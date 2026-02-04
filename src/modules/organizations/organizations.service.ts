@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Organization } from './entities/organization.entity';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
@@ -20,14 +22,22 @@ export class OrganizationsService {
     return org;
   }
 
-  create(data: Partial<Organization>) {
-    const org = this.repo.create(data);
+  create(data: CreateOrganizationDto): Promise<Organization> {
+    const { adminUserId, ...rest } = data;
+    const org = this.repo.create(rest as Partial<Organization>) as Organization;
+    if (adminUserId) {
+      (org as any).admin_user = { id: adminUserId };
+    }
     return this.repo.save(org);
   }
 
-  async update(id: number, data: Partial<Organization>) {
+  async update(id: number, data: UpdateOrganizationDto): Promise<Organization> {
     const org = await this.findOne(id);
-    Object.assign(org, data);
+    const { adminUserId, ...rest } = data;
+    Object.assign(org, rest);
+    if (adminUserId !== undefined) {
+      (org as any).admin_user = adminUserId ? { id: adminUserId } : null;
+    }
     return this.repo.save(org);
   }
 
