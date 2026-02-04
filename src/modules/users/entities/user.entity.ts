@@ -8,10 +8,13 @@ import {
   OneToOne,
   JoinColumn,
   ManyToOne,
+  ManyToMany,
+  JoinTable,
 } from 'typeorm';
 import { Role } from '../../roles/entities/role.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
 import { Permission } from '../../permissions/entities/permission.entity';
+import { Branch } from '../../branches/entities/branch.entity';
 
 @Entity('users')
 @Index(['email'], { unique: true })
@@ -51,11 +54,25 @@ export class User {
   @JoinColumn({ name: 'role_id' })
   role!: Role;
 
-  @ManyToOne(() => Organization)
+  @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'organization_id' })
   organization!: Organization;
 
   @ManyToOne(() => Permission)
   @JoinColumn({ name: 'permission_id' })
   permission!: Permission;
+
+  @ManyToMany(() => Branch, (branch) => branch.users)
+  @JoinTable({
+    name: 'users_branches',
+    joinColumn: {
+      name: 'user_id',
+      referencedColumnName: 'id',
+    },
+    inverseJoinColumn: {
+      name: 'branch_id',
+      referencedColumnName: 'id',
+    },
+  })
+  branches!: Branch[];
 }

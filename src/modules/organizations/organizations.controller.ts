@@ -1,6 +1,8 @@
 import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { Organization } from './entities/organization.entity';
+import { CreateOrganizationDto } from './dto/create-organization.dto';
+import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Controller('organizations')
 export class OrganizationsController {
@@ -17,12 +19,12 @@ export class OrganizationsController {
   }
 
   @Post()
-  create(@Body() data: Partial<Organization>) {
+  create(@Body() data: CreateOrganizationDto) {
     return this.organizationsService.create(data);
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() data: Partial<Organization>) {
+  update(@Param('id') id: number, @Body() data: UpdateOrganizationDto) {
     return this.organizationsService.update(id, data);
   }
 

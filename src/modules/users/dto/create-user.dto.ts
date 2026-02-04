@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsInt, Min, IsArray } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export class CreateUserDto {
   @IsNotEmpty()
@@ -17,4 +18,15 @@ export class CreateUserDto {
 
   @IsOptional()
   bio?: string;
+  
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  organizationId?: number; 
+
+  @IsOptional()
+  @IsArray()
+  @Type(() => Number)
+  branchIds?: number[];
 }
+

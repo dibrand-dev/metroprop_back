@@ -5,7 +5,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
+import { BranchesModule } from './modules/branches/branches.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { RegistrationModule } from './modules/registration/registration.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -20,8 +22,6 @@ import { AuthModule } from './modules/auth/auth.module';
         console.log('DB Config:', {
           host: configService.get<string>('DATABASE_HOST'),
           port: configService.get<number>('DATABASE_PORT'),
-     //   user: configService.get<string>('DATABASE_USER'),
-     //   password: configService.get<string>('DATABASE_PASSWORD'),
           database: configService.get<string>('DATABASE_NAME'),
           synchronize: configService.get<string>('DATABASE_SYNCHRONIZE'),
           logging: configService.get<string>('DATABASE_LOGGING'),
@@ -36,8 +36,6 @@ import { AuthModule } from './modules/auth/auth.module';
         database: configService.get<string>('DATABASE_NAME'),
         entities: [__dirname + '/modules/**/*.entity{.ts,.js}'],
         migrations: [__dirname + '/database/migrations/**/*{.ts,.js}'],
-        //entities: [__dirname + '/modules/**/*.entity.ts'],
-        //migrations: [__dirname + '/database/migrations/**/*.ts'],
         synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE') ?? true,
         logging: configService.get<boolean>('DATABASE_LOGGING') ?? false,
         ssl:
@@ -49,7 +47,9 @@ import { AuthModule } from './modules/auth/auth.module';
     }),
     UsersModule,
     AuthModule,
-    OrganizationsModule
+    OrganizationsModule,
+    BranchesModule,
+    RegistrationModule
   ],
   controllers: [AppController],
   providers: [AppService],

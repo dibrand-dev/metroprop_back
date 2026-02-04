@@ -5,6 +5,8 @@ import * as bcrypt from 'bcryptjs';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { Organization } from '../organizations/entities/organization.entity';
+import { Branch } from '../branches/entities/branch.entity';
 
 @Injectable()
 export class UsersService {
@@ -27,6 +29,10 @@ export class UsersService {
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
+      organization: createUserDto.organizationId
+        ? ({ id: createUserDto.organizationId } as Organization)
+        : undefined,
+      branches: createUserDto.branchIds?.map((id) => ({ id } as Branch)),
     });
 
     return this.usersRepository.save(user);
@@ -72,6 +78,9 @@ export class UsersService {
     }
 
     Object.assign(user, updateUserDto);
+    if (updateUserDto.branchIds) {
+      user.branches = updateUserDto.branchIds.map((id) => ({ id } as Branch));
+    }
 
     return this.usersRepository.save(user);
   }
