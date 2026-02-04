@@ -28,6 +28,7 @@ metroprop_back/
 │       │   └── dto/
 │       │       └── login.dto.ts
 │       ├── users/                         # User management
+<<<<<<< HEAD
 │          ├── users.service.ts
 │          ├── users.controller.ts
 │          ├── users.module.ts
@@ -37,6 +38,25 @@ metroprop_back/
 │              ├── create-user.dto.ts
 │              └── update-user.dto.ts
 │       
+=======
+│       │   ├── users.service.ts
+│       │   ├── users.controller.ts
+│       │   ├── users.module.ts
+│       │   ├── entities/
+│       │   │   └── user.entity.ts
+│       │   └── dto/
+│       │       ├── create-user.dto.ts
+│       │       └── update-user.dto.ts
+│       └── properties/                    # Property listings
+│           ├── properties.service.ts
+│           ├── properties.controller.ts
+│           ├── properties.module.ts
+│           ├── entities/
+│           │   └── property.entity.ts
+│           └── dto/
+│               ├── create-property.dto.ts
+│               └── update-property.dto.ts
+>>>>>>> 8245c926954c2bfd77a6806c94790b40bbef8a92
 ├── dist/                                  # Compiled JavaScript
 ├── node_modules/                          # Dependencies
 ├── package.json                           # Project dependencies
@@ -332,8 +352,13 @@ psql -U postgres -d metroprop_db
 -- List users
 SELECT * FROM users;
 
+<<<<<<< HEAD
 -- List users
 SELECT * FROM users;
+=======
+-- List properties
+SELECT * FROM properties;
+>>>>>>> 8245c926954c2bfd77a6806c94790b40bbef8a92
 
 -- Check indexes
 \di

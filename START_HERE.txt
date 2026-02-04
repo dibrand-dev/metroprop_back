@@ -239,7 +239,6 @@ Public Endpoints:
   POST   /users                     Create user
   POST   /auth/login                Login
 
-
 Protected Endpoints (require JWT):
   GET    /users                     List users
   GET    /users/:id                 Get user
