@@ -34,8 +34,15 @@ export class UsersService {
         : undefined,
       branches: createUserDto.branchIds?.map((id) => ({ id } as Branch)),
     });
-
-    return this.usersRepository.save(user);
+    const saved = await this.usersRepository.save(user);
+    if (createUserDto.branchIds && createUserDto.branchIds.length > 0) {
+      await this.usersRepository
+        .createQueryBuilder()
+        .relation(User, 'branches')
+        .of(saved)
+        .add(createUserDto.branchIds);
+    }
+    return saved;
   }
 
   async findAll(limit: number = 10, offset: number = 0) {
@@ -79,7 +86,11 @@ export class UsersService {
 
     Object.assign(user, updateUserDto);
     if (updateUserDto.branchIds) {
-      user.branches = updateUserDto.branchIds.map((id) => ({ id } as Branch));
+      await this.usersRepository
+        .createQueryBuilder()
+        .relation(User, 'branches')
+        .of(user)
+        .set(updateUserDto.branchIds);
     }
 
     return this.usersRepository.save(user);
