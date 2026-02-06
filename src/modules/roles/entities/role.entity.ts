@@ -1,6 +1,16 @@
-import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index
+} from 'typeorm';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('roles')
+@Index(['name'], { unique: true })
 export class Role {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -10,4 +20,22 @@ export class Role {
 
   @Column({ type: 'text', nullable: true })
   description?: string;
+
+  @CreateDateColumn({ name: 'created_at' })
+  created_at!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updated_at!: Date;
+
+  @Column({ type: 'boolean', default: false })
+  is_deleted!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at?: Date;
+
+  // Relación inversa
+  @OneToMany(() => User, (user) => user.role, {
+    eager: false
+  })
+  users?: User[];
 }

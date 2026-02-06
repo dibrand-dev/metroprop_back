@@ -1,4 +1,15 @@
-import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
+import { 
+  Controller, 
+  Get, 
+  Post, 
+  Patch, 
+  Delete, 
+  Param, 
+  Body,
+  ParseIntPipe,
+  HttpCode,
+  HttpStatus
+} from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';
 import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
@@ -14,22 +25,27 @@ export class OrganizationsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: number) {
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.organizationsService.findOne(id);
   }
 
   @Post()
+  @HttpCode(HttpStatus.CREATED)
   create(@Body() data: CreateOrganizationDto) {
     return this.organizationsService.create(data);
   }
 
-  @Put(':id')
-  update(@Param('id') id: number, @Body() data: UpdateOrganizationDto) {
+  @Patch(':id')
+  update(
+    @Param('id', ParseIntPipe) id: number, 
+    @Body() data: UpdateOrganizationDto
+  ) {
     return this.organizationsService.update(id, data);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: number) {
+  @HttpCode(HttpStatus.NO_CONTENT)
+  remove(@Param('id', ParseIntPipe) id: number) {
     return this.organizationsService.remove(id);
   }
 }

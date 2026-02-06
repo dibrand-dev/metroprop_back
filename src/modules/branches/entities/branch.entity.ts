@@ -1,8 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, JoinColumn, ManyToMany } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  ManyToOne, 
+  JoinColumn, 
+  ManyToMany,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index
+} from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('branches')
+@Index(['email'], { unique: true })
+@Index(['organization_id'])
 export class Branch {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -10,40 +22,58 @@ export class Branch {
   @Column({ nullable: true })
   branch_logo?: string;
 
-  @Column()
+  @Column({ type: 'varchar', length: 255 })
   branch_name!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   address?: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   phone?: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   alternative_phone?: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   contact_time?: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   email!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   location_id?: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   full_location?: string;
 
-  @Column({ nullable: true })
-  geo_lat?: string;
+  @Column({ type: 'numeric', precision: 10, scale: 8, nullable: true })
+  geo_lat?: number;
 
-  @Column({ nullable: true })
-  geo_long?: string;
+  @Column({ type: 'numeric', precision: 11, scale: 8, nullable: true })
+  geo_long?: number;
 
-  @ManyToOne(() => Organization, { onDelete: 'CASCADE' })
+  @CreateDateColumn({ name: 'created_at' })
+  created_at!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updated_at!: Date;
+
+  @Column({ type: 'boolean', default: false })
+  is_deleted!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at?: Date;
+
+  // Relaciones
+  @ManyToOne(() => Organization, (org) => org.branches, { 
+    onDelete: 'CASCADE',
+    eager: false 
+  })
   @JoinColumn({ name: 'organization_id' })
   organization!: Organization;
 
-  @ManyToMany(() => User, (user) => user.branches)
-  users!: User[];
+  @ManyToMany(() => User, (user) => user.branches, {
+    eager: false
+  })
+  users?: User[];
 }

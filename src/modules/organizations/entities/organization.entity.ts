@@ -1,8 +1,20 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany, ManyToOne, JoinColumn } from 'typeorm';
+import { 
+  Entity, 
+  PrimaryGeneratedColumn, 
+  Column, 
+  OneToMany, 
+  ManyToOne, 
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+  Index
+} from 'typeorm';
 import { Branch } from '../../branches/entities/branch.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('organizations')
+@Index(['email'], { unique: true })
+@Index(['cuit'], { unique: true, where: 'is_deleted = false' })
 export class Organization {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -52,16 +64,30 @@ export class Organization {
   @Column({ type: 'varchar', nullable: true })
   fiscal_condition?: string;
 
+  @CreateDateColumn({ name: 'created_at' })
+  created_at!: Date;
+
+  @UpdateDateColumn({ name: 'updated_at' })
+  updated_at!: Date;
+
   @Column({ type: 'boolean', default: false })
-  deleted!: boolean;
+  is_deleted!: boolean;
 
-  @OneToMany(() => Branch, (branch) => branch.organization)
-  branches!: Branch[];
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at?: Date;
 
-  @OneToMany(() => User, (user) => user.organization)
-  users!: User[];
+  // Relaciones
+  @OneToMany(() => Branch, (branch) => branch.organization, {
+    eager: false
+  })
+  branches?: Branch[];
+
+  @OneToMany(() => User, (user) => user.organization, {
+    eager: false
+  })
+  users?: User[];
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'admin_user' })
+  @JoinColumn({ name: 'admin_user_id' })
   admin_user?: User;
 }
