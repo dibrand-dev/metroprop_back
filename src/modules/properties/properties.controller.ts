@@ -9,6 +9,7 @@ import {
   Query,
   HttpCode,
   HttpStatus,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -44,6 +45,29 @@ export class PropertiesController {
   }
 
   /**
+   * GET /properties/stats
+   * Obtener estadísticas de propiedades
+   * Nota: DEBE estar antes de GET :id para evitar conflicto
+   */
+  @Get('stats')
+  getStats() {
+    return this.propertiesService.getStats();
+  }
+
+  /**
+   * GET /properties/search
+   * Buscar propiedades por texto
+   * Nota: DEBE estar antes de GET :id para evitar conflicto
+   */
+  @Get('search')
+  search(@Query('q') query: string) {
+    if (!query) {
+      return { error: 'Parámetro de búsqueda requerido' };
+    }
+    return this.propertiesService.search(query);
+  }
+
+  /**
    * GET /properties
    * Obtener todas las propiedades con paginación y filtros
    */
@@ -71,36 +95,6 @@ export class PropertiesController {
   }
 
   /**
-   * GET /properties/search
-   * Buscar propiedades por texto
-   */
-  @Get('search')
-  search(@Query('q') query: string) {
-    if (!query) {
-      return { error: 'Parámetro de búsqueda requerido' };
-    }
-    return this.propertiesService.search(query);
-  }
-
-  /**
-   * GET /properties/stats
-   * Obtener estadísticas de propiedades
-   */
-  @Get('stats')
-  getStats() {
-    return this.propertiesService.getStats();
-  }
-
-  /**
-   * GET /properties/:id
-   * Obtener propiedad por ID
-   */
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.propertiesService.findOne(parseInt(id));
-  }
-
-  /**
    * GET /properties/ref/:reference_code
    * Obtener propiedad por reference_code
    */
@@ -110,15 +104,24 @@ export class PropertiesController {
   }
 
   /**
+   * GET /properties/:id
+   * Obtener propiedad por ID
+   */
+  @Get(':id')
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.propertiesService.findOne(id);
+  }
+
+  /**
    * PATCH /properties/:id
    * Actualizar una propiedad
    */
   @Patch(':id')
   update(
-    @Param('id') id: string,
+    @Param('id', ParseIntPipe) id: number,
     @Body() updatePropertyDto: UpdatePropertyDto,
   ) {
-    return this.propertiesService.update(parseInt(id), updatePropertyDto);
+    return this.propertiesService.update(id, updatePropertyDto);
   }
 
   /**
@@ -127,8 +130,8 @@ export class PropertiesController {
    */
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id') id: string) {
-    return this.propertiesService.remove(parseInt(id));
+  remove(@Param('id', ParseIntPipe) id: number) {
+    return this.propertiesService.remove(id);
   }
 
   /**
@@ -136,7 +139,7 @@ export class PropertiesController {
    * Restaurar una propiedad eliminada
    */
   @Patch(':id/restore')
-  restore(@Param('id') id: string) {
-    return this.propertiesService.restore(parseInt(id));
+  restore(@Param('id', ParseIntPipe) id: number) {
+    return this.propertiesService.restore(id);
   }
 }

@@ -50,19 +50,41 @@ export class User {
   updated_at!: Date;
 
   // Relaciones
-  @OneToOne(() => Role)
+  @ManyToOne(() => Role, (role) => role.users, { 
+    onDelete: 'RESTRICT',
+    nullable: false,
+    eager: false 
+  })
   @JoinColumn({ name: 'role_id' })
   role!: Role;
 
-  @ManyToOne(() => Organization, { onDelete: 'CASCADE', nullable: true })
+  @ManyToOne(() => Organization, (org) => org.users, { 
+    onDelete: 'CASCADE', 
+    nullable: true,
+    eager: false 
+  })
   @JoinColumn({ name: 'organization_id' })
-  organization!: Organization;
+  organization?: Organization;
 
-  @ManyToOne(() => Permission)
-  @JoinColumn({ name: 'permission_id' })
-  permission!: Permission;
+  @ManyToMany(() => Permission, (permission) => permission.users, {
+    eager: false
+  })
+  @JoinTable({
+    name: 'users_permissions',
+    joinColumn: { 
+      name: 'user_id', 
+      referencedColumnName: 'id' 
+    },
+    inverseJoinColumn: { 
+      name: 'permission_id', 
+      referencedColumnName: 'id' 
+    }
+  })
+  permissions?: Permission[];
 
-  @ManyToMany(() => Branch, (branch) => branch.users)
+  @ManyToMany(() => Branch, (branch) => branch.users, {
+    eager: false
+  })
   @JoinTable({
     name: 'users_branches',
     joinColumn: {
@@ -74,5 +96,5 @@ export class User {
       referencedColumnName: 'id',
     },
   })
-  branches!: Branch[];
+  branches?: Branch[];
 }
