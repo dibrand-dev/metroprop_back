@@ -8,6 +8,7 @@ import { OrganizationsModule } from './modules/organizations/organizations.modul
 import { BranchesModule } from './modules/branches/branches.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RegistrationModule } from './modules/registration/registration.module';
+import { PropertiesModule } from './modules/properties/properties.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -49,7 +50,8 @@ import { RegistrationModule } from './modules/registration/registration.module';
     AuthModule,
     OrganizationsModule,
     BranchesModule,
-    RegistrationModule
+    RegistrationModule,
+    PropertiesModule
   ],
   controllers: [AppController],
   providers: [AppService],
