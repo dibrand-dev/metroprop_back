@@ -10,7 +10,6 @@ import {
 import { User } from '../../users/entities/user.entity';
 
 @Entity('permissions')
-@Index(['name'], { unique: true })
 export class Permission {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -34,7 +33,7 @@ export class Permission {
   updated_at!: Date;
 
   @Column({ type: 'boolean', default: false })
-  is_deleted!: boolean;
+  deleted!: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   deleted_at?: Date;

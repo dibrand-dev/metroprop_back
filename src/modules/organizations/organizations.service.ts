@@ -44,6 +44,7 @@ export class OrganizationsService {
   async remove(id: number) {
     const org = await this.findOne(id);
     org.deleted = true; // borrado lógico
+    org.deleted_at = new Date();
     return this.repo.save(org);
   }
 }

@@ -1,0 +1,20 @@
+{
+  "name": "Partner API - Update Property",
+  "method": "PUT",
+  "url": "http://localhost:3000/api/partner/v1/properties/123",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "tech_integrations_prod_key_2024",
+    "x-api-secret": "tech_secret_2024_secure_hash"
+  },
+  "body": {
+    "price": 185000,
+    "description": "Hermoso departamento de 2 ambientes con balcón - PRECIO ACTUALIZADO",
+    "amenities": ["pool", "gym", "security", "rooftop"],
+    "contact": {
+      "agent_name": "María González",
+      "phone": "+541123456789",
+      "email": "maria.gonzalez@techintegrations.com"
+    }
+  }
+}

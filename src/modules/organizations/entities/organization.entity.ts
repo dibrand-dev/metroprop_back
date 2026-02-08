@@ -13,8 +13,7 @@ import { Branch } from '../../branches/entities/branch.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('organizations')
-@Index(['email'], { unique: true })
-@Index(['cuit'], { unique: true, where: 'is_deleted = false' })
+@Index('idx_organizations_cuit_unique', ['cuit'], { unique: true, where: 'deleted = false' })
 export class Organization {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -22,7 +21,7 @@ export class Organization {
   @Column({ type: 'varchar', nullable: true })
   company_logo?: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: false })
   company_name!: string;
 
   @Column({ type: 'varchar', nullable: true })
@@ -37,7 +36,7 @@ export class Organization {
   @Column({ type: 'varchar', nullable: true })
   contact_time?: string;
 
-  @Column({ type: 'varchar', unique: true })
+  @Column({ type: 'varchar', nullable: false })
   email!: string;
 
   @Column({ type: 'varchar', nullable: true })
@@ -71,7 +70,7 @@ export class Organization {
   updated_at!: Date;
 
   @Column({ type: 'boolean', default: false })
-  is_deleted!: boolean;
+  deleted!: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   deleted_at?: Date;
@@ -88,6 +87,6 @@ export class Organization {
   users?: User[];
 
   @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
-  @JoinColumn({ name: 'admin_user_id' })
+  @JoinColumn({ name: 'admin_user' })
   admin_user?: User;
 }

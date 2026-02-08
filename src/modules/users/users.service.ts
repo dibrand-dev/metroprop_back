@@ -21,7 +21,7 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException('User with this email already exists');
+      throw new ConflictException(`Duplicate value for field 'email'. This value already exists in the database.`);
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
@@ -32,7 +32,6 @@ export class UsersService {
       organization: createUserDto.organizationId
         ? ({ id: createUserDto.organizationId } as Organization)
         : undefined,
-      branches: createUserDto.branchIds?.map((id) => ({ id } as Branch)),
     });
     const saved = await this.usersRepository.save(user);
     if (createUserDto.branchIds && createUserDto.branchIds.length > 0) {

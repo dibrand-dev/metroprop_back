@@ -13,8 +13,7 @@ import { Organization } from '../../organizations/entities/organization.entity';
 import { User } from '../../users/entities/user.entity';
 
 @Entity('branches')
-@Index(['email'], { unique: true })
-@Index(['organization_id'])
+@Index('idx_branches_organization', ['organization'])
 export class Branch {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -22,8 +21,8 @@ export class Branch {
   @Column({ nullable: true })
   branch_logo?: string;
 
-  @Column({ type: 'varchar', length: 255 })
-  branch_name!: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  branch_name?: string;
 
   @Column({ type: 'varchar', nullable: true })
   address?: string;
@@ -37,7 +36,7 @@ export class Branch {
   @Column({ type: 'varchar', nullable: true })
   contact_time?: string;
 
-  @Column({ type: 'varchar', unique: true })
+  @Column({ type: 'varchar' })
   email!: string;
 
   @Column({ type: 'varchar', nullable: true })
@@ -59,7 +58,7 @@ export class Branch {
   updated_at!: Date;
 
   @Column({ type: 'boolean', default: false })
-  is_deleted!: boolean;
+  deleted!: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   deleted_at?: Date;

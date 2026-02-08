@@ -1,0 +1,42 @@
+{
+  "name": "Partner API - Create Property",
+  "method": "POST",
+  "url": "http://localhost:3000/api/partner/v1/properties",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "tech_integrations_prod_key_2024",
+    "x-api-secret": "tech_secret_2024_secure_hash"
+  },
+  "body": {
+    "title": "Departamento en Palermo",
+    "description": "Hermoso departamento de 2 ambientes con balcón",
+    "price": 180000,
+    "currency": "USD",
+    "operation_type": "sale",
+    "property_type": 1,
+    "rooms": 2,
+    "bathrooms": 1,
+    "surface": 65,
+    "parking": true,
+    "amenities": ["pool", "gym", "security"],
+    "address": {
+      "street": "Av. Santa Fe",
+      "number": "3456",
+      "floor": "8",
+      "apartment": "B",
+      "neighborhood": "Palermo",
+      "city": "Buenos Aires",
+      "country": "Argentina"
+    },
+    "contact": {
+      "agent_name": "María González",
+      "phone": "+541123456789",
+      "email": "maria.gonzalez@techintegrations.com"
+    },
+    "images": [
+      "https://example.com/images/prop123/living.jpg",
+      "https://example.com/images/prop123/bedroom.jpg",
+      "https://example.com/images/prop123/kitchen.jpg"
+    ]
+  }
+}
