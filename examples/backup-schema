@@ -10,7 +10,7 @@ create table locations
     zip_code       varchar,
     short_location varchar,
     parent_id      integer
-        constraint parent_id
+        constraint fk_locations_parent_id
             references locations,
     type           varchar,
     migrated       boolean default false,
@@ -20,136 +20,254 @@ create table locations
 alter table locations
     owner to postgres;
 
-create table organizations
+create table roles
 (
-    id                serial
-        primary key,
-    company_logo      varchar,
-    address           varchar,
-    phone             varchar,
-    alternative_phone varchar,
-    contact_time      varchar,
-    email             varchar               not null
-        constraint "UQ_4ad920935f4d4eb73fc58b40f72"
+    id          serial
+        constraint pk_roles
+            primary key,
+    name        varchar(100)            not null
+        constraint uk_roles_name
             unique,
-    location_id       varchar,
-    full_location     varchar,
-    geo_lat           varchar,
-    geo_long          varchar,
-    professional_type varchar,
-    deleted           boolean default false not null,
-    company_name      varchar(255)          not null,
-    admin_user        integer,
-    social_reason     varchar,
-    fiscal_condition  varchar,
-    cuit              varchar
+    description text,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null,
+    deleted     boolean   default false not null,
+    deleted_at  timestamp
 );
 
-alter table organizations
+alter table roles
     owner to postgres;
 
-create table branches
-(
-    id                serial
-        primary key,
-    branch_logo       varchar,
-    branch_name       varchar not null,
-    address           varchar,
-    phone             varchar,
-    alternative_phone varchar,
-    contact_time      varchar,
-    email             varchar not null
-        unique,
-    location_id       varchar,
-    full_location     varchar,
-    geo_lat           varchar,
-    geo_long          varchar,
-    organization_id   integer
-        constraint "FK_9ecf73d5ca57108dc33c87f7d88"
-            references organizations
-            on delete cascade,
-    deleted           boolean default false
-);
+create index idx_roles_deleted
+    on roles (deleted);
 
-alter table branches
-    owner to postgres;
+create index idx_roles_created_at
+    on roles (created_at);
 
 create table permissions
 (
     id          serial
-        primary key,
-    name        varchar(100) not null
-        constraint "UQ_48ce552495d14eae9b187bb6716"
+        constraint pk_permissions
+            primary key,
+    name        varchar(100)            not null
+        constraint uk_permissions_name
             unique,
-    description text
+    action      varchar(255)            not null,
+    resource    varchar(255)            not null,
+    description text,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null,
+    deleted     boolean   default false not null,
+    deleted_at  timestamp
 );
 
 alter table permissions
     owner to postgres;
 
+create index idx_permissions_deleted
+    on permissions (deleted);
+
+create index idx_permissions_resource
+    on permissions (resource);
+
+create table organizations
+(
+    id                serial
+        constraint pk_organizations
+            primary key,
+    company_logo      varchar,
+    company_name      varchar(255)            not null,
+    address           varchar,
+    phone             varchar,
+    alternative_phone varchar,
+    contact_time      varchar,
+    email             varchar                 not null,
+    location_id       varchar,
+    full_location     varchar,
+    geo_lat           varchar,
+    geo_long          varchar,
+    professional_type varchar,
+    admin_user        integer,
+    social_reason     varchar,
+    fiscal_condition  varchar,
+    cuit              varchar,
+    created_at        timestamp default now() not null,
+    updated_at        timestamp default now() not null,
+    deleted           boolean   default false not null,
+    deleted_at        timestamp
+);
+
+alter table organizations
+    owner to postgres;
+
+create index idx_organizations_cuit
+    on organizations (cuit);
+
+create index idx_organizations_deleted
+    on organizations (deleted);
+
+create table branches
+(
+    id                serial
+        constraint pk_branches
+            primary key,
+    branch_logo       varchar,
+    branch_name       varchar(255),
+    address           varchar,
+    phone             varchar,
+    alternative_phone varchar,
+    contact_time      varchar,
+    email             varchar                 not null,
+    location_id       varchar,
+    full_location     varchar,
+    geo_lat           numeric(10, 8),
+    geo_long          numeric(11, 8),
+    organization_id   integer
+        constraint fk_branches_organization_id
+            references organizations
+            on delete cascade,
+    created_at        timestamp default now() not null,
+    updated_at        timestamp default now() not null,
+    deleted           boolean   default false not null,
+    deleted_at        timestamp
+);
+
+alter table branches
+    owner to postgres;
+
+create index idx_branches_organization_id
+    on branches (organization_id);
+
+create index idx_branches_deleted
+    on branches (deleted);
+
 create table users
 (
     id              serial
-        primary key,
-    role_id         integer,
+        constraint pk_users
+            primary key,
+    name            varchar(255)            not null,
+    email           varchar(255)            not null
+        constraint uk_users_email
+            unique,
+    password        varchar(255)            not null,
+    role_id         integer
+        constraint fk_users_role_id
+            references roles,
     organization_id integer
-        constraint "FK_21a659804ed7bf61eb91688dea7"
+        constraint fk_users_organization_id
             references organizations
             on delete cascade,
-    permission_id   integer
-        constraint "FK_4daed8ecfcce827ad3a6ba2587c"
-            references permissions,
     phone           varchar(50),
     bio             text,
     avatar          varchar(255),
     is_verified     boolean   default false not null,
     created_at      timestamp default now() not null,
     updated_at      timestamp default now() not null,
-    name            varchar(255)            not null,
-    email           varchar(255)            not null,
-    password        varchar(255)            not null
+    deleted         boolean   default false not null,
+    deleted_at      timestamp
 );
 
 alter table users
     owner to postgres;
 
 alter table organizations
-    add constraint "FK_84687878ce7a62025e1774b31ad"
+    add constraint fk_organizations_admin_user
         foreign key (admin_user) references users
             on delete set null;
 
-create unique index "IDX_97672ac88f789774dd47f7c8be"
-    on users (email);
+create index idx_users_role_id
+    on users (role_id);
+
+create index idx_users_organization_id
+    on users (organization_id);
+
+create index idx_users_deleted
+    on users (deleted);
 
 create table users_branches
 (
     user_id   integer not null
-        constraint "FK_a2298d713539687b12f2c169ba4"
+        constraint fk_users_branches_user_id
             references users
-            on update cascade on delete cascade,
+            on delete cascade,
     branch_id integer not null
-        constraint "FK_6e191d2fe767c69e4d76e46a30e"
-            references branches,
-    constraint "PK_9da378646b233e4b5001d24cba7"
+        constraint fk_users_branches_branch_id
+            references branches
+            on delete cascade,
+    constraint pk_users_branches
         primary key (user_id, branch_id)
 );
 
 alter table users_branches
     owner to postgres;
 
-create index "IDX_a2298d713539687b12f2c169ba"
+create index idx_users_branches_user_id
     on users_branches (user_id);
 
-create index "IDX_6e191d2fe767c69e4d76e46a30"
+create index idx_users_branches_branch_id
     on users_branches (branch_id);
+
+create table users_permissions
+(
+    user_id       integer not null
+        constraint fk_users_permissions_user_id
+            references users
+            on delete cascade,
+    permission_id integer not null
+        constraint fk_users_permissions_permission_id
+            references permissions
+            on delete cascade,
+    constraint pk_users_permissions
+        primary key (user_id, permission_id)
+);
+
+alter table users_permissions
+    owner to postgres;
+
+create index idx_users_permissions_user_id
+    on users_permissions (user_id);
+
+create index idx_users_permissions_permission_id
+    on users_permissions (permission_id);
+
+create table tags
+(
+    id          serial
+        constraint pk_tags
+            primary key,
+    name        varchar(255)            not null
+        constraint uk_tags_name
+            unique,
+    slug        varchar(255),
+    type        integer                 not null,
+    description text,
+    is_active   boolean   default true,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null
+);
+
+alter table tags
+    owner to postgres;
+
+create index idx_tags_type
+    on tags (type);
+
+create index idx_tags_is_active
+    on tags (is_active);
+
+create index idx_tags_slug
+    on tags (slug);
 
 create table properties
 (
-    id                       integer   default nextval('properties_id_seq'::regclass) not null
-        primary key,
-    reference_code           varchar(100)                                             not null
-        unique,
-    publication_title        varchar(500)                                             not null,
+    id                       serial
+        constraint pk_properties
+            primary key,
+    reference_code           varchar(100)            not null
+        constraint uk_properties_reference_code
+            unique,
+    publication_title        varchar(500)            not null,
     publication_title_en     varchar(500),
     description              text,
     internal_comments        text,
@@ -160,8 +278,8 @@ create table properties
     location_id              integer,
     geo_lat                  numeric(10, 8),
     geo_long                 numeric(11, 8),
-    property_type            integer                                                  not null,
-    status                   integer                                                  not null,
+    property_type            integer                 not null,
+    status                   integer                 not null,
     suite_amount             integer,
     room_amount              integer,
     bathroom_amount          integer,
@@ -183,9 +301,9 @@ create table properties
     expenses                 integer,
     commission               varchar(50),
     network_share            varchar(50),
-    operation_type           varchar(50)                                              not null,
-    price                    numeric(15, 2)                                           not null,
-    currency                 varchar(3)                                               not null,
+    operation_type           varchar(50)             not null,
+    price                    numeric(15, 2)          not null,
+    currency                 varchar(3)              not null,
     period                   varchar(50),
     producer_user            varchar(255),
     branch                   varchar(255),
@@ -197,10 +315,10 @@ create table properties
     development              varchar(255),
     network_information      text,
     transaction_requirements text,
-    created_at               timestamp default now()                                  not null,
-    updated_at               timestamp default now()                                  not null,
-    deleted_at               timestamp,
-    deleted                  boolean   default false                                  not null
+    created_at               timestamp default now() not null,
+    updated_at               timestamp default now() not null,
+    deleted                  boolean   default false not null,
+    deleted_at               timestamp
 );
 
 alter table properties
@@ -221,19 +339,22 @@ create index idx_properties_reference_code
 create index idx_properties_branch
     on properties (branch);
 
+create index idx_properties_deleted
+    on properties (deleted);
+
 create table property_operations
 (
-    id             bigint         not null
-        primary key,
-    property_id    bigint         not null,
-    currency       varchar(3)     not null,
-    price          numeric(15, 2) not null,
-    period         varchar(50),
-    "propertyId"   bigint
-        constraint "FK_35ede2af03b824b35423f66445b"
+    id             serial
+        constraint pk_property_operations
+            primary key,
+    property_id    integer        not null
+        constraint fk_property_operations_property_id
             references properties
             on delete cascade,
-    operation_type varchar(50)    not null
+    operation_type varchar(50)    not null,
+    currency       varchar(3)     not null,
+    price          numeric(15, 2) not null,
+    period         varchar(50)
 );
 
 alter table property_operations
@@ -244,17 +365,17 @@ create index idx_property_operations_property_id
 
 create table property_images
 (
-    id             bigint                not null
-        primary key,
-    property_id    bigint                not null,
+    id             serial
+        constraint pk_property_images
+            primary key,
+    property_id    integer               not null
+        constraint fk_property_images_property_id
+            references properties
+            on delete cascade,
     url            varchar(500)          not null,
     is_blueprint   boolean default false not null,
     description    text,
-    order_position integer,
-    "propertyId"   bigint
-        constraint "FK_7a07b6b7f9418bf1d5160106694"
-            references properties
-            on delete cascade
+    order_position integer
 );
 
 alter table property_images
@@ -265,16 +386,16 @@ create index idx_property_images_property_id
 
 create table property_tags
 (
-    id           bigint       not null
-        primary key,
-    tag_id       integer      not null,
-    property_id  bigint       not null,
-    tag_name     varchar(255) not null,
-    tag_type     integer      not null,
-    "propertyId" bigint
-        constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+    id          serial
+        constraint pk_property_tags
+            primary key,
+    property_id integer      not null
+        constraint fk_property_tags_property_id
             references properties
-            on delete cascade
+            on delete cascade,
+    tag_id      integer      not null,
+    tag_name    varchar(255) not null,
+    tag_type    integer      not null
 );
 
 alter table property_tags
@@ -288,15 +409,15 @@ create index idx_property_tags_tag_id
 
 create table property_attributes
 (
-    id           bigint       not null
-        primary key,
-    property_id  bigint       not null,
-    code         varchar(100) not null,
-    value        varchar(255) not null,
-    "propertyId" bigint
-        constraint "FK_043c5d830803966b4eea0ee21cf"
+    id          serial
+        constraint pk_property_attributes
+            primary key,
+    property_id integer      not null
+        constraint fk_property_attributes_property_id
             references properties
-            on delete cascade
+            on delete cascade,
+    code        varchar(100) not null,
+    value       varchar(255) not null
 );
 
 alter table property_attributes
@@ -305,46 +426,21 @@ alter table property_attributes
 create index idx_property_attributes_property_id
     on property_attributes (property_id);
 
-create table tags
-(
-    id          integer      not null
-        primary key,
-    name        varchar(255) not null
-        unique,
-    slug        varchar(255),
-    type        integer      not null,
-    description text,
-    is_active   boolean   default true,
-    created_at  timestamp default CURRENT_TIMESTAMP,
-    updated_at  timestamp default CURRENT_TIMESTAMP
-);
-
-alter table tags
-    owner to postgres;
-
-create index idx_tags_type
-    on tags (type);
-
-create index idx_tags_is_active
-    on tags (is_active);
-
-create index idx_tags_slug
-    on tags (slug);
-
 create table partners
 (
     id          serial
-        primary key,
-    name        varchar(100) not null,
+        constraint pk_partners
+            primary key,
+    name        varchar(100)            not null,
     description text,
-    app_key     varchar(255) not null
+    app_key     varchar(255)            not null
         constraint uk_partners_app_key
             unique,
-    app_secret  varchar(255) not null,
-    status      smallint                 default 0,
-    deleted     boolean                  default false,
-    created_at  timestamp with time zone default CURRENT_TIMESTAMP,
-    updated_at  timestamp with time zone default CURRENT_TIMESTAMP
+    app_secret  varchar(255)            not null,
+    status      smallint  default 0,
+    deleted     boolean   default false,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null
 );
 
 alter table partners
