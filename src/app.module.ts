@@ -9,6 +9,7 @@ import { BranchesModule } from './modules/branches/branches.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RegistrationModule } from './modules/registration/registration.module';
 import { PropertiesModule } from './modules/properties/properties.module';
+import { PartnersModule } from './modules/partners/partners.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -51,7 +52,8 @@ import { PropertiesModule } from './modules/properties/properties.module';
     OrganizationsModule,
     BranchesModule,
     RegistrationModule,
-    PropertiesModule
+    PropertiesModule,
+    PartnersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

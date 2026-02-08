@@ -29,6 +29,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
           ? (exceptionResponse as any).message || exception.message
           : exceptionResponse;
       error = exception.name;
+      
+      // Handle ConflictException specifically for duplicate field errors
+      if (status === HttpStatus.CONFLICT && typeof message === 'string' && message.includes('Duplicate value for field')) {
+        error = 'UniqueConstraintViolation';
+      }
     } else if (exception instanceof Error) {
       // Handle common database errors (e.g., TypeORM QueryFailedError)
       const anyEx = exception as any;
@@ -41,23 +46,44 @@ export class AllExceptionsFilter implements ExceptionFilter {
           case '23505': { // unique_violation
             status = HttpStatus.CONFLICT;
             const detail: string = driverError?.detail || '';
+            const constraint: string | undefined = driverError?.constraint;
+            
             // Try to extract column name from detail: Key (email)=(value) already exists.
             let column = detail.match(/Key \(([^)]+)\)=/)?.[1];
+            
             // If detail is missing or doesn't contain the column, try the constraint name.
-            const constraint: string | undefined = driverError?.constraint;
             if (!column && constraint) {
+              // Handle different constraint naming patterns
               if (constraint.startsWith('PK_')) {
-                column = 'id';
+                column = 'id (primary key)';
+              } else if (constraint.startsWith('uk_') || constraint.startsWith('UQ_')) {
+                // Extract field from uk_table_field or UQ_hash patterns
+                const ukMatch = constraint.match(/^uk_\w+_(.+)$/) || constraint.match(/^UQ_.*$/);
+                if (ukMatch?.[1]) {
+                  column = ukMatch[1];
+                } else if (constraint.includes('email')) {
+                  column = 'email';
+                } else if (constraint.includes('cuit')) {
+                  column = 'cuit';
+                } else if (constraint.includes('app_key')) {
+                  column = 'app_key';
+                } else if (constraint.includes('name')) {
+                  column = 'name';
+                }
               } else {
-                // Common pattern: <table>_<column>_key
-                const consMatch = constraint.match(/_(.+?)_key$/);
+                // Try to extract from general pattern: table_column_key
+                const consMatch = constraint.match(/_(.+?)_key$/) || constraint.match(/_(.+?)$/);
                 if (consMatch?.[1]) {
                   column = consMatch[1];
                 }
               }
             }
-            message = `Duplicate value for ${column || 'unique field'}.`;
+            
+            message = `Duplicate value for field '${column || 'unique field'}'. This value already exists in the database.`;
             error = 'UniqueConstraintViolation';
+            
+            // Log full error details for debugging
+            this.logger.warn(`Unique constraint violation - Constraint: ${constraint}, Detail: ${detail}, Extracted field: ${column}`);
             break;
           }
           case '23503': { // foreign_key_violation
@@ -81,6 +107,15 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else {
         message = exception.message;
         error = exception.name;
+      }
+    }
+
+    if (status === HttpStatus.CONFLICT) {
+      this.logger.error('--- 409 ConflictException Detected ---');
+      this.logger.error('Exception type:', exception?.constructor?.name);
+      this.logger.error('Exception object:', JSON.stringify(exception, null, 2));
+      if (exception instanceof Error) {
+        this.logger.error('Stack:', exception.stack);
       }
     }
 

@@ -23,12 +23,12 @@ export class Property {
   id?: number;
 
   // ========== Identificadores ==========
-  @Column({ type: 'varchar', length: 100, unique: true })
-  reference_code?: string;
+  @Column({ type: 'varchar', length: 100, unique: true, nullable: false })
+  reference_code!: string;
 
   // ========== Datos Básicos ==========
-  @Column({ type: 'varchar', length: 500 })
-  publication_title?: string;
+  @Column({ type: 'varchar', length: 500, nullable: false })
+  publication_title!: string;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   publication_title_en?: string;
@@ -63,11 +63,11 @@ export class Property {
   geo_long?: number;
 
   // ========== Tipo de Propiedad y Negocio ==========
-  @Column({ type: 'integer' })
-  property_type?: number;
+  @Column({ type: 'integer', nullable: false })
+  property_type!: number;
 
-  @Column({ type: 'integer' })
-  status?: number;
+  @Column({ type: 'integer', nullable: false })
+  status!: number;
 
   // ========== Características Principales ==========
   @Column({ type: 'integer', nullable: true })
@@ -137,14 +137,14 @@ export class Property {
   network_share?: string;
 
   // ========== Operación y Precio (denormalizado para acceso rápido) ==========
-  @Column({ type: 'varchar', length: 50 })
-  operation_type?: string;
+  @Column({ type: 'varchar', length: 50, nullable: false })
+  operation_type!: string;
 
-  @Column({ type: 'numeric', precision: 15, scale: 2 })
-  price?: number;
+  @Column({ type: 'numeric', precision: 15, scale: 2, nullable: false })
+  price!: number;
 
-  @Column({ type: 'varchar', length: 3 })
-  currency?: string;
+  @Column({ type: 'varchar', length: 3, nullable: false })
+  currency!: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   period?: string;

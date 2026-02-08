@@ -17,18 +17,18 @@ import { Permission } from '../../permissions/entities/permission.entity';
 import { Branch } from '../../branches/entities/branch.entity';
 
 @Entity('users')
-@Index(['email'], { unique: true })
+@Index('uk_users_email', ['email'], { unique: true, where: 'email IS NOT NULL' })
 export class User {
   @PrimaryGeneratedColumn() // ahora integer autoincrement (serial en SQL)
   id!: number;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: false })
   name!: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: false })
   email!: string;
 
-  @Column({ type: 'varchar', length: 255 })
+  @Column({ type: 'varchar', length: 255, nullable: false })
   password!: string;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
@@ -49,14 +49,20 @@ export class User {
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at!: Date;
 
+  @Column({ type: 'boolean', default: false })
+  deleted!: boolean;
+
+  @Column({ type: 'timestamp', nullable: true })
+  deleted_at?: Date;
+
   // Relaciones
   @ManyToOne(() => Role, (role) => role.users, { 
     onDelete: 'RESTRICT',
-    nullable: false,
+    nullable: true,
     eager: false 
   })
   @JoinColumn({ name: 'role_id' })
-  role!: Role;
+  role?: Role;
 
   @ManyToOne(() => Organization, (org) => org.users, { 
     onDelete: 'CASCADE', 
