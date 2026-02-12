@@ -20,6 +20,10 @@ export class CreateUserDto {
   @MaxLength(255, { message: 'Nombre no puede exceder 255 caracteres' })
   name!: string;
 
+  @IsOptional()
+  @IsString()
+  google_id?: string;
+
   @IsEmail({}, { message: 'Email debe ser válido' })
   @IsNotEmpty({ message: 'Email es requerido' })
   @MaxLength(255, { message: 'Email no puede exceder 255 caracteres' })

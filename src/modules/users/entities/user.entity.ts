@@ -22,6 +22,9 @@ export class User {
   @PrimaryGeneratedColumn() // ahora integer autoincrement (serial en SQL)
   id!: number;
 
+  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  google_id?: string;
+
   @Column({ type: 'varchar', length: 255, nullable: false })
   name!: string;
 

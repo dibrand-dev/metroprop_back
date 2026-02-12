@@ -5,6 +5,7 @@ import { OrganizationsService } from "../organizations/organizations.service";
 import { UsersService } from "../users/users.service";
 import { SimpleRegistrationDto } from "./dto/simple-registration.dto";
 import { ProfessionalRegistrationDto } from "./dto/professional-registration.dto";
+import { GoogleOAuthDto } from "./dto/google-oauth.dto";
 
 @Injectable()
 export class RegistrationService {
@@ -14,6 +15,33 @@ export class RegistrationService {
     private readonly branchesService: BranchesService,
     private readonly dataSource: DataSource, // para transacciones
   ) {}
+
+  async registerOrLoginWithGoogle(dto: GoogleOAuthDto) {
+    // Buscar usuario por google_id
+    let user = await this.usersService['usersRepository'].findOne({ where: { google_id: dto.google_id } });
+    if (!user && dto.email) {
+      // Si no existe, buscar por email (por si ya existe con email pero no tiene google_id)
+      user = await this.usersService['usersRepository'].findOne({ where: { email: dto.email } });
+      if (user) {
+        user.google_id = dto.google_id;
+        await this.usersService['usersRepository'].save(user);
+      }
+    }
+    if (!user) {
+      // Crear usuario nuevo
+      user = this.usersService['usersRepository'].create({
+        google_id: dto.google_id,
+        email: dto.email,
+        name: dto.name || dto.email,
+        avatar: dto.avatar,
+        password: Math.random().toString(36).slice(-8), // password random, no se usa
+        is_verified: true,
+      });
+      user = await this.usersService['usersRepository'].save(user);
+    }
+    // Aquí puedes generar y devolver un token si usas JWT, o solo el usuario
+    return { user };
+  }
 
   async registerProfessional(dto: ProfessionalRegistrationDto) {
     return this.dataSource.transaction(async manager => {
