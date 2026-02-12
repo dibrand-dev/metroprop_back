@@ -2,6 +2,7 @@ import { Controller, Post, Body } from '@nestjs/common';
 import { RegistrationService } from './registration.service';
 import { SimpleRegistrationDto } from './dto/simple-registration.dto';
 import { ProfessionalRegistrationDto } from './dto/professional-registration.dto';
+import { GoogleOAuthDto } from './dto/google-oauth.dto';
 
 @Controller('registration')
 export class RegistrationController {
@@ -15,5 +16,10 @@ export class RegistrationController {
   @Post('professional')
   async registerProfessional(@Body() dto: ProfessionalRegistrationDto) {
     return this.registrationService.registerProfessional(dto);
+  }
+
+  @Post('google')
+  async registerOrLoginWithGoogle(@Body() dto: GoogleOAuthDto) {
+    return this.registrationService.registerOrLoginWithGoogle(dto);
   }
 }
