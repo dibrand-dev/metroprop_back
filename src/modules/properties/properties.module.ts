@@ -8,6 +8,8 @@ import { PropertyAttribute } from './entities/property-attribute.entity';
 import { PropertyOperation } from './entities/property-operation.entity';
 import { PropertyTag } from './entities/property-tag.entity';
 
+import { S3Service } from '../../common/s3.service';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -19,7 +21,7 @@ import { PropertyTag } from './entities/property-tag.entity';
     ]),
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService],
+  providers: [PropertiesService, S3Service],
   exports: [PropertiesService],
 })
 export class PropertiesModule {}

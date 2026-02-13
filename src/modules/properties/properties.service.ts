@@ -13,6 +13,8 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreatePropertyWithRelationsDto } from './dto/create-property-with-relations.dto';
 
+import { S3Service } from '../../common/s3.service';
+
 @Injectable()
 export class PropertiesService {
   constructor(
@@ -24,6 +26,7 @@ export class PropertiesService {
     private propertyTagRepository: Repository<PropertyTag>,
     @InjectRepository(PropertyOperation)
     private propertyOperationRepository: Repository<PropertyOperation>,
+    private readonly s3Service: S3Service,
   ) {}
 
   /**
@@ -264,6 +267,16 @@ export class PropertiesService {
   }
 
   /**
+   * Sube una imagen de propiedad a S3 usando el key relativo (ej: 147/imagen.jpg)
+   * El path final será properties/147/imagen.jpg
+   */
+  async uploadImageToS3(file: Express.Multer.File, key: string): Promise<string> {
+    const { PROPERTY_IMAGE_FOLDER } = await import('../../common/constants');
+    const filenamePath = `${PROPERTY_IMAGE_FOLDER}/${key}`;
+    return this.s3Service.uploadImage(file.buffer, filenamePath, file.mimetype);
+  }
+
+  /**
    * Crear propiedad con imágenes, tags y operaciones relacionadas
    */
   async createWithRelations(
@@ -294,8 +307,14 @@ export class PropertiesService {
     // 2. Crear las imágenes asociadas
     if (images && Array.isArray(images) && images.length > 0) {
       for (const imageData of images) {
+        let imageUrl = imageData.url;
+        // Si imageData tiene buffer y mimetype, subir a S3
+        if ((imageData as any).buffer && (imageData as any).mimetype) {
+          imageUrl = await this.s3Service.uploadImage((imageData as any).buffer, `properties/${Date.now()}_${(imageData as any).originalname || 'image'}`, (imageData as any).mimetype);
+        }
         const propertyImage = this.propertyImageRepository.create({
           ...imageData,
+          url: imageUrl,
           property: savedProperty,
         });
         await this.propertyImageRepository.save(propertyImage);

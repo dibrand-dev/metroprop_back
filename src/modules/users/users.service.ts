@@ -1,3 +1,5 @@
+import { S3Service } from '../../common/s3.service';
+import { USER_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, ConflictException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Int32, Repository } from 'typeorm';
@@ -13,6 +15,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
+    private readonly s3Service: S3Service,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -105,5 +108,14 @@ export class UsersService {
 
   async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
     return bcrypt.compare(password, hashedPassword);
+  }
+
+  /**
+   * Sube un avatar a S3 usando el key relativo (ej: 147/avatar.jpg)
+   * El path final será users/147/avatar.jpg
+   */
+  async uploadAvatarToS3(file: Express.Multer.File, key: string): Promise<string> {
+    const filenamePath = `${USER_IMAGE_FOLDER}/${key}`;
+    return this.s3Service.uploadImage(file.buffer, filenamePath, file.mimetype);
   }
 }

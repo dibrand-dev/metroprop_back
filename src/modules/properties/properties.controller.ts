@@ -16,8 +16,24 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { CreatePropertyWithRelationsDto } from './dto/create-property-with-relations.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+
 @Controller('properties')
 export class PropertiesController {
+    /**
+     * POST /properties/upload-image
+     * Sube una imagen a S3 y retorna la URL pública
+     */
+    @Post('upload-image')
+    @UseInterceptors(FileInterceptor('file'))
+    async uploadImage(@UploadedFile() file: Express.Multer.File) {
+      if (!file) {
+        return { error: 'Archivo no recibido' };
+      }
+      const url = await this.propertiesService.uploadImageToS3(file);
+      return { url };
+    }
   constructor(private readonly propertiesService: PropertiesService) {}
 
   /**

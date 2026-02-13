@@ -1,3 +1,15 @@
+## Configuración AWS S3 para imágenes
+
+Agrega las siguientes variables de entorno en tu archivo `.env`:
+
+```
+AWS_ACCESS_KEY_ID=tu_access_key
+AWS_SECRET_ACCESS_KEY=tu_secret_key
+AWS_REGION=us-east-1
+AWS_S3_BUCKET_NAME=nombre-del-bucket
+```
+
+Estas variables son necesarias para subir imágenes a AWS S3 desde el endpoint `/properties/upload-image`.
 # MetroProp Backend - NestJS PostgreSQL API
 
 Production-ready backend for Tokko CRM. Create properties with images, tags, and operations in a single request.
