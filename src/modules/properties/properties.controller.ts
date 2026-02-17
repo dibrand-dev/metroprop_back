@@ -22,17 +22,38 @@ import { FileInterceptor } from '@nestjs/platform-express';
 @Controller('properties')
 export class PropertiesController {
     /**
-     * POST /properties/upload-image
+     * POST /properties/:propertyId/upload-image
      * Sube una imagen a S3 y retorna la URL pública
      */
-    @Post('upload-image')
+    @Post(':propertyId/upload-image')
     @UseInterceptors(FileInterceptor('file'))
-    async uploadImage(@UploadedFile() file: Express.Multer.File) {
+    async uploadImage(
+      @Param('propertyId', ParseIntPipe) propertyId: number,
+      @UploadedFile() file: Express.Multer.File
+    ) {
       if (!file) {
         return { error: 'Archivo no recibido' };
       }
-      const url = await this.propertiesService.uploadImageToS3(file);
-      return { url };
+
+      // Chequear existencia de la propiedad antes de subir
+      const property = await this.propertiesService.findOne(propertyId);
+      if (!property) {
+        return {
+          statusCode: 404,
+          message: `Property with id ${propertyId} not found. No upload performed.`
+        };
+      }
+
+      // Asumiendo que el imageId es igual al propertyId, ajustar si es necesario
+      const imageId = propertyId;
+      const url = await this.propertiesService.uploadImageToS3(file, imageId, propertyId);
+      return {
+        url,
+        propertyId,
+        fileName: file.originalname,
+        fileSize: file.size,
+        status: url ? null : 'Ver campo status en la entidad PropertyImage para detalles de error',
+      };
     }
   constructor(private readonly propertiesService: PropertiesService) {}
 

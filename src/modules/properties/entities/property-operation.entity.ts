@@ -1,14 +1,12 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index } from 'typeorm';
 import { Property } from './property.entity';
 
-@Entity('property_operations')
-@Index('idx_property_operations_property_id', ['property_id'])
-export class PropertyOperation {
-  @PrimaryColumn('bigint')
-  id!: number;
 
-  @Column('bigint')
-  property_id!: number;
+@Entity('property_operations')
+@Index('idx_property_operations_property_id', ['property'])
+export class PropertyOperation {
+  @PrimaryGeneratedColumn('increment')
+  id!: number;
 
   @Column({ type: 'varchar', length: 50 })
   operation_type!: string;
@@ -24,6 +22,7 @@ export class PropertyOperation {
 
   @ManyToOne(() => Property, (property) => property.operations, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   property!: Property;
 }

@@ -1,3 +1,5 @@
+import { UploadedFile, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';  
 import {
   Controller,
   Get,
@@ -50,5 +52,39 @@ export class PartnersController {
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.partnersService.remove(id);
+  }
+
+  @Post(':id/image')
+  @UseInterceptors(FileInterceptor('image'))
+  async uploadImage(
+    @Param('id', ParseIntPipe) id: number,
+    @UploadedFile() file: Express.Multer.File
+  ) {
+    if (!file) {
+      throw new Error('No file uploaded');
+    }
+
+    // Chequear existencia del partner antes de subir
+    const partner = await this.partnersService.findById(id);
+    if (!partner) {
+      return {
+        statusCode: 404,
+        message: `Partner with id ${id} not found. No upload performed.`
+      };
+    }
+
+    // Upload a S3
+    const imageUrl = await this.partnersService.uploadImageToS3(file, id);
+
+    // Actualizar el campo image en la DB solo si subió bien
+    if (imageUrl) {
+      await this.partnersService.update(id, { image: imageUrl } as any);
+    }
+
+    return {
+      message: imageUrl ? 'Image uploaded successfully' : 'Image upload failed',
+      imageUrl: imageUrl,
+      partnerId: id,
+    };
   }
 }

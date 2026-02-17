@@ -17,7 +17,7 @@ import { PropertyTag } from './property-tag.entity';
 @Index('idx_properties_property_type', ['property_type'])
 @Index('idx_properties_location_id', ['location_id'])
 @Index('idx_properties_reference_code', ['reference_code'])
-@Index('idx_properties_branch', ['branch'])
+// @Index('idx_properties_branch', ['branch'])
 export class Property {
   @PrimaryGeneratedColumn('increment')
   id?: number;
@@ -151,10 +151,27 @@ export class Property {
 
   // ========== Información de Contacto y Responsables ==========
   @Column({ type: 'varchar', length: 255, nullable: true })
+  owner_name?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  owner_phone?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  owner_email?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  postal_code?: string;
+  @Column({ type: 'varchar', length: 255, nullable: true })
   producer_user?: string;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  branch?: string;
+  @Column({ type: 'integer', nullable: true })
+  branch_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  user_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  organization_id?: number;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   key_contact?: string;
@@ -170,6 +187,12 @@ export class Property {
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   maintenance_user?: string;
+
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  construction_year?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  last_renovation?: string;
 
   // ========== Información de Desarrollo ==========
   @Column({ type: 'varchar', length: 255, nullable: true })

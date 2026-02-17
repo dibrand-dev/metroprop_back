@@ -1,18 +1,15 @@
-import { Entity, PrimaryColumn, Column, ManyToOne, Index } from 'typeorm';
+import { Entity, PrimaryColumn, Column, ManyToOne, Index, PrimaryGeneratedColumn } from 'typeorm';
 import { Property } from './property.entity';
 
 @Entity('property_tags')
-@Index('idx_property_tags_property_id', ['property_id'])
+@Index('idx_property_tags_property_id', ['property'])
 @Index('idx_property_tags_tag_id', ['tag_id'])
 export class PropertyTag {
-  @PrimaryColumn('bigint')
+  @PrimaryGeneratedColumn('increment')
   id!: number;
 
   @Column('integer')
   tag_id!: number;
-
-  @Column('bigint')
-  property_id!: number;
 
   @Column({ type: 'varchar', length: 255 })
   tag_name!: string;
@@ -22,6 +19,7 @@ export class PropertyTag {
 
   @ManyToOne(() => Property, (property) => property.tags, {
     onDelete: 'CASCADE',
+    nullable: false,
   })
   property!: Property;
 }

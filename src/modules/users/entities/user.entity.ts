@@ -43,6 +43,9 @@ export class User {
   @Column({ type: 'varchar', length: 255, nullable: true })
   avatar?: string;
 
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  avatar_status?: string | null;
+
   @Column({ type: 'boolean', default: false })
   is_verified!: boolean;
 

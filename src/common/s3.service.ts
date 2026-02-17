@@ -27,6 +27,6 @@ export class S3Service {
       ACL: 'public-read',
     };
     await this.s3.putObject(params).promise();
-    return `https://${bucket}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+    return key;
   }
 }

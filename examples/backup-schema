@@ -9,16 +9,11 @@ create table locations
     full_location  varchar,
     zip_code       varchar,
     short_location varchar,
-    parent_id      integer
-        constraint fk_locations_parent_id
-            references locations,
+    parent_id      integer,
     type           varchar,
     migrated       boolean default false,
     status         varchar
 );
-
-alter table locations
-    owner to postgres;
 
 create table roles
 (
@@ -35,8 +30,6 @@ create table roles
     deleted_at  timestamp
 );
 
-alter table roles
-    owner to postgres;
 
 create index idx_roles_deleted
     on roles (deleted);
@@ -60,9 +53,6 @@ create table permissions
     deleted     boolean   default false not null,
     deleted_at  timestamp
 );
-
-alter table permissions
-    owner to postgres;
 
 create index idx_permissions_deleted
     on permissions (deleted);
@@ -94,17 +84,13 @@ create table organizations
     created_at        timestamp default now() not null,
     updated_at        timestamp default now() not null,
     deleted           boolean   default false not null,
-    deleted_at        timestamp
+    deleted_at        timestamp,
+    logo_status       varchar
 );
 
-alter table organizations
-    owner to postgres;
-
-create index idx_organizations_cuit
-    on organizations (cuit);
-
-create index idx_organizations_deleted
-    on organizations (deleted);
+create unique index idx_organizations_cuit_unique
+    on organizations (cuit)
+    where (deleted = false);
 
 create table branches
 (
@@ -123,23 +109,18 @@ create table branches
     geo_lat           numeric(10, 8),
     geo_long          numeric(11, 8),
     organization_id   integer
-        constraint fk_branches_organization_id
+        constraint "FK_9ecf73d5ca57108dc33c87f7d88"
             references organizations
             on delete cascade,
     created_at        timestamp default now() not null,
     updated_at        timestamp default now() not null,
     deleted           boolean   default false not null,
-    deleted_at        timestamp
+    deleted_at        timestamp,
+    logo_stats        varchar
 );
 
-alter table branches
-    owner to postgres;
-
-create index idx_branches_organization_id
+create index idx_branches_organization
     on branches (organization_id);
-
-create index idx_branches_deleted
-    on branches (deleted);
 
 create table users
 (
@@ -147,15 +128,14 @@ create table users
         constraint pk_users
             primary key,
     name            varchar(255)            not null,
-    email           varchar(255)            not null
-        constraint uk_users_email
-            unique,
+    email           varchar(255)            not null,
     password        varchar(255)            not null,
     role_id         integer
-        constraint fk_users_role_id
-            references roles,
+        constraint "FK_a2cecd1a3531c0b041e29ba46e1"
+            references roles
+            on delete restrict,
     organization_id integer
-        constraint fk_users_organization_id
+        constraint "FK_21a659804ed7bf61eb91688dea7"
             references organizations
             on delete cascade,
     phone           varchar(50),
@@ -165,47 +145,43 @@ create table users
     created_at      timestamp default now() not null,
     updated_at      timestamp default now() not null,
     deleted         boolean   default false not null,
-    deleted_at      timestamp
+    deleted_at      timestamp,
+    google_id       varchar(255)
+        constraint "UQ_0bd5012aeb82628e07f6a1be53b"
+            unique,
+    avatar_status   integer
 );
 
-alter table users
-    owner to postgres;
-
 alter table organizations
-    add constraint fk_organizations_admin_user
+    add constraint "FK_84687878ce7a62025e1774b31ad"
         foreign key (admin_user) references users
             on delete set null;
 
-create index idx_users_role_id
-    on users (role_id);
-
-create index idx_users_organization_id
-    on users (organization_id);
-
-create index idx_users_deleted
-    on users (deleted);
+create unique index uk_users_email
+    on users (email)
+    where (email IS NOT NULL);
 
 create table users_branches
 (
-    user_id   integer not null
-        constraint fk_users_branches_user_id
+    user_id   integer                                                 not null
+        constraint "FK_a2298d713539687b12f2c169ba4"
             references users
-            on delete cascade,
-    branch_id integer not null
-        constraint fk_users_branches_branch_id
-            references branches
-            on delete cascade,
-    constraint pk_users_branches
-        primary key (user_id, branch_id)
+            on update cascade on delete cascade,
+    branch_id integer                                                 not null
+        constraint "FK_6e191d2fe767c69e4d76e46a30e"
+            references branches,
+    id        integer default nextval('users_branches_seq'::regclass) not null
+        constraint users_branches_pk
+            primary key,
+    constraint "PK_9da378646b233e4b5001d24cba7"
+        primary key ()
 );
 
-alter table users_branches
-    owner to postgres;
 
-create index idx_users_branches_user_id
+create index "IDX_a2298d713539687b12f2c169ba"
     on users_branches (user_id);
 
-create index idx_users_branches_branch_id
+create index "IDX_6e191d2fe767c69e4d76e46a30"
     on users_branches (branch_id);
 
 create table users_permissions
@@ -213,17 +189,19 @@ create table users_permissions
     user_id       integer not null
         constraint fk_users_permissions_user_id
             references users
-            on delete cascade,
+            on delete cascade
+        constraint "FK_4de7d0b175f702be3be55270023"
+            references users
+            on update cascade on delete cascade,
     permission_id integer not null
         constraint fk_users_permissions_permission_id
             references permissions
-            on delete cascade,
+            on delete cascade
+        constraint "FK_b09b9a210c60f41ec7b453758e9"
+            references permissions,
     constraint pk_users_permissions
         primary key (user_id, permission_id)
 );
-
-alter table users_permissions
-    owner to postgres;
 
 create index idx_users_permissions_user_id
     on users_permissions (user_id);
@@ -246,9 +224,6 @@ create table tags
     created_at  timestamp default now() not null,
     updated_at  timestamp default now() not null
 );
-
-alter table tags
-    owner to postgres;
 
 create index idx_tags_type
     on tags (type);
@@ -306,7 +281,7 @@ create table properties
     currency                 varchar(3)              not null,
     period                   varchar(50),
     producer_user            varchar(255),
-    branch                   varchar(255),
+    branch_id                integer,
     key_contact              varchar(255),
     key_agent_user           varchar(255),
     key_location             varchar(100),
@@ -318,11 +293,17 @@ create table properties
     created_at               timestamp default now() not null,
     updated_at               timestamp default now() not null,
     deleted                  boolean   default false not null,
-    deleted_at               timestamp
+    deleted_at               timestamp,
+    owner_name               varchar(255),
+    owner_phone              varchar(50),
+    owner_email              varchar(100),
+    postal_code              varchar(20),
+    construction_year        varchar(10),
+    last_renovation          varchar(20),
+    organization_id          integer,
+    user_id                  integer
 );
 
-alter table properties
-    owner to postgres;
 
 create index idx_properties_status
     on properties (status);
@@ -337,69 +318,85 @@ create index idx_properties_reference_code
     on properties (reference_code);
 
 create index idx_properties_branch
-    on properties (branch);
-
-create index idx_properties_deleted
-    on properties (deleted);
+    on properties (branch_id);
 
 create table property_operations
 (
-    id             serial
+    id             integer default nextval('property_operations_id_seq'::regclass) not null
         constraint pk_property_operations
             primary key,
-    property_id    integer        not null
+    property_id    integer                                                         not null
         constraint fk_property_operations_property_id
             references properties
             on delete cascade,
-    operation_type varchar(50)    not null,
-    currency       varchar(3)     not null,
-    price          numeric(15, 2) not null,
-    period         varchar(50)
+    operation_type varchar(50)                                                     not null,
+    currency       varchar(3)                                                      not null,
+    price          numeric(15, 2)                                                  not null,
+    period         varchar(50),
+    constraint "PK_10ff0aed71fe685ff33bc910ccf"
+        primary key (),
+    constraint "PK_10ff0aed71fe685ff33bc910ccf"
+        primary key (),
+    constraint "FK_35ede2af03b824b35423f66445b"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_35ede2af03b824b35423f66445b"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_35ede2af03b824b35423f66445b"
+        foreign key () references properties
+            on delete cascade
 );
-
-alter table property_operations
-    owner to postgres;
 
 create index idx_property_operations_property_id
     on property_operations (property_id);
 
 create table property_images
 (
-    id             serial
-        constraint pk_property_images
-            primary key,
-    property_id    integer               not null
-        constraint fk_property_images_property_id
+    url            varchar(500)           not null,
+    is_blueprint   boolean  default false not null,
+    description    text,
+    order_position integer,
+    "propertyId"   integer                not null
+        constraint "FK_7a07b6b7f9418bf1d5160106694"
             references properties
             on delete cascade,
-    url            varchar(500)          not null,
-    is_blueprint   boolean default false not null,
-    description    text,
-    order_position integer
+    status         varchar(1000),
+    id             serial
+        constraint "PK_317c3774ee70c26d70c4f80e200"
+            primary key,
+    try            smallint default 0
 );
 
-alter table property_images
-    owner to postgres;
-
 create index idx_property_images_property_id
-    on property_images (property_id);
+    on property_images ("propertyId");
 
 create table property_tags
 (
-    id          serial
+    id          integer default nextval('property_tags_id_seq'::regclass) not null
         constraint pk_property_tags
             primary key,
-    property_id integer      not null
+    property_id integer                                                   not null
         constraint fk_property_tags_property_id
             references properties
             on delete cascade,
-    tag_id      integer      not null,
-    tag_name    varchar(255) not null,
-    tag_type    integer      not null
+    tag_id      integer                                                   not null,
+    tag_name    varchar(255)                                              not null,
+    tag_type    integer                                                   not null,
+    constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
+        primary key (),
+    constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
+        primary key (),
+    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+        foreign key () references properties
+            on delete cascade
 );
-
-alter table property_tags
-    owner to postgres;
 
 create index idx_property_tags_property_id
     on property_tags (property_id);
@@ -409,19 +406,29 @@ create index idx_property_tags_tag_id
 
 create table property_attributes
 (
-    id          serial
+    id          integer default nextval('property_attributes_id_seq'::regclass) not null
         constraint pk_property_attributes
             primary key,
-    property_id integer      not null
+    property_id integer                                                         not null
         constraint fk_property_attributes_property_id
             references properties
             on delete cascade,
-    code        varchar(100) not null,
-    value       varchar(255) not null
+    code        varchar(100)                                                    not null,
+    value       varchar(255)                                                    not null,
+    constraint "PK_11a59ed2f7f6d6aa01475860dda"
+        primary key (),
+    constraint "PK_11a59ed2f7f6d6aa01475860dda"
+        primary key (),
+    constraint "FK_043c5d830803966b4eea0ee21cf"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_043c5d830803966b4eea0ee21cf"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_043c5d830803966b4eea0ee21cf"
+        foreign key () references properties
+            on delete cascade
 );
-
-alter table property_attributes
-    owner to postgres;
 
 create index idx_property_attributes_property_id
     on property_attributes (property_id);
@@ -443,9 +450,6 @@ create table partners
     updated_at  timestamp default now() not null
 );
 
-alter table partners
-    owner to postgres;
-
 create index idx_partners_app_key
     on partners (app_key);
 
@@ -457,4 +461,3 @@ create index idx_partners_deleted
 
 create index idx_partners_created_at
     on partners (created_at);
-

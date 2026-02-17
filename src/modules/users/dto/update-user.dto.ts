@@ -12,4 +12,8 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsOptional()
   @IsString()
   google_id?: string;
+
+  @IsOptional()
+  @IsString()
+  avatar?: string;
 }

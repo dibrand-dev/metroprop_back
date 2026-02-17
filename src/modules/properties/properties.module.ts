@@ -1,3 +1,4 @@
+import { ImageUploadModule } from '../../common/image-upload/image-upload.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PropertiesService } from './properties.service';
@@ -19,6 +20,7 @@ import { S3Service } from '../../common/s3.service';
       PropertyOperation,
       PropertyTag,
     ]),
+    ImageUploadModule,
   ],
   controllers: [PropertiesController],
   providers: [PropertiesService, S3Service],
