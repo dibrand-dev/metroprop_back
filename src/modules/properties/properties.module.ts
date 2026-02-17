@@ -1,3 +1,4 @@
+import { ImageUploadModule } from '../../common/image-upload/image-upload.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PropertiesService } from './properties.service';
@@ -8,6 +9,8 @@ import { PropertyAttribute } from './entities/property-attribute.entity';
 import { PropertyOperation } from './entities/property-operation.entity';
 import { PropertyTag } from './entities/property-tag.entity';
 
+import { S3Service } from '../../common/s3.service';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -17,9 +20,10 @@ import { PropertyTag } from './entities/property-tag.entity';
       PropertyOperation,
       PropertyTag,
     ]),
+    ImageUploadModule,
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService],
+  providers: [PropertiesService, S3Service],
   exports: [PropertiesService],
 })
 export class PropertiesModule {}

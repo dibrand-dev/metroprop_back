@@ -13,6 +13,11 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreatePropertyWithRelationsDto } from './dto/create-property-with-relations.dto';
 
+import { S3Service } from '../../common/s3.service';
+import { ImageUploadService } from '../../common/image-upload/image-upload.service';
+import { ImageUploadConfig } from '../../common/image-upload/dto/image-upload-config.dto';
+import axios from 'axios';
+
 @Injectable()
 export class PropertiesService {
   constructor(
@@ -24,6 +29,8 @@ export class PropertiesService {
     private propertyTagRepository: Repository<PropertyTag>,
     @InjectRepository(PropertyOperation)
     private propertyOperationRepository: Repository<PropertyOperation>,
+    private readonly s3Service: S3Service,
+    private readonly imageUploadService: ImageUploadService,
   ) {}
 
   /**
@@ -264,15 +271,105 @@ export class PropertiesService {
   }
 
   /**
+   * Sube una imagen de propiedad a S3 usando el key relativo (ej: 147/imagen.jpg)
+   * El path final será properties/147/imagen.jpg
+   */
+  async uploadImageToS3(file: Express.Multer.File, imageId: number, propertyId: number): Promise<string | null> {
+    const { PROPERTY_IMAGE_FOLDER } = await import('../../common/constants');
+    const config: ImageUploadConfig<any> = {
+      repository: this.propertyImageRepository,
+      entityId: imageId,
+      imageFieldName: 'url',
+      statusFieldName: 'status',
+      s3Folder: PROPERTY_IMAGE_FOLDER,
+      primaryKeyField: 'id',
+    };
+    const result = await this.imageUploadService.uploadImage(file, config);
+    return result.url;
+  }
+
+  /**
+   * Procesa y sube imágenes a S3 en segundo plano.
+   * Descarga la imagen de la URL original, la sube a S3 y actualiza la DB.
+   */
+  private async processAndUploadImages(
+    imagesToProcess: {
+      imageId: number;
+      originalUrl: string;
+      propertyId: number;
+    }[],
+  ) {
+    for (const image of imagesToProcess) {
+      try {
+        // 1. Descargar la imagen de la URL original
+        const response = await axios.get(image.originalUrl, {
+          responseType: 'arraybuffer',
+        });
+        const imageBuffer = Buffer.from(response.data, 'binary');
+        const mimeType = response.headers['content-type'] || 'image/jpeg';
+        const fileExtension = mimeType.split('/')[1] || 'jpg';
+
+        // 2. Subir a S3
+        const fileObj = {
+          buffer: imageBuffer,
+          mimetype: mimeType,
+          originalname: `${image.imageId}.${fileExtension}`,
+        } as Express.Multer.File;
+        const s3Url = await this.uploadImageToS3(
+          fileObj,
+          image.imageId,
+          image.propertyId,
+        );
+
+        if (s3Url) {
+          // 3. Actualizar la URL en la base de datos (éxito: try = 0, status = null)
+          await this.propertyImageRepository.update(image.imageId, { url: s3Url, status: null, try: 0 });
+          console.log(`Successfully uploaded and updated image: ${image.imageId}`);
+        } else {
+          // Si falla, incrementar try y poner error
+          const errorMsg = `S3 upload failed for: ${image.originalUrl}`;
+          await this.propertyImageRepository.increment({ id: image.imageId }, 'try', 1);
+          await this.propertyImageRepository.update(image.imageId, { status: errorMsg });
+          console.error(`Failed to upload image ID ${image.imageId} from URL ${image.originalUrl}`);          
+        }
+      } catch (error ) {
+        const err: any = error;
+        let errorMsg = 'Unknown error';
+        
+        // Detectar tipos específicos de errores y crear mensajes concisos
+        if (err?.code === 'ENOTFOUND') {
+          errorMsg = `URL not found: ${image.originalUrl}`;
+        } else if (err?.response?.status) {
+          errorMsg = `HTTP ${err.response.status}: ${image.originalUrl}`;
+        } else if (err?.message) {
+          errorMsg = `Error: ${err.message.substring(0, 100)}... URL: ${image.originalUrl}`;
+        } else {
+          errorMsg = `Processing failed for: ${image.originalUrl}`;
+        }
+        
+        // Asegurar que nunca supere 1000 caracteres
+        errorMsg = errorMsg.substring(0, 1000);
+        
+        // Incrementar try en caso de error
+        await this.propertyImageRepository.increment({ id: image.imageId }, 'try', 1);
+        await this.propertyImageRepository.update(image.imageId, { status: errorMsg });
+        console.error(
+          `Failed to process image ID ${image.imageId} from URL ${image.originalUrl}:`,
+          err?.message || error,
+        );
+      }
+    }
+  }
+
+  /**
    * Crear propiedad con imágenes, tags y operaciones relacionadas
    */
   async createWithRelations(
     dto: CreatePropertyWithRelationsDto,
   ): Promise<Property> {
-    // 1. Crear la propiedad base usando el método create existente
+    // 1. Crear la propiedad base
     const { images, tags, operations, ...propertyData } = dto;
 
-    // Verificar que no exista una propiedad con el mismo reference_code
     const existingProperty = await this.propertyRepository.findOne({
       where: { reference_code: propertyData.reference_code },
     });
@@ -283,7 +380,6 @@ export class PropertiesService {
       );
     }
 
-    // Crear la propiedad
     const newProperty = this.propertyRepository.create({
       ...propertyData,
       deleted: false,
@@ -291,15 +387,32 @@ export class PropertiesService {
 
     const savedProperty = await this.propertyRepository.save(newProperty);
 
-    // 2. Crear las imágenes asociadas
-    if (images && Array.isArray(images) && images.length > 0) {
+    // 2. Guardar imágenes con URL original y preparar para subida en segundo plano
+    if (images && images.length > 0) {
+      const imagesToProcess: {
+        imageId: number;
+        originalUrl: string;
+        propertyId: number;
+      }[] = [];
       for (const imageData of images) {
         const propertyImage = this.propertyImageRepository.create({
-          ...imageData,
+          ...imageData, // url, description, is_blueprint, etc.
           property: savedProperty,
         });
-        await this.propertyImageRepository.save(propertyImage);
+        const savedImage = await this.propertyImageRepository.save(
+          propertyImage,
+        );
+
+        // Añadir a la lista de imágenes para procesar en segundo plano
+        imagesToProcess.push({
+          imageId: savedImage.id,
+          originalUrl: savedImage.url,
+          propertyId: savedProperty.id!,
+        });
       }
+
+      // Disparar el proceso de subida en segundo plano SIN ESPERARLO (fire-and-forget)
+      this.processAndUploadImages(imagesToProcess);
     }
 
     // 3. Crear los tags asociados

@@ -3,6 +3,9 @@ import {
   ConflictException,
   NotFoundException,
 } from '@nestjs/common';
+import { PARTNER_IMAGE_FOLDER } from '../../common/constants';
+import { ImageUploadService } from '../../common/image-upload/image-upload.service';
+import { ImageUploadConfig } from '../../common/image-upload/dto/image-upload-config.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Partner } from './entities/partner.entity';
@@ -14,7 +17,23 @@ export class PartnersService {
   constructor(
     @InjectRepository(Partner)
     private partnersRepository: Repository<Partner>,
+    private readonly imageUploadService: ImageUploadService,
   ) {}
+  /**
+   * Sube una imagen de partner a S3 usando el servicio centralizado
+   */
+  async uploadImageToS3(file: Express.Multer.File, partnerId: number): Promise<string | null> {
+    const config: ImageUploadConfig<any> = {
+      repository: this.partnersRepository,
+      entityId: partnerId,
+      imageFieldName: 'image', // Ajusta el campo según tu entidad
+      statusFieldName: 'image_status', // Ajusta el campo según tu entidad
+      s3Folder: PARTNER_IMAGE_FOLDER,
+      primaryKeyField: 'id',
+    };
+    const result = await this.imageUploadService.uploadImage(file, config);
+    return result.url;
+  }
 
   async create(createPartnerDto: CreatePartnerDto): Promise<Partner> {
     const existingPartner = await this.partnersRepository.findOne({

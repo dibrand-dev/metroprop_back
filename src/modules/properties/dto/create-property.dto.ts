@@ -225,8 +225,16 @@ export class CreatePropertyDto {
   producer_user?: string;
 
   @IsOptional()
-  @IsString()
-  branch?: string;
+  @IsInt()
+  branch_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  user_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  organization_id?: number;
 
   @IsOptional()
   @IsString()
@@ -264,4 +272,34 @@ export class CreatePropertyDto {
   @IsOptional()
   @IsString()
   transaction_requirements?: string;
+
+  @IsString()
+  @MaxLength(255)
+  owner_name?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  owner_phone?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  owner_email?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  postal_code?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(10)
+  construction_year?: string;
+  
+  @IsOptional()
+  @IsString()
+  @MaxLength(20)
+  last_renovation?: string;
+  
 }

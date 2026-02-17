@@ -1,3 +1,7 @@
+import { S3Service } from '../../common/s3.service';
+import { ORGANIZATION_IMAGE_FOLDER } from '../../common/constants';
+import { ImageUploadService } from '../../common/image-upload/image-upload.service';
+import { ImageUploadConfig } from '../../common/image-upload/dto/image-upload-config.dto';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -7,9 +11,12 @@ import { UpdateOrganizationDto } from './dto/update-organization.dto';
 
 @Injectable()
 export class OrganizationsService {
+
   constructor(
     @InjectRepository(Organization)
     private repo: Repository<Organization>,
+    private readonly s3Service: S3Service,
+    private readonly imageUploadService: ImageUploadService,
   ) {}
 
   findAll() {
@@ -46,5 +53,22 @@ export class OrganizationsService {
     org.deleted = true; // borrado lógico
     org.deleted_at = new Date();
     return this.repo.save(org);
+  }
+
+  /**
+   * Sube un logo de organización a S3 usando el key relativo (ej: 147/logo.jpg)
+   * El path final será organizations/147/logo.jpg
+   */
+  async uploadLogoToS3(file: Express.Multer.File, orgId: number): Promise<string | null> {
+    const config: ImageUploadConfig<any> = {
+      repository: this.repo,
+      entityId: orgId,
+      imageFieldName: 'company_logo',
+      statusFieldName: 'logo_status',
+      s3Folder: ORGANIZATION_IMAGE_FOLDER,
+      primaryKeyField: 'id',
+    };
+    const result = await this.imageUploadService.uploadImage(file, config);
+    return result.url;
   }
 }
