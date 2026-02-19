@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as nodemailer from 'nodemailer';
+import * as sendGrid from '@sendgrid/mail';
 
 export interface EmailOptions {
   to: string;
@@ -11,38 +11,58 @@ export interface EmailOptions {
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
-  private transporter: nodemailer.Transporter;
 
   constructor(private configService: ConfigService) {
-    this.transporter = nodemailer.createTransport({
-      host: this.configService.get('SMTP_HOST', 'localhost'),
-      port: this.configService.get('SMTP_PORT', 587),
-      secure: false, // true for 465, false for other ports
-      auth: {
-        user: this.configService.get('SMTP_USER'),
-        pass: this.configService.get('SMTP_PASS'),
-      },
-    });
+    const apiKey = this.configService.get('SENDGRID_API_KEY');
+    
+    if (!apiKey) {
+      throw new Error('SENDGRID_API_KEY must be provided');
+    }
+    
+    sendGrid.setApiKey(apiKey);
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
     try {
-      const info = await this.transporter.sendMail({
-        from: this.configService.get('SMTP_FROM', 'noreply@metroprop.com'),
+      const msg = {
         to: options.to,
+        from: {
+          email: this.configService.get('SENDGRID_FROM_EMAIL', 'noreply@metroprop.com'),
+          name: this.configService.get('SENDGRID_FROM_NAME', 'MetroProp')
+        },
         subject: options.subject,
         html: options.html,
-      });
+        // Optional: Add tracking settings
+        trackingSettings: {
+          clickTracking: {
+            enable: true,
+          },
+          openTracking: {
+            enable: true,
+          },
+        },
+      };
 
-      this.logger.log(`Email sent successfully to ${options.to}. MessageId: ${info.messageId}`);
+      const [response] = await sendGrid.send(msg);
+
+      this.logger.log(`Email sent successfully to ${options.to}. Status: ${response.statusCode}`);
     } catch (error) {
       const errorMessage = `Failed to send email to ${options.to}`;
-      const errorStack = error instanceof Error ? error.stack : String(error);
       
-      this.logger.error(errorMessage, errorStack);
-      
-      // Re-throw a more user-friendly error while preserving original for debugging
-      throw new Error(`Email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const sendGridError = error as any;
+        this.logger.error(errorMessage, {
+          statusCode: sendGridError.code,
+          message: sendGridError.message,
+          response: sendGridError.response?.body
+        });
+        
+        throw new Error(`SendGrid error: ${sendGridError.message} (Code: ${sendGridError.code})`);
+      } else {
+        const errorStack = error instanceof Error ? error.stack : String(error);
+        this.logger.error(errorMessage, errorStack);
+        throw new Error(`Email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
   }
 
