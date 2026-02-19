@@ -18,6 +18,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
+ENV NODE_OPTIONS=--max-old-space-size=768
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
