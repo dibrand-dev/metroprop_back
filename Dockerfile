@@ -9,6 +9,7 @@ RUN npm ci
 
 COPY . .
 
+# problemas de memoria por ser una instancia small
 ENV NODE_OPTIONS=--max-old-space-size=1024
 RUN npm run build
 
@@ -19,6 +20,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
+# problemas de memoria por ser una instancia small
 ENV NODE_OPTIONS=--max-old-space-size=1024
 RUN npm ci --only=production
 
