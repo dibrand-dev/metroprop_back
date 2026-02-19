@@ -9,6 +9,7 @@ RUN npm ci
 
 COPY . .
 
+ENV NODE_OPTIONS=--max-old-space-size=1024
 RUN npm run build
 
 # Production stage
@@ -18,7 +19,7 @@ WORKDIR /app
 
 COPY package*.json ./
 
-ENV NODE_OPTIONS=--max-old-space-size=768
+ENV NODE_OPTIONS=--max-old-space-size=1024
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
