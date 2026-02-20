@@ -149,7 +149,10 @@ create table users
     google_id       varchar(255)
         constraint "UQ_0bd5012aeb82628e07f6a1be53b"
             unique,
-    avatar_status   integer
+    avatar_status   integer,
+    email_verification_token     varchar(255),
+    password_reset_token         varchar(255),
+    password_reset_token_expires timestamp
 );
 
 alter table organizations
