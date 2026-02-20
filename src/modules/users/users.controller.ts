@@ -16,10 +16,15 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { VerifyEmailDto, RequestPasswordResetDto, ResetPasswordDto } from './dto/auth-validation.dto';
+import { EmailService } from '../../common/email/email.service';
 
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(
+    private readonly usersService: UsersService,
+    private readonly emailService: EmailService
+  ) {}
 
   @Get()
   findAll() {
@@ -86,5 +91,38 @@ export class UsersController {
       fileName: file.originalname,
       avatar_status: imageUrl ? null : 'Ver campo avatar_status en la entidad para detalles de error',
     };
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+    return this.usersService.verifyEmail(verifyEmailDto.token);
+  }
+
+  @Post('request-password-reset')
+  @HttpCode(HttpStatus.OK)
+  async requestPasswordReset(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
+    const result = await this.usersService.requestPasswordReset(requestPasswordResetDto.email);
+    
+    // Si hay usuario y token, enviar email
+    if (result.success && result.user && result.token) {
+      try {
+        await this.emailService.sendPasswordResetEmail(result.user.email, result.user.name, result.token);
+      } catch (emailError) {
+        console.error('Error sending password reset email:', emailError);
+      }
+    }
+    
+    // Siempre devolver la misma respuesta por seguridad
+    return {
+      success: true,
+      message: 'Si el email existe en nuestro sistema, recibirás un enlace de recuperación'
+    };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.OK)
+  async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+    return this.usersService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
   }
 }

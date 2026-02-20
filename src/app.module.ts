@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { RegistrationModule } from './modules/registration/registration.module';
 import { PropertiesModule } from './modules/properties/properties.module';
 import { PartnersModule } from './modules/partners/partners.module';
+import { EmailModule } from './common/email/email.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -54,6 +55,7 @@ import { PartnersModule } from './modules/partners/partners.module';
     RegistrationModule,
     PropertiesModule,
     PartnersModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [AppService],

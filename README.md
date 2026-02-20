@@ -845,7 +845,48 @@ curl http://localhost:3000/properties/stats
 
 ---
 
-## 🗄️ Database Setup
+## � SendGrid Email Configuration
+
+MetroProp uses SendGrid for reliable email delivery. Configure the following environment variables:
+
+### 1. Get SendGrid API Key
+1. Sign up at [SendGrid](https://sendgrid.com/)
+2. Go to Settings > API Keys
+3. Create a new API key with Mail Send permissions
+
+### 2. Configure Environment Variables
+Add to your `.env` file:
+
+```env
+# SendGrid Configuration
+SENDGRID_API_KEY=SG.your_sendgrid_api_key_here
+SENDGRID_FROM_EMAIL=noreply@yourapp.com
+SENDGRID_FROM_NAME=MetroProp
+```
+
+### 3. Domain Authentication (Production)
+For production, configure domain authentication in SendGrid:
+- Go to Settings > Sender Authentication
+- Set up Domain Authentication
+- Update `SENDGRID_FROM_EMAIL` to use your authenticated domain
+
+### 4. Email Templates
+The following emails are automatically sent:
+- **Welcome emails** - User registration verification
+- **Professional welcome emails** - Professional user verification  
+- **Password reset emails** - Password recovery
+
+### 5. Testing Email Sending
+```bash
+# Test email functionality via API
+curl -X POST http://localhost:3000/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","name":"Test User","password":"password123"}'
+```
+
+---
+
+## �🗄️ Database Setup
 
 ### Option A: Docker (Recommended)
 ```bash
