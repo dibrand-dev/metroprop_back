@@ -464,3 +464,4 @@ create index idx_partners_deleted
 
 create index idx_partners_created_at
     on partners (created_at);
+

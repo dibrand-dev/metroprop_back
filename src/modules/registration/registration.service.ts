@@ -3,6 +3,7 @@ import { DataSource } from "typeorm";
 import { BranchesService } from "../branches/branches.service";
 import { OrganizationsService } from "../organizations/organizations.service";
 import { UsersService } from "../users/users.service";
+import { EmailService } from "../../common/email/email.service";
 import { SimpleRegistrationDto } from "./dto/simple-registration.dto";
 import { ProfessionalRegistrationDto } from "./dto/professional-registration.dto";
 import { GoogleOAuthDto } from "./dto/google-oauth.dto";
@@ -13,6 +14,7 @@ export class RegistrationService {
     private readonly usersService: UsersService,
     private readonly organizationsService: OrganizationsService,
     private readonly branchesService: BranchesService,
+    private readonly emailService: EmailService,
     private readonly dataSource: DataSource, // para transacciones
   ) {}
 
@@ -74,7 +76,17 @@ export class RegistrationService {
           branchIds: [branch.id],
         });
 
-        await this.organizationsService.update(organization.id, { adminUserId: user.id });        
+        await this.organizationsService.update(organization.id, { adminUserId: user.id });
+        
+        // 4. Generar token y enviar email de bienvenida profesional
+        try {
+          const verificationToken = await this.usersService.setEmailVerificationToken(user.id);
+          await this.emailService.sendProfessionalWelcomeEmail(user.email, user.name, verificationToken);
+        } catch (emailError) {
+          // No fallar el registro por error de email, solo loggear
+          console.error('Error sending professional welcome email:', emailError);
+        }
+        
         return { user, organization, branch };
       } catch (error) {
         throw error;
@@ -88,6 +100,15 @@ export class RegistrationService {
       password: dto.password,
       name: dto.email,
     });
+
+    // Enviar email de bienvenida
+    try {
+      const verificationToken = await this.usersService.setEmailVerificationToken(user.id);
+      await this.emailService.sendWelcomeEmail(user.email, user.name, verificationToken);
+    } catch (emailError) {
+      // No fallar el registro por error de email, solo loggear
+      console.error('Error sending welcome email:', emailError);
+    }
 
     return { user };
   }
