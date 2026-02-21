@@ -28,7 +28,7 @@ export class UsersService {
     });
 
     if (existingUser) {
-      throw new ConflictException(`Duplicate value for field 'email'. This value already exists in the database.`);
+      throw new ConflictException(`El correo ${createUserDto.email} ya se encuentra registrado en el sistema.`);
     }
 
     const hashedPassword = await bcrypt.hash(createUserDto.password, 10);
