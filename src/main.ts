@@ -24,10 +24,33 @@ async function bootstrap() {
   // Global exception filter
   app.useGlobalFilters(new AllExceptionsFilter());
 
-  // CORS
+  // CORS Configuration
+  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
+  
   app.enableCors({
-    origin: process.env.CORS_ORIGIN || '*',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, etc.)
+      if (!origin) return callback(null, true);
+      
+      if (origin === corsOrigin) {
+        callback(null, true);
+      } else {
+        console.warn(`🚫 CORS: Blocked request from origin: ${origin}`);
+        callback(new Error(`CORS: Origin ${origin} not allowed`), false);
+      }
+    },
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Origin',
+      'X-Requested-With', 
+      'Content-Type', 
+      'Accept',
+      'Authorization',
+      'Cache-Control'
+    ],
+    exposedHeaders: ['X-Total-Count'],
     credentials: true,
+    maxAge: 86400, // 24 hours
   });
 
   const port = configService.get<number>('PORT') || 3000;
