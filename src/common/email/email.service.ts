@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import * as sendGrid from '@sendgrid/mail';
+import sgMail from '@sendgrid/mail';
 
 export interface EmailOptions {
   to: string;
@@ -19,7 +19,7 @@ export class EmailService {
       throw new Error('SENDGRID_API_KEY must be provided');
     }
     
-    sendGrid.setApiKey(apiKey);
+    sgMail.setApiKey(apiKey);
   }
 
   async sendEmail(options: EmailOptions): Promise<void> {
@@ -43,7 +43,7 @@ export class EmailService {
         },
       };
 
-      const [response] = await sendGrid.send(msg);
+      const [response] = await sgMail.send(msg);
 
       this.logger.log(`Email sent successfully to ${options.to}. Status: ${response.statusCode}`);
     } catch (error) {
