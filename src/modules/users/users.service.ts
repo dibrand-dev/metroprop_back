@@ -199,6 +199,38 @@ export class UsersService {
   }
 
   /**
+   * Validar token de reset de password sin cambiar nada
+   */
+  async validateResetToken(token: string): Promise<{ valid: boolean; user?: { email: string; name: string }; message?: string }> {
+    const user = await this.usersRepository.findOne({
+      where: { password_reset_token: token },
+      select: ['id', 'email', 'name', 'password_reset_token_expires']
+    });
+
+    if (!user) {
+      return { 
+        valid: false, 
+        message: 'El enlace de recuperación no es válido o ya fue utilizado' 
+      };
+    }
+
+    if (!user.password_reset_token_expires || new Date() > user.password_reset_token_expires) {
+      return { 
+        valid: false, 
+        message: 'El enlace de recuperación ha expirado. Solicite un nuevo enlace de recuperación' 
+      };
+    }
+
+    return {
+      valid: true,
+      user: {
+        email: user.email,
+        name: user.name
+      }
+    };
+  }
+
+  /**
    * Reset de password usando token
    */
   async resetPassword(token: string, newPassword: string): Promise<{ success: boolean; message: string }> {
