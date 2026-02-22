@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { JwtModule } from '@nestjs/jwt';
+import { ConfigService } from '@nestjs/config';
 import { RegistrationController } from './registration.controller';
 import { RegistrationService } from './registration.service';
 import { UsersService } from '../users/users.service';
@@ -20,6 +22,15 @@ import { S3Service } from '../../common/s3.service';
     UsersModule,
     ImageUploadModule,
     EmailModule,
+    JwtModule.registerAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get<string>('JWT_SECRET'),
+        signOptions: {
+          expiresIn: parseInt(configService.get<string>('JWT_EXPIRATION') || '3600'),
+        },
+      }),
+    }),
   ],
   controllers: [RegistrationController],
   providers: [
