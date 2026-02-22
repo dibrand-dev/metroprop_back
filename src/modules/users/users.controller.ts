@@ -120,6 +120,12 @@ export class UsersController {
     };
   }
 
+  @Get('validate-reset-token/:token')
+  @HttpCode(HttpStatus.OK)
+  async validateResetToken(@Param('token') token: string) {
+    return this.usersService.validateResetToken(token);
+  }
+
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
