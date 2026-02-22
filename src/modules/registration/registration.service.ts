@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException } from "@nestjs/common";
 import { DataSource } from "typeorm";
+import { JwtService } from "@nestjs/jwt";
 import { BranchesService } from "../branches/branches.service";
 import { OrganizationsService } from "../organizations/organizations.service";
 import { UsersService } from "../users/users.service";
@@ -16,21 +17,35 @@ export class RegistrationService {
     private readonly branchesService: BranchesService,
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource, // para transacciones
+    private readonly jwtService: JwtService,
   ) {}
 
   async registerOrLoginWithGoogle(dto: GoogleOAuthDto) {
-    // Buscar usuario por google_id
-    let user = await this.usersService['usersRepository'].findOne({ where: { google_id: dto.google_id } });
+    let user;
+    let isNewUser = false;
+    let wasLinked = false;
+
+    // 1. Buscar usuario por google_id
+    user = await this.usersService['usersRepository'].findOne({ where: { google_id: dto.google_id } });
+    
     if (!user && dto.email) {
-      // Si no existe, buscar por email (por si ya existe con email pero no tiene google_id)
+      // 2. Si no existe, buscar por email (usuario existente sin Google)
       user = await this.usersService['usersRepository'].findOne({ where: { email: dto.email } });
+      
       if (user) {
+        // Usuario existe, asociar google_id
         user.google_id = dto.google_id;
+        if (dto.name && !user.name) user.name = dto.name;
+        if (dto.avatar && !user.avatar) user.avatar = dto.avatar;
+        user.is_verified = true; // Auto-verificar con Google
+        wasLinked = true;
         await this.usersService['usersRepository'].save(user);
+        console.log(`🔗 Usuario existente ${user.email} vinculado con Google ID: ${dto.google_id}`);
       }
     }
+    
     if (!user) {
-      // Crear usuario nuevo
+      // 3. Crear usuario nuevo
       user = this.usersService['usersRepository'].create({
         google_id: dto.google_id,
         email: dto.email,
@@ -40,9 +55,32 @@ export class RegistrationService {
         is_verified: true,
       });
       user = await this.usersService['usersRepository'].save(user);
+      isNewUser = true;
+      console.log(`🆕 Nuevo usuario creado con Google: ${user.email}`);
     }
-    // Aquí puedes generar y devolver un token si usas JWT, o solo el usuario
-    return { user };
+
+    // 4. Generar JWT token
+    const access_token = this.jwtService.sign({
+      sub: user.id,
+      email: user.email,
+    });
+
+    return {
+      access_token,
+      user: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatar: user.avatar,
+        is_verified: user.is_verified,
+        google_id: user.google_id,
+      },
+      message: isNewUser 
+        ? 'Usuario creado exitosamente con Google' 
+        : wasLinked 
+        ? 'Cuenta vinculada con Google exitosamente'
+        : 'Login exitoso con Google'
+    };
   }
 
   async registerProfessional(dto: ProfessionalRegistrationDto) {
