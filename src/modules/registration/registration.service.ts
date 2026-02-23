@@ -51,7 +51,7 @@ export class RegistrationService {
         email: dto.email,
         name: dto.name || dto.email,
         avatar: dto.avatar,
-        password: Math.random().toString(36).slice(-8), // password random, no se usa
+        password: '', 
         is_verified: true,
       });
       user = await this.usersService['usersRepository'].save(user);

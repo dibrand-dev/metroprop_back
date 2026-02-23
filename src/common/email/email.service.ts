@@ -24,15 +24,18 @@ export class EmailService {
 
   async sendEmail(options: EmailOptions): Promise<void> {
     try {
+      const fromEmail = this.configService.get('SENDGRID_FROM_EMAIL', 'hola@metroprop.co');
+      const fromName = this.configService.get('SENDGRID_FROM_NAME', 'MetroProp');
+      const apiKey = this.configService.get('SENDGRID_API_KEY');
+      const apiKeyShort = apiKey ? apiKey.substring(0, 6) + '...' : 'undefined';
       const msg = {
         to: options.to,
         from: {
-          email: this.configService.get('SENDGRID_FROM_EMAIL', 'noreply@metroprop.com'),
-          name: this.configService.get('SENDGRID_FROM_NAME', 'MetroProp')
+          email: fromEmail,
+          name: fromName
         },
         subject: options.subject,
         html: options.html,
-        // Optional: Add tracking settings
         trackingSettings: {
           clickTracking: {
             enable: true,
@@ -43,12 +46,32 @@ export class EmailService {
         },
       };
 
+      this.logger.log('[EmailService] Attempting to send email with:', {
+        apiKeyShort,
+        fromEmail,
+        fromName,
+        to: options.to,
+        subject: options.subject,
+        html: options.html
+      });
+
       const [response] = await sgMail.send(msg);
 
       this.logger.log(`Email sent successfully to ${options.to}. Status: ${response.statusCode}`);
     } catch (error) {
       const errorMessage = `Failed to send email to ${options.to}`;
-      
+      const fromEmail = this.configService.get('SENDGRID_FROM_EMAIL', 'hola@metroprop.co');
+      const fromName = this.configService.get('SENDGRID_FROM_NAME', 'MetroProp');
+      const apiKey = this.configService.get('SENDGRID_API_KEY');
+      const apiKeyShort = apiKey ? apiKey.substring(0, 6) + '...' : 'undefined';
+      this.logger.error('[EmailService] Error sending email. Details:', {
+        apiKeyShort,
+        fromEmail,
+        fromName,
+        to: options.to,
+        subject: options.subject,
+        html: options.html
+      });
       if (error && typeof error === 'object' && 'response' in error) {
         const sendGridError = error as any;
         this.logger.error(errorMessage, {
@@ -56,7 +79,6 @@ export class EmailService {
           message: sendGridError.message,
           response: sendGridError.response?.body
         });
-        
         throw new Error(`SendGrid error: ${sendGridError.message} (Code: ${sendGridError.code})`);
       } else {
         const errorStack = error instanceof Error ? error.stack : String(error);
