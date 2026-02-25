@@ -357,7 +357,7 @@ export class PropertiesService {
   ) {
     for (const image of imagesToProcess) {
       try {
-        // 1. Descargar la imagen de la URL original
+        // 1. Descargar la imagen de la URL original 
         const response = await axios.get(image.originalUrl, {
           responseType: 'arraybuffer',
         });
