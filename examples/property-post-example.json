@@ -1,0 +1,70 @@
+{
+  "reference_code": "PROP-APT-2024-001",
+  "publication_title": "Departamento Moderno en Centro",
+  "publication_title_en": "Modern Apartment in Downtown",
+  "property_type": 1,
+  "status": 1,
+  "description": "Hermoso departamento de 2 ambientes totalmente equipado con logia y balcón. Ubicado en zona céntrica con acceso a transporte público y comercios.",
+  "internal_comments": "Propiedad recién refaccionada, pintura y pisos nuevos. Propietario motivado para vender.",
+  "street": "Av. Santa Fe",
+  "number": "1234",
+  "floor": "5",
+  "apartment": "B",
+  "location_id": 1,
+  "geo_lat": -34.6037,
+  "geo_long": -58.3816,
+  "suite_amount": 1,
+  "room_amount": 2,
+  "bathroom_amount": 1,
+  "toilet_amount": 1,
+  "parking_lot_amount": 1,
+  "surface": 85.5,
+  "roofed_surface": 85.5,
+  "unroofed_surface": 0,
+  "semiroofed_surface": 8,
+  "images": [
+    {
+      "url": "https://example.com/images/property-001-front.jpg",
+      "is_blueprint": false,
+      "description": "Fachada del edificio",
+      "order_position": 1
+    },
+    {
+      "url": "https://example.com/images/property-001-blueprint.jpg",
+      "is_blueprint": true,
+      "description": "Plano de la unidad",
+      "order_position": 2
+    }
+  ],
+  "tags": [
+    {
+      "tag_id": 1,
+      "tag_name": "Ascensor",
+      "tag_type": 1
+    },
+    {
+      "tag_id": 2,
+      "tag_name": "Balcón",
+      "tag_type": 2
+    },
+    {
+      "tag_id": 3,
+      "tag_name": "Cochera",
+      "tag_type": 3
+    }
+  ],
+  "operations": [
+    {
+      "operation_type": "venta",
+      "currency": "ARS",
+      "price": 250000,
+      "period": null
+    },
+    {
+      "operation_type": "alquiler",
+      "currency": "ARS",
+      "price": 1500,
+      "period": "mensual"
+    }
+  ]
+}

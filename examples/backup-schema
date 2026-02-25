@@ -1,0 +1,467 @@
+create table locations
+(
+    id             serial
+        constraint pk_locations
+            primary key,
+    name           varchar not null,
+    iso_code       varchar,
+    sap_code       integer,
+    full_location  varchar,
+    zip_code       varchar,
+    short_location varchar,
+    parent_id      integer,
+    type           varchar,
+    migrated       boolean default false,
+    status         varchar
+);
+
+create table roles
+(
+    id          serial
+        constraint pk_roles
+            primary key,
+    name        varchar(100)            not null
+        constraint uk_roles_name
+            unique,
+    description text,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null,
+    deleted     boolean   default false not null,
+    deleted_at  timestamp
+);
+
+
+create index idx_roles_deleted
+    on roles (deleted);
+
+create index idx_roles_created_at
+    on roles (created_at);
+
+create table permissions
+(
+    id          serial
+        constraint pk_permissions
+            primary key,
+    name        varchar(100)            not null
+        constraint uk_permissions_name
+            unique,
+    action      varchar(255)            not null,
+    resource    varchar(255)            not null,
+    description text,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null,
+    deleted     boolean   default false not null,
+    deleted_at  timestamp
+);
+
+create index idx_permissions_deleted
+    on permissions (deleted);
+
+create index idx_permissions_resource
+    on permissions (resource);
+
+create table organizations
+(
+    id                serial
+        constraint pk_organizations
+            primary key,
+    company_logo      varchar,
+    company_name      varchar(255)            not null,
+    address           varchar,
+    phone             varchar,
+    alternative_phone varchar,
+    contact_time      varchar,
+    email             varchar                 not null,
+    location_id       varchar,
+    full_location     varchar,
+    geo_lat           varchar,
+    geo_long          varchar,
+    professional_type varchar,
+    admin_user        integer,
+    social_reason     varchar,
+    fiscal_condition  varchar,
+    cuit              varchar,
+    created_at        timestamp default now() not null,
+    updated_at        timestamp default now() not null,
+    deleted           boolean   default false not null,
+    deleted_at        timestamp,
+    logo_status       varchar
+);
+
+create unique index idx_organizations_cuit_unique
+    on organizations (cuit)
+    where (deleted = false);
+
+create table branches
+(
+    id                serial
+        constraint pk_branches
+            primary key,
+    branch_logo       varchar,
+    branch_name       varchar(255),
+    address           varchar,
+    phone             varchar,
+    alternative_phone varchar,
+    contact_time      varchar,
+    email             varchar                 not null,
+    location_id       varchar,
+    full_location     varchar,
+    geo_lat           numeric(10, 8),
+    geo_long          numeric(11, 8),
+    organization_id   integer
+        constraint "FK_9ecf73d5ca57108dc33c87f7d88"
+            references organizations
+            on delete cascade,
+    created_at        timestamp default now() not null,
+    updated_at        timestamp default now() not null,
+    deleted           boolean   default false not null,
+    deleted_at        timestamp,
+    logo_stats        varchar
+);
+
+create index idx_branches_organization
+    on branches (organization_id);
+
+create table users
+(
+    id              serial
+        constraint pk_users
+            primary key,
+    name            varchar(255)            not null,
+    email           varchar(255)            not null,
+    password        varchar(255)            not null,
+    role_id         integer
+        constraint "FK_a2cecd1a3531c0b041e29ba46e1"
+            references roles
+            on delete restrict,
+    organization_id integer
+        constraint "FK_21a659804ed7bf61eb91688dea7"
+            references organizations
+            on delete cascade,
+    phone           varchar(50),
+    bio             text,
+    avatar          varchar(255),
+    is_verified     boolean   default false not null,
+    created_at      timestamp default now() not null,
+    updated_at      timestamp default now() not null,
+    deleted         boolean   default false not null,
+    deleted_at      timestamp,
+    google_id       varchar(255)
+        constraint "UQ_0bd5012aeb82628e07f6a1be53b"
+            unique,
+    avatar_status   integer,
+    email_verification_token     varchar(255),
+    password_reset_token         varchar(255),
+    password_reset_token_expires timestamp
+);
+
+alter table organizations
+    add constraint "FK_84687878ce7a62025e1774b31ad"
+        foreign key (admin_user) references users
+            on delete set null;
+
+create unique index uk_users_email
+    on users (email)
+    where (email IS NOT NULL);
+
+create table users_branches
+(
+    user_id   integer                                                 not null
+        constraint "FK_a2298d713539687b12f2c169ba4"
+            references users
+            on update cascade on delete cascade,
+    branch_id integer                                                 not null
+        constraint "FK_6e191d2fe767c69e4d76e46a30e"
+            references branches,
+    id        integer default nextval('users_branches_seq'::regclass) not null
+        constraint users_branches_pk
+            primary key,
+    constraint "PK_9da378646b233e4b5001d24cba7"
+        primary key ()
+);
+
+
+create index "IDX_a2298d713539687b12f2c169ba"
+    on users_branches (user_id);
+
+create index "IDX_6e191d2fe767c69e4d76e46a30"
+    on users_branches (branch_id);
+
+create table users_permissions
+(
+    user_id       integer not null
+        constraint fk_users_permissions_user_id
+            references users
+            on delete cascade
+        constraint "FK_4de7d0b175f702be3be55270023"
+            references users
+            on update cascade on delete cascade,
+    permission_id integer not null
+        constraint fk_users_permissions_permission_id
+            references permissions
+            on delete cascade
+        constraint "FK_b09b9a210c60f41ec7b453758e9"
+            references permissions,
+    constraint pk_users_permissions
+        primary key (user_id, permission_id)
+);
+
+create index idx_users_permissions_user_id
+    on users_permissions (user_id);
+
+create index idx_users_permissions_permission_id
+    on users_permissions (permission_id);
+
+create table tags
+(
+    id          serial
+        constraint pk_tags
+            primary key,
+    name        varchar(255)            not null
+        constraint uk_tags_name
+            unique,
+    slug        varchar(255),
+    type        integer                 not null,
+    description text,
+    is_active   boolean   default true,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null
+);
+
+create index idx_tags_type
+    on tags (type);
+
+create index idx_tags_is_active
+    on tags (is_active);
+
+create index idx_tags_slug
+    on tags (slug);
+
+create table properties
+(
+    id                       serial
+        constraint pk_properties
+            primary key,
+    reference_code           varchar(100)            not null
+        constraint uk_properties_reference_code
+            unique,
+    publication_title        varchar(500)            not null,
+    publication_title_en     varchar(500),
+    description              text,
+    internal_comments        text,
+    street                   varchar(255),
+    number                   varchar(50),
+    floor                    varchar(20),
+    apartment                varchar(20),
+    location_id              integer,
+    geo_lat                  numeric(10, 8),
+    geo_long                 numeric(11, 8),
+    property_type            integer                 not null,
+    status                   integer                 not null,
+    suite_amount             integer,
+    room_amount              integer,
+    bathroom_amount          integer,
+    toilet_amount            integer,
+    parking_lot_amount       integer,
+    surface                  numeric(10, 2),
+    roofed_surface           numeric(10, 2),
+    unroofed_surface         numeric(10, 2),
+    semiroofed_surface       numeric(10, 2),
+    total_surface            numeric(10, 2),
+    surface_measurement      varchar(10),
+    age                      integer,
+    property_condition       varchar(100),
+    situation                varchar(100),
+    dispositions             varchar(100),
+    orientation              varchar(50),
+    floors_amount            integer,
+    zonification             varchar(100),
+    expenses                 integer,
+    commission               varchar(50),
+    network_share            varchar(50),
+    operation_type           varchar(50)             not null,
+    price                    numeric(15, 2)          not null,
+    currency                 varchar(3)              not null,
+    period                   varchar(50),
+    producer_user            varchar(255),
+    branch_id                integer,
+    key_contact              varchar(255),
+    key_agent_user           varchar(255),
+    key_location             varchar(100),
+    key_reference_code       varchar(255),
+    maintenance_user         varchar(255),
+    development              varchar(255),
+    network_information      text,
+    transaction_requirements text,
+    created_at               timestamp default now() not null,
+    updated_at               timestamp default now() not null,
+    deleted                  boolean   default false not null,
+    deleted_at               timestamp,
+    owner_name               varchar(255),
+    owner_phone              varchar(50),
+    owner_email              varchar(100),
+    postal_code              varchar(20),
+    construction_year        varchar(10),
+    last_renovation          varchar(20),
+    organization_id          integer,
+    user_id                  integer
+);
+
+
+create index idx_properties_status
+    on properties (status);
+
+create index idx_properties_property_type
+    on properties (property_type);
+
+create index idx_properties_location_id
+    on properties (location_id);
+
+create index idx_properties_reference_code
+    on properties (reference_code);
+
+create index idx_properties_branch
+    on properties (branch_id);
+
+create table property_operations
+(
+    id             integer default nextval('property_operations_id_seq'::regclass) not null
+        constraint pk_property_operations
+            primary key,
+    property_id    integer                                                         not null
+        constraint fk_property_operations_property_id
+            references properties
+            on delete cascade,
+    operation_type varchar(50)                                                     not null,
+    currency       varchar(3)                                                      not null,
+    price          numeric(15, 2)                                                  not null,
+    period         varchar(50),
+    constraint "PK_10ff0aed71fe685ff33bc910ccf"
+        primary key (),
+    constraint "PK_10ff0aed71fe685ff33bc910ccf"
+        primary key (),
+    constraint "FK_35ede2af03b824b35423f66445b"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_35ede2af03b824b35423f66445b"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_35ede2af03b824b35423f66445b"
+        foreign key () references properties
+            on delete cascade
+);
+
+create index idx_property_operations_property_id
+    on property_operations (property_id);
+
+create table property_images
+(
+    url            varchar(500)           not null,
+    is_blueprint   boolean  default false not null,
+    description    text,
+    order_position integer,
+    "propertyId"   integer                not null
+        constraint "FK_7a07b6b7f9418bf1d5160106694"
+            references properties
+            on delete cascade,
+    status         varchar(1000),
+    id             serial
+        constraint "PK_317c3774ee70c26d70c4f80e200"
+            primary key,
+    try            smallint default 0
+);
+
+create index idx_property_images_property_id
+    on property_images ("propertyId");
+
+create table property_tags
+(
+    id          integer default nextval('property_tags_id_seq'::regclass) not null
+        constraint pk_property_tags
+            primary key,
+    property_id integer                                                   not null
+        constraint fk_property_tags_property_id
+            references properties
+            on delete cascade,
+    tag_id      integer                                                   not null,
+    tag_name    varchar(255)                                              not null,
+    tag_type    integer                                                   not null,
+    constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
+        primary key (),
+    constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
+        primary key (),
+    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
+        foreign key () references properties
+            on delete cascade
+);
+
+create index idx_property_tags_property_id
+    on property_tags (property_id);
+
+create index idx_property_tags_tag_id
+    on property_tags (tag_id);
+
+create table property_attributes
+(
+    id          integer default nextval('property_attributes_id_seq'::regclass) not null
+        constraint pk_property_attributes
+            primary key,
+    property_id integer                                                         not null
+        constraint fk_property_attributes_property_id
+            references properties
+            on delete cascade,
+    code        varchar(100)                                                    not null,
+    value       varchar(255)                                                    not null,
+    constraint "PK_11a59ed2f7f6d6aa01475860dda"
+        primary key (),
+    constraint "PK_11a59ed2f7f6d6aa01475860dda"
+        primary key (),
+    constraint "FK_043c5d830803966b4eea0ee21cf"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_043c5d830803966b4eea0ee21cf"
+        foreign key () references properties
+            on delete cascade,
+    constraint "FK_043c5d830803966b4eea0ee21cf"
+        foreign key () references properties
+            on delete cascade
+);
+
+create index idx_property_attributes_property_id
+    on property_attributes (property_id);
+
+create table partners
+(
+    id          serial
+        constraint pk_partners
+            primary key,
+    name        varchar(100)            not null,
+    description text,
+    app_key     varchar(255)            not null
+        constraint uk_partners_app_key
+            unique,
+    app_secret  varchar(255)            not null,
+    status      smallint  default 0,
+    deleted     boolean   default false,
+    created_at  timestamp default now() not null,
+    updated_at  timestamp default now() not null
+);
+
+create index idx_partners_app_key
+    on partners (app_key);
+
+create index idx_partners_status
+    on partners (status);
+
+create index idx_partners_deleted
+    on partners (deleted);
+
+create index idx_partners_created_at
+    on partners (created_at);
+
