@@ -69,6 +69,16 @@ export class S3Service {
   }
 
   /**
+   * Obtiene el prefijo del path según el ambiente
+   * - Production (EC2 IAM Role): '' (vacío)
+   * - Desarrollo (Access Keys): 'localhost/' para separar archivos locales
+   */
+  getPathPrefix(): string {
+    const environment = this.configService.get('NODE_ENV');
+    return environment === 'production' ? '' : 'localhost/';
+  }
+
+  /**
    * Sube un archivo a S3. MANTIENE la interfaz original para compatibilidad
    */
   async uploadImage(fileBuffer: Buffer, key: string, mimeType: string, bucketName?: string): Promise<string> {
@@ -128,13 +138,19 @@ export class S3Service {
    * HELPER: Para debugging - mostrar configuración actual
    */
   getConfig() {
+    const environment = this.configService.get('NODE_ENV');
+    const isProduction = environment === 'production';
     return {
-      environment: this.configService.get('NODE_ENV'),
+      environment,
       region: this.configService.get('AWS_REGION'),
       bucket: this.configService.get('AWS_S3_BUCKET_NAME'),
       testMode: this.configService.get('AWS_TEST_MODE'),
       useIamRole: this.configService.get('AWS_USE_IAM_ROLE'),
       hasAccessKey: !!this.configService.get('AWS_ACCESS_KEY_ID'),
+      pathPrefix: this.getPathPrefix(),
+      credentialsSource: isProduction 
+        ? '🔐 EC2 IAM Role (No Access Keys)' 
+        : '🔑 Access Keys + localhost/ prefix for local files',
     };
   }
 }
