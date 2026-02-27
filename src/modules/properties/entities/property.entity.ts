@@ -149,6 +149,9 @@ export class Property {
   @Column({ type: 'varchar', length: 50, nullable: true })
   period?: string;
 
+  @Column({ type: 'numeric', precision: 15, scale: 2, nullable: true })
+  price_square_meter?: number;
+
   // ========== Información de Contacto y Responsables ==========
   @Column({ type: 'varchar', length: 255, nullable: true })
   owner_name?: string;

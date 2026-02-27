@@ -223,6 +223,12 @@ export class CreatePropertyDto {
   @MaxLength(50)
   period?: string;
 
+  // Precio por metro cuadrado
+  @IsOptional()
+  @IsNumber({ allowNaN: false, allowInfinity: false })
+  @IsPositive()
+  price_square_meter?: number;
+
   // Contactos y responsables
   @IsOptional()
   @IsString()
