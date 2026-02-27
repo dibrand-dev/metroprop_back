@@ -150,4 +150,46 @@ export class RegistrationService {
 
     return { user };
   }
+
+  /**
+   * Reenvía el email de bienvenida para un usuario no verificado.
+   * Si el usuario ya tiene un token, se utiliza el mismo; si no tiene
+   * token (pero tampoco está validado) se genera uno nuevo.
+   * Mensajes claros para cada situación.
+   */
+  async resendWelcomeEmail(email: string): Promise<{ success: boolean; message: string }> {
+    const user = await this.usersService.findByEmail(email);
+    if (!user) {
+      throw new BadRequestException('Usuario no encontrado');
+    }
+
+    if (user.is_verified) {
+      return { success: false, message: 'El usuario ya se encuentra activo' };
+    }
+
+    // token existente o nuevo
+    let token = user.email_verification_token;
+    if (!token) {
+      token = await this.usersService.setEmailVerificationToken(user.id);
+    }
+
+    // determinar si es profesional (tiene organización) para elegir plantilla
+    let isProfessional = false;
+    const userWithOrg = await this.usersService.findByEmailWithOrganization(email);
+    if (userWithOrg && userWithOrg.organization) {
+      isProfessional = true;
+    }
+
+    try {
+      if (isProfessional) {
+        await this.emailService.sendProfessionalWelcomeEmail(user.email, user.name, token);
+      } else {
+        await this.emailService.sendWelcomeEmail(user.email, user.name, token);
+      }
+      return { success: true, message: 'Correo de bienvenida reenviado correctamente' };
+    } catch (error) {
+      console.error('Error resending welcome email:', error);
+      return { success: false, message: 'Error al reenviar el correo de bienvenida' };
+    }
+  }
 }

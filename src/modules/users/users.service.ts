@@ -83,6 +83,14 @@ export class UsersService {
     return this.usersRepository.findOne({ where: { email } });
   }
 
+  /**
+   * Busca un usuario por email incluyendo la relación de organización (si existe).
+   * Útil para distinguir entre usuario profesional y simple.
+   */
+  async findByEmailWithOrganization(email: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { email }, relations: ['organization'] });
+  }
+
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
     const user = await this.findById(id);
 
