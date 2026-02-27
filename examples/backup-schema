@@ -281,6 +281,7 @@ create table properties
     network_share            varchar(50),
     operation_type           varchar(50)             not null,
     price                    numeric(15, 2)          not null,
+    price_square_meter      numeric(15, 2),
     currency                 varchar(3)              not null,
     period                   varchar(50),
     producer_user            varchar(255),
