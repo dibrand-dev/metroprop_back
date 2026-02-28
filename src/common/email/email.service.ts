@@ -109,7 +109,7 @@ export class EmailService {
                     <td align="center" style="padding:20px; background-color: #F5F5F5;">
                       <img src="${ this.configService.get('FRONTEND_URL')}/images/metropropLogo.png" alt="Metroprop Logo" width="150" style="display:block;">
                     </td>
-                  </tr>
+                  </tr> 
                   <!-- Body -->
                   <tr style="border-bottom: 1px solid black;">
                     <td style="padding:20px; color:#333333; font-size:16px; line-height:1.5;text-align: center;">
