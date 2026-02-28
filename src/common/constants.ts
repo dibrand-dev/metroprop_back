@@ -12,3 +12,16 @@ export const PROPERTY_STATUS = {
   DRAFT: 'draft',
 };
 
+export const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
+// 🔗 API Endpoints
+export const API_ENDPOINTS = {
+  PRODUCTION: 'https://api.metroprop.co',
+  DEVELOPMENT: 'http://localhost:3000',
+} as const;
+
+
+// 🎯 Current API Base URL
+export const API_BASE_URL = IS_PRODUCTION 
+  ? API_ENDPOINTS.PRODUCTION 
+  : API_ENDPOINTS.DEVELOPMENT;

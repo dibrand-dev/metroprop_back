@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import sgMail from '@sendgrid/mail';
+import { API_BASE_URL } from '../constants';
 
 export interface EmailOptions {
   to: string;
@@ -91,32 +92,85 @@ export class EmailService {
   async sendWelcomeEmail(to: string, name: string, verificationToken: string): Promise<void> {
     const verificationUrl = `${this.configService.get('FRONTEND_URL')}/login?verifyMailToken=${verificationToken}`;
     
-    const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">¡Bienvenido ${name}!</h2>
-        <p style="font-size: 16px; line-height: 1.6;">
-          Gracias por registrarte en MetroProp. Para completar tu registro, por favor verifica tu dirección de email haciendo clic en el botón de abajo.
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${verificationUrl}" 
-             style="background-color: #007bff; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Validar Email
-          </a>
-        </div>
-        <p style="color: #666; font-size: 14px;">
-          Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:<br>
-          <a href="${verificationUrl}">${verificationUrl}</a>
-        </p>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">
-          Este enlace no expira. Si no solicitaste este registro, puedes ignorar este email.
-        </p>
-      </div>
-    `;
+      const html = `
+      <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <title>Bienvenido a Metroprop</title>
+        </head>
+        <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#ffffff;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:20px 0;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="overflow:hidden;">
+                  <!-- Header -->
+                  <tr>
+                    <td align="center" style="padding:20px; background-color: #F5F5F5;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metropropLogo.png" alt="Metroprop Logo" width="150" style="display:block;">
+                    </td>
+                  </tr>
+                  <!-- Body -->
+                  <tr style="border-bottom: 1px solid black;">
+                    <td style="padding:20px; color:#333333; font-size:16px; line-height:1.5;text-align: center;">
+                      <p style="margin:0; font-size:26px; font-weight:800;">¡Hola ${name}!<br>Confirmamos que tu registro en Metroprop fue exitoso.</p>
+                      <p>Desde ahora vas a poder:</p>
+                      <ul style="list-style:none; padding: 15px;  background-color:#F5F5F5; margin:10px;border-radius: 8px;">
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/search.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Guardar alertas de búsqueda
+                        </li>
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/corazon.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Seguir la evolución de tus propiedades favoritas
+                        </li>
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/envelope.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Contactar inmobiliarias
+                        </li>
+                      </ul>
+                      <div style="margin:30px 10px;border-radius: 10px;background-color: #fff; padding: 30px;border: 2px solid #A8A8A8;">
+                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/megafono.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>  
+                        <p style="margin:15px 0;font-size:20px;font-weight:700;">Personalizá tus alertas según zonas, precios y tipos de propiedad.</p>
+                        <p style="margin:15px 0;font-size:16px;">Es la forma más rápida de encontrar oportunidades que se ajusten a lo que buscás.</p>
+                      </div>
+                      <!-- CTA Button -->
+                      <div style="text-align:center; margin:20px 0;">
+                        <a href="#" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 80px; border-radius:4px; font-weight:bold; display:inline-block;">
+                          Validar mi cuenta
+                        </a>
+                      </div>
+                      <p style="margin:10px 0;">Si necesitás ayuda, escribinos cuando quieras.</p>
+                      <p style="margin:0;">¡Gracias por sumarte!</p>
+                    </td>
+                  </tr>
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
+                      <p style="margin:30px;">  
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/facebook.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.svg" alt="icono" width="20" style="vertical-align:middle;">
+                      </p>
+                      <p style="margin:0;">
+                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                      </p>
+                      <p style="margin-top:30px;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+            `;
+
 
     await this.sendEmail({
       to,
-      subject: 'Bienvenido a MetroProp - Verifica tu cuenta',
+      subject: '🏠 ¡Bienvenido a MetroProp! - Confirma tu cuenta',
       html
     });
   }
@@ -125,31 +179,87 @@ export class EmailService {
     const verificationUrl = `${this.configService.get('FRONTEND_URL')}/login?verifyMailToken=${verificationToken}`;
     
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">¡Bienvenido ${name}!</h2>
-        <p style="font-size: 16px; line-height: 1.6;">
-          Gracias por unirte a MetroProp como <strong>usuario profesional</strong>. Para completar tu registro profesional, por favor verifica tu dirección de email haciendo clic en el botón de abajo.
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${verificationUrl}" 
-             style="background-color: #28a745; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Validar Email Profesional
-          </a>
-        </div>
-        <p style="color: #666; font-size: 14px;">
-          Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:<br>
-          <a href="${verificationUrl}">${verificationUrl}</a>
-        </p>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">
-          Como usuario profesional tendrás acceso a funcionalidades avanzadas para gestión de propiedades. Este enlace no expira.
-        </p>
-      </div>
-    `;
+      <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <title>Bienvenido a Metroprop</title>
+        </head>
+        <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f7f7f7;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f7f7f7; padding:20px 0;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
+                  <!-- Header -->
+                  <tr>
+                    <td align="center" style="padding:20px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metropropLogo.png" alt="Metroprop Logo" width="150" style="display:block;">
+                    </td>
+                  </tr>
+                  <!-- Body -->
+                  <tr>
+                    <td style="padding:20px; color:#333333; font-size:16px; line-height:1.5;text-align: center;background-color: #EBF1FD;">
+                      <p style="margin:0; font-size:26px; font-weight:800;">¡Hola ${name}!<br>Bienvenido a Metroprop.<br>Tu cuenta fue registrada con éxito.</p>
+                      <p>Desde tu cuenta profesional vas a poder:</p>
+                      <ul style="list-style:none; padding: 15px;  background-color: #fff; margin:0;border-radius: 10px;box-shadow: 0 4px 4px 0 rgba(0, 0, 0, .25);">
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/building.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Publicar propiedades
+                        </li>
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/envelope.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Recibir consultas de interesados
+                        </li>
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/message.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Gestionar tus contactos
+                        </li>
+                        <li style="margin:8px 0;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/mis_publicaciones.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          Monitorear el rendimiento de tus publicaciones
+                        </li>
+                      </ul>
+                      <div style="margin:50px 0;border-radius: 10px;box-shadow: 0 4px 4px 0 rgba(0, 0, 0, .25);background-color: #fff; padding: 30px;">
+                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/casareservada.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>  
+                        <p style="margin:15px 0;font-size:20px;font-weight:700;">Subí tu primer propiedad y empezá a recibir consultas.</p>
+                      </div>
+                      <!-- CTA Button -->
+                      <div style="text-align:center; margin:20px 0;">
+                        <a href="#" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:4px; font-weight:bold; display:inline-block;">
+                          Validar mi cuenta
+                        </a>
+                      </div>
+                      <p style="margin:10px 0;">Si necesitás ayuda, escribinos cuando quieras.</p>
+                      <p style="margin:0;">¡Gracias por sumarte!</p>
+                    </td>
+                  </tr>
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#ffffff;">
+                      <p style="margin:30px;">  
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/facebook.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.svg" alt="icono" width="20" style="vertical-align:middle;">
+                      </p>
+                      <p style="margin:0;">
+                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                      </p>
+                      <p style="margin:30px 0;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+     `
+    ;
 
     await this.sendEmail({
       to,
-      subject: 'Bienvenido a MetroProp - Cuenta Profesional',
+      subject: '🏗️ MetroProp Professional - Activa tu cuenta avanzada',
       html
     });
   }
@@ -158,31 +268,71 @@ export class EmailService {
     const resetUrl = `${this.configService.get('FRONTEND_URL')}/resetPassword?token=${resetToken}`;
     
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #333;">Hola ${name}</h2>
-        <p style="font-size: 16px; line-height: 1.6;">
-          Recibimos una solicitud para restablecer la contraseña de tu cuenta en MetroProp.
-        </p>
-        <div style="text-align: center; margin: 30px 0;">
-          <a href="${resetUrl}" 
-             style="background-color: #dc3545; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
-            Restablecer Contraseña
-          </a>
-        </div>
-        <p style="color: #666; font-size: 14px;">
-          Si no puedes hacer clic en el botón, copia y pega este enlace en tu navegador:<br>
-          <a href="${resetUrl}">${resetUrl}</a>
-        </p>
-        <hr style="border: 1px solid #eee; margin: 30px 0;">
-        <p style="color: #999; font-size: 12px;">
-          Este enlace expirará en 1 hora. Si no solicitaste este cambio, puedes ignorar este email y tu contraseña no será modificada.
-        </p>
-      </div>
+      <!DOCTYPE html>
+        <html lang="es">
+        <head>
+          <meta charset="UTF-8">
+          <title>Bienvenido a Metroprop</title>
+        </head>
+        <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#ffffff;">
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:20px 0;">
+            <tr>
+              <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" border="0" style="overflow:hidden;">
+                  <!-- Header -->
+                  <tr>
+                    <td align="center" style="padding:20px; background-color: #F5F5F5;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metropropLogo.png" alt="Metroprop Logo" width="150" style="display:block;">
+                    </td>
+                  </tr>
+                  <!-- Body -->
+                  <tr>
+                    <td style="padding:20px; color:#333333; font-size:16px; line-height:1.5;text-align: center;border-bottom: 2px solid black;">
+                      <p style="margin:0; font-size:26px; font-weight:800;">Recibimos una solicitud para recuperar tu contraseña.</p>
+
+                      <div style="margin:30px 10px;border-radius: 10px;background-color: #F5F5F5; padding: 30px;">
+                        <p style="margin:15px 0;font-size:16px;">Para continuar hacé clic en el siguiente enlace:</p>
+                        <!-- CTA Button -->
+                        <a href="${resetUrl}" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 80px; border-radius:4px; font-weight:bold; display:inline-block;">
+                          Restablecer contraseña
+                        </a>
+                      </div>
+
+                      <p style="margin:10px 0;">Por seguridad, este enlace es válido por 30 minutos.</p>
+                      <p style="margin:0; font-weight:bold;">Si vos no pediste este cambio, simplemente ignorá este mensaje.</p>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:20px; color:#333333; font-size:16px; line-height:1.5;text-align: center;">
+                      <p style="margin:0; font-size:18px; font-weight:bold;">Equipo Metroprop</p>
+                    </td>
+                  </tr>
+                  <!-- Footer -->
+                  <tr>
+                    <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
+                      <p style="margin:30px;">  
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/facebook.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.svg" alt="icono" width="20" style="vertical-align:middle;">
+                      </p>
+                      <p style="margin:0;">
+                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                      </p>
+                      <p style="margin-top:30px;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
     `;
 
     await this.sendEmail({
       to,
-      subject: 'Restablecer contraseña - MetroProp',
+      subject: '🔐 MetroProp - Restablecer contraseña (Acción requerida)',
       html
     });
   }
