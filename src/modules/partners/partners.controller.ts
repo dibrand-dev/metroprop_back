@@ -21,6 +21,12 @@ import { UpdatePartnerDto } from './dto/update-partner.dto';
 export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
 
+  @Get('checkstatus')
+  checkStatus() {
+    return 'hola';
+  }
+
+
   @Get()
   findAll(
     @Query('limit') limit: string = '10',
