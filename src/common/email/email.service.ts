@@ -170,7 +170,7 @@ export class EmailService {
 
     await this.sendEmail({
       to,
-      subject: '🏠 ¡Bienvenido a MetroProp! - Confirma tu cuenta',
+      subject: '¡Bienvenido a MetroProp! - Confirma tu cuenta',
       html
     });
   }
@@ -259,7 +259,7 @@ export class EmailService {
 
     await this.sendEmail({
       to,
-      subject: '🏗️ MetroProp Professional - Activa tu cuenta avanzada',
+      subject: 'MetroProp Professional - Activa tu cuenta avanzada',
       html
     });
   }
@@ -332,7 +332,7 @@ export class EmailService {
 
     await this.sendEmail({
       to,
-      subject: '🔐 MetroProp - Restablecer contraseña (Acción requerida)',
+      subject: 'MetroProp - Restablecer contraseña (Acción requerida)',
       html
     });
   }
