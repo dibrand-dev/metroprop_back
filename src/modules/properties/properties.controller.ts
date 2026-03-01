@@ -14,6 +14,7 @@ import {
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 
 import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -66,6 +67,16 @@ export class PropertiesController {
   @HttpCode(HttpStatus.CREATED)
   create(@Body() createPropertyDto: CreatePropertyDto) {
     return this.propertiesService.create(createPropertyDto);
+  }
+
+  /**
+   * POST /properties/draft
+   * Crear un borrador de propiedad
+   */
+  @Post('draft')
+  @HttpCode(HttpStatus.CREATED)
+  createDraft(@Body() createDraftDto: CreateDraftPropertyDto) {
+    return this.propertiesService.createDraft(createDraftDto);
   }
 
   /**
