@@ -8,8 +8,8 @@ export class PropertyImage {
   @PrimaryGeneratedColumn('increment')
   id!: number;
 
-  @Column({ type: 'varchar', length: 500 })
-  url!: string;
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  url!: string | null;
 
   @Column({ type: 'boolean', default: false })
   is_blueprint!: boolean;
