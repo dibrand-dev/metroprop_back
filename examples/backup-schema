@@ -257,6 +257,7 @@ create table properties
     geo_lat                  numeric(10, 8),
     geo_long                 numeric(11, 8),
     property_type            integer                 not null,
+    property_subtype         integer,
     status                   integer                 not null,
     suite_amount             integer,
     room_amount              integer,

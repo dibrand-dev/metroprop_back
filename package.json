@@ -50,7 +50,8 @@
     "pg": "^8.11.0",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.16"
+    "typeorm": "^0.3.16",
+    "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.2.0",
@@ -63,6 +64,7 @@
     "@types/passport-jwt": "^3.0.10",
     "@types/sendgrid": "^2.0.31",
     "@types/supertest": "^6.0.2",
+    "@types/uuid": "^10.0.0",
     "@typescript-eslint/eslint-plugin": "^6.10.0",
     "@typescript-eslint/parser": "^6.10.0",
     "eslint": "^8.54.0",

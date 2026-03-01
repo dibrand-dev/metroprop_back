@@ -17,6 +17,11 @@ import { ImageUploadService } from '../../common/image-upload/image-upload.servi
 import { ImageUploadConfig } from '../../common/image-upload/dto/image-upload-config.dto';
 import axios from 'axios';
 
+// --- IMPORTACIONES PARA DRAFT ---
+import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
+import { PropertyStatus } from '../../common/enums';
+import { v4 as uuidv4 } from 'uuid';
+
 @Injectable()
 export class PropertiesService {
   constructor(
@@ -31,6 +36,26 @@ export class PropertiesService {
     private readonly s3Service: S3Service,
     private readonly imageUploadService: ImageUploadService,
   ) {}
+
+  /**
+   * Crea una propiedad en estado borrador.
+   * Rellena los campos obligatorios con valores por defecto.
+   */
+  async createDraft(createDraftDto: CreateDraftPropertyDto): Promise<Property> {
+    const tempReferenceCode = `DRAFT-${uuidv4().substring(0, 8)}`;
+    const tempTitle = `Borrador - ${tempReferenceCode}`;
+
+    const newProperty = this.propertyRepository.create({
+      ...createDraftDto,
+      status: PropertyStatus.DRAFT,
+      reference_code: tempReferenceCode,
+      publication_title: tempTitle,
+      price: 0,
+      currency: 'USD',
+    });
+
+    return this.propertyRepository.save(newProperty);
+  }
 
   /**
    * Crear nueva propiedad

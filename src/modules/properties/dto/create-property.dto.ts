@@ -13,8 +13,10 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { OperationType, PropertyStatus, PropertySubtype, PropertyType } from '../../../common/enums';
 
 export class CreatePropertyDto {
   // ========== CAMPOS OBLIGATORIOS ==========
@@ -32,19 +34,16 @@ export class CreatePropertyDto {
   publication_title!: string;
 
   @IsNotEmpty({ message: 'property_type es obligatorio' })
-  @IsInt({ message: 'property_type debe ser un número entero' })
-  @IsPositive({ message: 'property_type debe ser positivo' })
-  property_type!: number;
+  @IsEnum(PropertyType)
+  property_type!: PropertyType;
 
   @IsNotEmpty({ message: 'status es obligatorio' })
-  @IsInt({ message: 'status debe ser un número entero' })
-  @IsPositive({ message: 'status debe ser positivo' })
-  status!: number;
+  @IsEnum(PropertyStatus)
+  status!: PropertyStatus;
 
   @IsNotEmpty({ message: 'operation_type es obligatorio' })
-  @IsString({ message: 'operation_type debe ser un string' })
-  @MinLength(1, { message: 'operation_type no puede estar vacío' })
-  operation_type!: string;
+  @IsEnum(OperationType)
+  operation_type!: OperationType;
 
   @IsNotEmpty({ message: 'price es obligatorio' })
   @IsNumber({ allowNaN: false, allowInfinity: false }, { message: 'price debe ser un número válido' })
@@ -57,6 +56,10 @@ export class CreatePropertyDto {
   currency!: string;
 
   // ========== CAMPOS OPCIONALES ==========
+
+  @IsOptional()
+  @IsEnum(PropertySubtype)
+  property_subtype?: PropertySubtype;
 
   @IsOptional()
   @IsString()
