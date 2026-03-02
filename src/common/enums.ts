@@ -43,3 +43,15 @@ export enum PropertyStatus {
   RENTED = 3,     // Alquilada
   PAUSED = 4,     // Pausada por el usuario
 }
+
+/**
+ * Estados de multimedia (imágenes/archivos) durante el proceso de upload.
+ * Para tracking del proceso asíncrono de subida a S3.
+ */
+export enum MediaUploadStatus {
+  PENDING = 'pending',       // Esperando ser procesado
+  UPLOADING = 'uploading',   // En proceso de subida a S3
+  COMPLETED = 'completed',   // Subido exitosamente
+  FAILED = 'failed',         // Error en la subida
+  RETRYING = 'retrying',     // Reintentando después de error
+}

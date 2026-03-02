@@ -17,7 +17,9 @@
 ```json
 {
   "name": "Partner Ejemplo",
-  "email": "partner@mail.com"
+  "description": "description",
+  "app_key": "appkey12345678",
+  "app_secret": "appsecret12345678",
 }
 ```
 
@@ -26,8 +28,7 @@
 - Body ejemplo:
 ```json
 {
-  "name": "Nuevo nombre",
-  "email": "nuevo@mail.com"
+  "name": "Nuevo nombre",   
 }
 ```
 
@@ -40,41 +41,3 @@
 - Body: _Archivo (form-data)_
 
 ---
-
-# Partner API (api/partner/v1)
-
-### POST /api/partner/v1/properties
-- Descripción: Crear propiedad vía partner API.
-- Body ejemplo:
-```json
-{
-  "property": "datos de la propiedad"
-}
-```
-
-### PUT /api/partner/v1/properties/:id
-- Descripción: Actualizar propiedad vía partner API.
-- Body ejemplo:
-```json
-{
-  "property": "datos actualizados"
-}
-```
-
-### DELETE /api/partner/v1/properties/:id
-- Descripción: Eliminar propiedad vía partner API.
-- Body ejemplo:
-```json
-{
-  "motivo": "opcional"
-}
-```
-
-### POST /api/partner/v1/properties/:id/deactivate
-- Descripción: Desactivar propiedad vía partner API.
-- Body ejemplo:
-```json
-{
-  "motivo": "opcional"
-}
-```

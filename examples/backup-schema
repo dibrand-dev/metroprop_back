@@ -376,6 +376,39 @@ create table property_images
 create index idx_property_images_property_id
     on property_images ("propertyId");
 
+create table property_videos
+(
+    id          serial
+        constraint pk_property_videos
+            primary key,
+    property_id integer      not null
+        constraint fk_property_videos_property_id
+            references properties
+            on delete cascade,
+    url         varchar(255) not null,
+    is_360      boolean default false,
+    "order"     integer
+);
+
+create index idx_property_videos_property_id
+    on property_videos (property_id);
+
+create table property_attached
+(
+    id          serial
+        constraint pk_property_attached
+            primary key,
+    property_id integer      not null
+        constraint fk_property_attached_property_id
+            references properties
+            on delete cascade,
+    file_url    varchar(255) not null,
+    "order"     integer
+);
+
+create index idx_property_attached_property_id
+    on property_attached (property_id);
+
 create table property_tags
 (
     id          integer default nextval('property_tags_id_seq'::regclass) not null
