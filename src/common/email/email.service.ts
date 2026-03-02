@@ -113,7 +113,7 @@ export class EmailService {
                   <!-- Body -->
                   <tr style="border-bottom: 1px solid black;">
                     <td style="padding:20px; color:#333333; font-size:16px; line-height:1.5;text-align: center;">
-                      <p style="margin:0; font-size:26px; font-weight:800;">¡Hola ${name}!<br>Confirmamos que tu registro en Metroprop fue exitoso.</p>
+                      <p style="margin:0; font-size:26px; font-weight:800;">¡Hola! Confirmamos que tu registro en Metroprop fue exitoso.</p>
                       <p>Desde ahora vas a poder:</p>
                       <ul style="list-style:none; padding: 15px;  background-color:#F5F5F5; margin:10px;border-radius: 8px;">
                         <li style="margin:8px 0;">
