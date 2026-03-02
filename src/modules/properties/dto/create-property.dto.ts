@@ -346,6 +346,36 @@ export class CreatePropertyDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOperationDto)
   operations?: CreateOperationDto[];
+
+  /**
+   * Videos de la propiedad
+   * Puede enviar 0 o más videos
+   */
+  @IsOptional()
+  @IsArray({ message: 'videos debe ser un array' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateVideoDto)
+  videos?: CreateVideoDto[];
+
+  /**
+   * Multimedia 360 de la propiedad
+   * Puede enviar 0 o más multimedia 360
+   */
+  @IsOptional()
+  @IsArray({ message: 'multimedia360 debe ser un array' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateMultimedia360Dto)
+  multimedia360?: CreateMultimedia360Dto[];
+
+  /**
+   * Archivos adjuntos de la propiedad (documentos, planos, etc)
+   * Puede enviar 0 o más archivos adjuntos
+   */
+  @IsOptional()
+  @IsArray({ message: 'attached debe ser un array' })
+  @ValidateNested({ each: true })
+  @Type(() => CreateAttachedDto)
+  attached?: CreateAttachedDto[];
 }
 
 // ========== DTOs PARA RELACIONES ==========
@@ -404,4 +434,41 @@ export class CreateOperationDto {
   @IsOptional()
   @IsString()
   period?: string; // ej: "mensual", "anual"
+}
+
+export class CreateVideoDto {
+  @IsNotEmpty({ message: 'URL de video es requerida' })
+  @IsString()
+  url!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  order?: number;
+}
+
+export class CreateMultimedia360Dto {
+  @IsNotEmpty({ message: 'URL de multimedia 360 es requerida' })
+  @IsString()
+  url!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  order?: number;
+}
+
+export class CreateAttachedDto {
+  @IsNotEmpty({ message: 'URL de archivo adjunto es requerida' })
+  @IsString()
+  file_url!: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  order?: number;
+
+  @IsOptional()
+  @IsString()
+  description?: string;
 }

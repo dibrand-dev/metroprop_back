@@ -11,6 +11,8 @@ import { PropertyImage } from './property-image.entity';
 import { PropertyAttribute } from './property-attribute.entity';
 import { PropertyOperation } from './property-operation.entity';
 import { PropertyTag } from './property-tag.entity';
+import { PropertyVideo } from './property-video.entity';
+import { PropertyAttached } from './property-attached.entity';
 
 @Entity('properties')
 @Index('idx_properties_status', ['status'])
@@ -228,21 +230,37 @@ export class Property {
   })
   images?: PropertyImage[];
 
-  @OneToMany(() => PropertyAttribute, (attr) => attr.property, {
+  @OneToMany(() => PropertyAttribute, (attribute) => attribute.property, {
     cascade: true,
-    eager: false,
+    eager: true,
   })
   attributes?: PropertyAttribute[];
 
-  @OneToMany(() => PropertyOperation, (op) => op.property, {
+  @OneToMany(() => PropertyOperation, (operation) => operation.property, {
     cascade: true,
-    eager: false,
+    eager: true,
   })
   operations?: PropertyOperation[];
 
   @OneToMany(() => PropertyTag, (tag) => tag.property, {
     cascade: true,
-    eager: false,
+    eager: true,
   })
   tags?: PropertyTag[];
+
+  @OneToMany(() => PropertyVideo, (video) => video.property, {
+    cascade: true,
+    eager: true,
+  })
+  videos?: PropertyVideo[];
+
+  @OneToMany(() => PropertyAttached, (attached) => attached.property, {
+    cascade: true,
+    eager: true,
+  })
+  attached?: PropertyAttached[];
+
+  // Otros
+  @Column({ type: 'integer', nullable: true })
+  antiquity?: number;
 }

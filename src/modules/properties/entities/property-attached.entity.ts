@@ -1,25 +1,34 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Index, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  Index,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { Property } from './property.entity';
 import { MediaUploadStatus } from '../../../common/enums';
 
-
-@Entity('property_images')
-@Index('idx_property_images_property_id', ['property'])
-export class PropertyImage {
+@Entity('property_attached')
+@Index('idx_property_attached_property_id', ['property'])
+export class PropertyAttached {
   @PrimaryGeneratedColumn('increment')
   id!: number;
 
+  @ManyToOne(() => Property, (property) => property.attached, {
+    onDelete: 'CASCADE',
+  })
+  property!: Property;
+
+  @Column({ type: 'varchar', length: 255 })
+  file_url!: string;
+
+  @Column({ type: 'int', nullable: true })
+  order?: number;
+
   @Column({ type: 'varchar', length: 500, nullable: true })
-  url!: string | null;
-
-  @Column({ type: 'boolean', default: false })
-  is_blueprint!: boolean;
-
-  @Column({ type: 'text', nullable: true })
   description?: string;
-
-  @Column({ type: 'integer', nullable: true })
-  order_position?: number;
 
   @Column({ 
     type: 'enum', 
@@ -43,10 +52,4 @@ export class PropertyImage {
 
   @UpdateDateColumn()
   updated_at!: Date;
-
-  @ManyToOne(() => Property, (property) => property.images, {
-    onDelete: 'CASCADE',
-    nullable: false,
-  })
-  property!: Property;
 }

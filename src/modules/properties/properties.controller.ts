@@ -10,6 +10,10 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
+  BadRequestException,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -17,27 +21,141 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 
 import { UploadedFiles, UseInterceptors } from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
+import { FilesInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
+
+import { SaveMultimediaDto } from './dto/save-multimedia.dto';
+import { MultipartFormDataInterceptor } from '../../common/interceptors/multipart-form-data.interceptor';
 
 @Controller('properties')
 export class PropertiesController {
-    /**
-     * POST /properties/:propertyId/upload-images
-     * Sube múltiples imágenes a S3 y retorna las URLs públicas
-     */
-    @Post(':propertyId/upload-images')
-    @UseInterceptors(FilesInterceptor('files'))
-    async uploadImages(
-      @Param('propertyId', ParseIntPipe) propertyId: number,
-      @UploadedFiles() files: Express.Multer.File[]
-    ) {
-      if (!files || files.length === 0) {
-        return { error: 'No se recibieron archivos' };
-      }
-      // Llama al método asíncrono que guarda y dispara la subida en segundo plano
-      return this.propertiesService.uploadImagesAsync(files, propertyId);
-    }
   constructor(private readonly propertiesService: PropertiesService) {}
+
+  /**
+   * POST /properties/:propertyId/save-multimedia
+   * Guardar multimedia (videos, imágenes, archivos adjuntos) para una propiedad
+   * 
+   * @description
+   * Este endpoint acepta una combinación de:
+   * - URLs de videos/multimedia360 como JSON
+   * - Archivos de imagen (images[])
+   * - Archivos adjuntos (attached[])
+   * - Metadatos de orden y descripción
+   * 
+   * @example
+   * Content-Type: multipart/form-data
+   * 
+   * Form fields:
+   * - videos: JSON string con array de {url, order}
+   * - multimedia360: JSON string con array de {url, order}  
+   * - images: JSON string con array de {order_position} (opcional)
+   * - attached: JSON string con array de {order, description} (opcional)
+   * 
+   * Files:
+   * - images: Archivos de imagen (image/jpeg, image/png, etc.)
+   * - attached: Cualquier tipo de archivo (pdf, doc, etc.)
+   */
+  @Post(':propertyId/save-multimedia')
+  @UseInterceptors(
+    FileFieldsInterceptor([
+      { name: 'images', maxCount: 20 },
+      { name: 'attached', maxCount: 20 }
+    ]),
+    new MultipartFormDataInterceptor(['videos', 'multimedia360', 'images', 'attached'])
+  )
+  async saveMultimedia(
+    @Param('propertyId', ParseIntPipe) propertyId: number,
+    @Body() saveMultimediaDto: SaveMultimediaDto,
+    @UploadedFiles() files: { 
+      images?: Express.Multer.File[];
+      attached?: Express.Multer.File[];
+    },
+  ) {
+    // Validación personalizada archivo por archivo
+    this.validateUploadedFiles(files);
+    
+    return this.propertiesService.saveMultimedia(
+      propertyId,
+      saveMultimediaDto,
+      files,
+    );
+  }
+
+  /**
+   * Valida cada archivo individualmente para dar mensajes de error específicos
+   */
+  private validateUploadedFiles(files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] }) {
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+    const errors: string[] = [];
+
+    // Validar imágenes
+    if (files.images?.length) {
+      files.images.forEach((file, index) => {
+        // Validar tamaño
+        if (file.size > maxSize) {
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          errors.push(`Imagen "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
+        }
+        
+        // Validar tipo
+        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+          errors.push(`Imagen "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
+        }
+      });
+    }
+
+    // Validar archivos adjuntos
+    if (files.attached?.length) {
+      files.attached.forEach((file, index) => {
+        // Validar tamaño
+        if (file.size > maxSize) {
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          errors.push(`Archivo "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
+        }
+        
+        // Validar tipo
+        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+          errors.push(`Archivo "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
+        }
+      });
+    }
+
+    // Si hay errores, lanzar excepción con detalles
+    if (errors.length > 0) {
+      throw new BadRequestException(`Errores de validación de archivos: ${errors.join('; ')}`);
+    }
+  }
+
+  /**
+   * GET /properties/:propertyId/upload-status
+   * Obtener estado de uploads de multimedia para una propiedad
+   */
+  @Get(':propertyId/upload-status')
+  async getUploadStatus(@Param('propertyId', ParseIntPipe) propertyId: number) {
+    return this.propertiesService.getUploadStatus(propertyId);
+  }
+
+  /**
+   * POST /properties/:propertyId/retry-uploads
+   * Reintentar uploads fallidos para una propiedad
+   */
+  @Post(':propertyId/retry-uploads')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async retryFailedUploads(@Param('propertyId', ParseIntPipe) propertyId: number) {
+    return this.propertiesService.retryFailedUploads(propertyId);
+  }
+
+  /**
+   * GET /properties/service-status
+   * Obtener estado del servicio S3 y circuit breaker
+   * Nota: DEBE estar antes de GET :id para evitar conflicto
+   */
+  @Get('service-status')
+  async getServiceStatus() {
+    return this.propertiesService.getS3ServiceStatus();
+  }
 
   /**
    * POST /properties
