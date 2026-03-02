@@ -419,8 +419,6 @@ create table property_tags
             references properties
             on delete cascade,
     tag_id      integer                                                   not null,
-    tag_name    varchar(255)                                              not null,
-    tag_type    integer                                                   not null,
     constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
         primary key (),
     constraint "PK_a8c6b2044c6aaafd04d58de5c9f"

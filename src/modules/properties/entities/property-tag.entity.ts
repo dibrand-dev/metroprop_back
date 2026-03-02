@@ -11,11 +11,6 @@ export class PropertyTag {
   @Column('integer')
   tag_id!: number;
 
-  @Column({ type: 'varchar', length: 255 })
-  tag_name!: string;
-
-  @Column({ type: 'integer' })
-  tag_type!: number;
 
   @ManyToOne(() => Property, (property) => property.tags, {
     onDelete: 'CASCADE',
