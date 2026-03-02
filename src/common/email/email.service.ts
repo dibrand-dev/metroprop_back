@@ -117,20 +117,20 @@ export class EmailService {
                       <p>Desde ahora vas a poder:</p>
                       <ul style="list-style:none; padding: 15px;  background-color:#F5F5F5; margin:10px;border-radius: 8px;">
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/search.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/search.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Guardar alertas de búsqueda
                         </li>
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/corazon.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/corazon.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Seguir la evolución de tus propiedades favoritas
                         </li>
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/envelope.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/envelope.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Contactar inmobiliarias
                         </li>
                       </ul>
                       <div style="margin:30px 10px;border-radius: 10px;background-color: #fff; padding: 30px;border: 2px solid #A8A8A8;">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/megafono.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>  
+                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/megafono.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>  
                         <p style="margin:15px 0;font-size:20px;font-weight:700;">Personalizá tus alertas según zonas, precios y tipos de propiedad.</p>
                         <p style="margin:15px 0;font-size:16px;">Es la forma más rápida de encontrar oportunidades que se ajusten a lo que buscás.</p>
                       </div>
@@ -148,9 +148,9 @@ export class EmailService {
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
                       <p style="margin:30px;">  
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/facebook.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.svg" alt="icono" width="20" style="vertical-align:middle;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
                       <p style="margin:0;">
                         <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
@@ -203,24 +203,24 @@ export class EmailService {
                       <p>Desde tu cuenta profesional vas a poder:</p>
                       <ul style="list-style:none; padding: 15px;  background-color: #fff; margin:0;border-radius: 10px;box-shadow: 0 4px 4px 0 rgba(0, 0, 0, .25);">
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/building.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/building.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Publicar propiedades
                         </li>
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/envelope.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/envelope.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Recibir consultas de interesados
                         </li>
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/message.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/message.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Gestionar tus contactos
                         </li>
                         <li style="margin:8px 0;">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/mis_publicaciones.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/mis_publicaciones.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>
                           Monitorear el rendimiento de tus publicaciones
                         </li>
                       </ul>
                       <div style="margin:50px 0;border-radius: 10px;box-shadow: 0 4px 4px 0 rgba(0, 0, 0, .25);background-color: #fff; padding: 30px;">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/casareservada.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>  
+                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/casareservada.png" alt="icono" width="20" style="vertical-align:middle; margin-right:8px;"><br>  
                         <p style="margin:15px 0;font-size:20px;font-weight:700;">Subí tu primer propiedad y empezá a recibir consultas.</p>
                       </div>
                       <!-- CTA Button -->
@@ -237,9 +237,9 @@ export class EmailService {
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#ffffff;">
                       <p style="margin:30px;">  
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/facebook.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.svg" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.svg" alt="icono" width="20" style="vertical-align:middle;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
                       <p style="margin:0;">
                         <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
