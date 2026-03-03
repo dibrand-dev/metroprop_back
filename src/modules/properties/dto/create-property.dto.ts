@@ -333,9 +333,10 @@ export class CreatePropertyDto {
    */
   @IsOptional()
   @IsArray({ message: 'tags debe ser un array' })
-  @ValidateNested({ each: true })
-  @Type(() => CreateTagDto)
-  tags?: CreateTagDto[];
+  @IsInt({ each: true, message: 'Cada tag ID debe ser un número entero' })
+  @IsPositive({ each: true, message: 'Cada tag ID debe ser un número positivo' })
+  @Type(() => Number)
+  tags?: number[];
 
   /**
    * Operaciones de la propiedad (venta, alquiler, etc)
@@ -399,22 +400,7 @@ export class CreateImageDto {
   order_position?: number;
 }
 
-export class CreateTagDto {
-  @IsNotEmpty({ message: 'Tag ID es requerido' })
-  @IsInt()
-  @IsPositive()
-  tag_id!: number;
 
-  @IsNotEmpty({ message: 'Nombre de tag es requerido' })
-  @IsString()
-  tag_name!: string;
-
-  @IsNotEmpty({ message: 'Tipo de tag es requerido' })
-  @IsInt()
-  @Min(1)
-  @Max(3)
-  tag_type!: number; // 1=servicios, 2=ambientes, 3=adicionales
-}
 
 export class CreateOperationDto {
   @IsNotEmpty({ message: 'Tipo de operación es requerido' })

@@ -136,7 +136,7 @@ export class EmailService {
                       </div>
                       <!-- CTA Button -->
                       <div style="text-align:center; margin:20px 0;">
-                        <a href="#" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 80px; border-radius:4px; font-weight:bold; display:inline-block;">
+                        <a href="${verificationUrl}" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 80px; border-radius:4px; font-weight:bold; display:inline-block;">
                           Validar mi cuenta
                         </a>
                       </div>
@@ -225,7 +225,7 @@ export class EmailService {
                       </div>
                       <!-- CTA Button -->
                       <div style="text-align:center; margin:20px 0;">
-                        <a href="#" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:4px; font-weight:bold; display:inline-block;">
+                        <a href="${verificationUrl}" style="background-color:#007bff; color:#ffffff; text-decoration:none; padding:12px 24px; border-radius:4px; font-weight:bold; display:inline-block;">
                           Validar mi cuenta
                         </a>
                       </div>

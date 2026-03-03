@@ -278,6 +278,7 @@ create table properties
     floors_amount            integer,
     zonification             varchar(100),
     expenses                 integer,
+    currency_expenses  varchar(3) ,
     commission               varchar(50),
     network_share            varchar(50),
     operation_type           varchar(50)             not null,

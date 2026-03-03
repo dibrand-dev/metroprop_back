@@ -131,18 +131,18 @@ export class PropertiesService {
       this.processAndUploadImages(imagesToProcess);
     }
 
-    // 3. Crear los tags asociados si se proporcionan
-    if (tags && Array.isArray(tags) && tags.length > 0) {
-      for (const tagData of tags) {
-        const propertyTag = this.propertyTagRepository.create({
-          ...tagData,
+    // 3. Crear y asociar los tags
+    if (tags && tags.length > 0) {
+      const newTags = tags.map((tagId: number) => {
+        return this.propertyTagRepository.create({
+          tag_id: tagId,
           property: savedProperty,
         });
-        await this.propertyTagRepository.save(propertyTag);
-      }
+      });
+      await this.propertyTagRepository.save(newTags);
     }
 
-    // 4. Crear las operaciones asociadas si se proporcionan
+    // 4. Crear y asociar las operaciones
     if (operations && Array.isArray(operations) && operations.length > 0) {
       for (const operationData of operations) {
         const propertyOperation = this.propertyOperationRepository.create({
@@ -653,6 +653,7 @@ export class PropertiesService {
     id: number,
     updatePropertyDto: UpdatePropertyDto,
   ): Promise<Property> {
+    const { tags, ...propertyData } = updatePropertyDto;
     const property = await this.findOne(id);
 
     // Verificar si se está intentando cambiar el reference_code a uno que ya existe
@@ -671,8 +672,25 @@ export class PropertiesService {
       }
     }
 
-    // Aplicar cambios
-    Object.assign(property, updatePropertyDto);
+    // Actualizar los campos de la propiedad
+    Object.assign(property, propertyData);
+
+    // Actualizar los tags si se proporcionan
+    if (tags) {
+      // Eliminar los tags antiguos
+      await this.propertyTagRepository.delete({ property: { id } });
+
+      // Crear los nuevos tags
+      const newTags = tags.map((tagId) =>
+        this.propertyTagRepository.create({
+          tag_id: tagId,
+          property,
+        }),
+      );
+      await this.propertyTagRepository.save(newTags);
+      property.tags = newTags;
+    }
+
 
     return this.propertyRepository.save(property);
   }

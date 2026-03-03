@@ -39,23 +39,7 @@
       "order_position": 2
     }
   ],
-  "tags": [
-    {
-      "tag_id": 1,
-      "tag_name": "Ascensor",
-      "tag_type": 1
-    },
-    {
-      "tag_id": 2,
-      "tag_name": "Balcón",
-      "tag_type": 2
-    },
-    {
-      "tag_id": 3,
-      "tag_name": "Cochera",
-      "tag_type": 3
-    }
-  ],
+  "tags": [1, 2, 3],
   "operations": [
     {
       "operation_type": "venta",
