@@ -23,7 +23,17 @@ import { sanitizeFilename, getFileExtension, createUniqueFilename } from '../../
 
 // --- IMPORTACIONES PARA DRAFT ---
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
-import { PropertyStatus, MediaUploadStatus } from '../../common/enums';
+import { 
+  PropertyStatus, 
+  MediaUploadStatus, 
+  PropertyType, 
+  OperationType, 
+  Currency,
+  SurfaceMeasurement,
+  Orientation,
+  Disposition,
+  TemporalRentPeriod 
+} from '../../common/enums';
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
 
@@ -62,7 +72,7 @@ export class PropertiesService {
       reference_code: tempReferenceCode,
       publication_title: tempTitle,
       price: 0,
-      currency: 'USD',
+      currency: Currency.USD,
     });
 
     return this.propertyRepository.save(newProperty);

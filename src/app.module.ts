@@ -12,6 +12,7 @@ import { PropertiesModule } from './modules/properties/properties.module';
 import { PartnersModule } from './modules/partners/partners.module';
 import { EmailModule } from './common/email/email.module';
 import { LocationsModule } from './modules/locations/locations.module';
+import { TagsModule } from './modules/tags/tags.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -58,6 +59,7 @@ import { LocationsModule } from './modules/locations/locations.module';
     PartnersModule,
     EmailModule,
     LocationsModule,
+    TagsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

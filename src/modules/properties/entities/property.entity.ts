@@ -13,6 +13,16 @@ import { PropertyOperation } from './property-operation.entity';
 import { PropertyTag } from './property-tag.entity';
 import { PropertyVideo } from './property-video.entity';
 import { PropertyAttached } from './property-attached.entity';
+import { 
+  PropertyType, 
+  PropertyStatus, 
+  OperationType, 
+  Currency, 
+  SurfaceMeasurement,
+  Orientation,
+  Disposition,
+  TemporalRentPeriod 
+} from '../../../common/enums';
 
 @Entity('properties')
 @Index('idx_properties_status', ['status'])
@@ -66,10 +76,10 @@ export class Property {
 
   // ========== Tipo de Propiedad y Negocio ==========
   @Column({ type: 'integer', nullable: false })
-  property_type!: number;
+  property_type!: PropertyType;
 
-  @Column({ type: 'integer', nullable: false })
-  status!: number;
+  @Column({ type: 'integer', nullable: false, default: PropertyStatus.DISPONIBLE })
+  status!: PropertyStatus;
 
   // ========== Características Principales ==========
   @Column({ type: 'integer', nullable: true })
@@ -103,8 +113,8 @@ export class Property {
   @Column({ type: 'numeric', precision: 10, scale: 2, nullable: true })
   total_surface?: number;
 
-  @Column({ type: 'varchar', length: 10, nullable: true })
-  surface_measurement?: string;
+  @Column({ type: 'varchar', length: 10, nullable: true, default: SurfaceMeasurement.M2 })
+  surface_measurement?: SurfaceMeasurement;
 
   // ========== Información del Inmueble ==========
   @Column({ type: 'integer', nullable: true })
@@ -117,10 +127,10 @@ export class Property {
   situation?: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })
-  dispositions?: string;
+  dispositions?: Disposition;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
-  orientation?: string;
+  orientation?: Orientation;
 
   @Column({ type: 'integer', nullable: true })
   floors_amount?: number;
@@ -139,17 +149,17 @@ export class Property {
   network_share?: string;
 
   // ========== Operación y Precio (denormalizado para acceso rápido) ==========
-  @Column({ type: 'varchar', length: 50, nullable: false })
-  operation_type!: string;
+  @Column({ type: 'integer', nullable: false })
+  operation_type!: OperationType;
 
   @Column({ type: 'numeric', precision: 15, scale: 2, nullable: false })
   price!: number;
 
-  @Column({ type: 'varchar', length: 3, nullable: false })
-  currency!: string;
+  @Column({ type: 'varchar', length: 3, nullable: false, default: Currency.USD })
+  currency!: Currency;
 
-  @Column({ type: 'varchar', length: 50, nullable: true })
-  period?: string;
+  @Column({ type: 'integer', nullable: true })
+  period?: TemporalRentPeriod;
 
   @Column({ type: 'numeric', precision: 15, scale: 2, nullable: true })
   price_square_meter?: number;
