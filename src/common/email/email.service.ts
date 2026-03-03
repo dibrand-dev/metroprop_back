@@ -311,7 +311,7 @@ export class EmailService {
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
                       <p style="margin:30px;">  
-                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/facebook.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
                       <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
                       <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
