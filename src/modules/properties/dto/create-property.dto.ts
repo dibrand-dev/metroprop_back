@@ -100,6 +100,21 @@ export class CreatePropertyDto {
   @IsPositive()
   location_id?: number;
 
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  country_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  state_id?: number;
+
+  @IsOptional()
+  @IsInt()
+  @IsPositive()
+  sub_location_id?: number;
+
   // Coordenadas
   @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
@@ -112,6 +127,10 @@ export class CreatePropertyDto {
   @Min(-180)
   @Max(180)
   geo_long?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  show_exact_location?: boolean;
 
   // Características
   @IsOptional()

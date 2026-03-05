@@ -254,8 +254,12 @@ create table properties
     floor                    varchar(20),
     apartment                varchar(20),
     location_id              integer,
+    country_id               integer,
+    state_id                 integer,
+    sub_location_id          integer,
     geo_lat                  numeric(10, 8),
     geo_long                 numeric(11, 8),
+    show_exact_location      boolean default false,
     property_type            integer                 not null,
     property_subtype         integer,
     status                   integer                 not null,
@@ -319,6 +323,15 @@ create index idx_properties_property_type
 
 create index idx_properties_location_id
     on properties (location_id);
+
+create index idx_properties_country_id
+    on properties (country_id);
+
+create index idx_properties_state_id
+    on properties (state_id);
+
+create index idx_properties_sub_location_id
+    on properties (sub_location_id);
 
 create index idx_properties_reference_code
     on properties (reference_code);

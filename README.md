@@ -34,6 +34,9 @@ $body = @{
     price = 100000
     currency = "USD"
     location_id = 1
+    country_id = 1
+    state_id = 1
+    sub_location_id = 1
     branch = 1
     images = @(
         @{ url = "https://example.com/img1.jpg"; is_blueprint = $false; order_position = 1 },

@@ -28,6 +28,9 @@ import {
 @Index('idx_properties_status', ['status'])
 @Index('idx_properties_property_type', ['property_type'])
 @Index('idx_properties_location_id', ['location_id'])
+@Index('idx_properties_country_id', ['country_id'])
+@Index('idx_properties_state_id', ['state_id'])
+@Index('idx_properties_sub_location_id', ['sub_location_id'])
 @Index('idx_properties_reference_code', ['reference_code'])
 // @Index('idx_properties_branch', ['branch'])
 export class Property {
@@ -67,12 +70,24 @@ export class Property {
   @Column({ type: 'integer', nullable: true })
   location_id?: number;
 
+  @Column({ type: 'integer', nullable: true })
+  country_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  state_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  sub_location_id?: number;
+
   // ========== Coordenadas Geográficas ==========
   @Column({ type: 'numeric', precision: 10, scale: 8, nullable: true })
   geo_lat?: number;
 
   @Column({ type: 'numeric', precision: 11, scale: 8, nullable: true })
   geo_long?: number;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  show_exact_location?: boolean;
 
   // ========== Tipo de Propiedad y Negocio ==========
   @Column({ type: 'integer', nullable: false })
