@@ -235,8 +235,9 @@ export class PropertiesService {
   async saveMultimedia(
     propertyId: number,
     saveMultimediaDto: SaveMultimediaDto,
-    files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] },
+    files?: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] },
   ) {
+    const safeFiles = files ?? {};
     const logContext = { propertyId, operation: 'saveMultimedia' };
     console.log('🚀 Starting multimedia save process', logContext);
     
@@ -246,17 +247,17 @@ export class PropertiesService {
       throw new NotFoundException(`Propiedad con ID ${propertyId} no encontrada`);
     }
 
-    // Desestructurar datos del DTO
-    const { videos, multimedia360, images: imagesData, attached: attachedData } = saveMultimediaDto;
+    // Desestructurar datos del DTO (con fallback a objeto vacío si el DTO es undefined)
+    const { videos, multimedia360, images: imagesData, attached: attachedData } = saveMultimediaDto || {};
 
     // Logging estructurado de entrada
     const inputSummary = {
       videos: videos?.length || 0,
       multimedia360: multimedia360?.length || 0,
       imageMetadata: imagesData?.length || 0,
-      imageFiles: files.images?.length || 0,
+      imageFiles: safeFiles.images?.length || 0,
       attachedMetadata: attachedData?.length || 0,
-      attachedFiles: files.attached?.length || 0,
+      attachedFiles: safeFiles.attached?.length || 0,
     };
     console.log('📊 Input data summary:', inputSummary);
 
@@ -394,8 +395,8 @@ export class PropertiesService {
       // conservar registros existentes, sólo creamos/eliminos los
       // que realmente cambian y limitamos las subidas a los archivos
       // nuevos que llegan en `files.images`.
-      if ((imagesData && imagesData.length > 0) || (files.images && files.images.length > 0)) {
-        console.log(`🖼️ Processing images (metadata entries: ${imagesData?.length || 0}, files: ${files.images?.length || 0})`);
+      if ((imagesData && imagesData.length > 0) || (safeFiles.images && safeFiles.images.length > 0)) {
+        console.log(`🖼️ Processing images (metadata entries: ${imagesData?.length || 0}, files: ${safeFiles.images?.length || 0})`);
 
         // primero, obtener imágenes ya guardadas en la base
         const existingImages = await manager.find(PropertyImage, { where: { property: { id: propertyId } } });
@@ -466,12 +467,12 @@ export class PropertiesService {
               }
             } else {
               // no hay url en los metadatos, debe corresponder a un archivo nuevo
-              if (!files.images || fileCursor >= files.images.length) {
+              if (!safeFiles.images || fileCursor >= safeFiles.images.length) {
                 throw new BadRequestException(
                   `Faltan archivos para las entradas de imagen proporcionadas (índice ${idx})`,
                 );
               }
-              const file = files.images[fileCursor++];
+              const file = safeFiles.images[fileCursor++];
 
               const newImg = manager.create(PropertyImage, {
                 property,
@@ -488,9 +489,9 @@ export class PropertiesService {
           }
 
           // si quedaron archivos sin metadato, los añadimos al final
-          if (files.images && fileCursor < files.images.length) {
-            for (; fileCursor < files.images.length; fileCursor++) {
-              const file = files.images[fileCursor];
+          if (safeFiles.images && fileCursor < safeFiles.images.length) {
+            for (; fileCursor < safeFiles.images.length; fileCursor++) {
+              const file = safeFiles.images[fileCursor];
               const order = finalImages.length + 1;
               const newImg = manager.create(PropertyImage, {
                 property,
@@ -505,10 +506,10 @@ export class PropertiesService {
               results.images.queued++;
             }
           }
-        } else if (files.images && files.images.length > 0) {
+        } else if (safeFiles.images && safeFiles.images.length > 0) {
           // no hay metadatos, pero sí archivos: agregar todos en orden
-          for (let i = 0; i < files.images.length; i++) {
-            const file = files.images[i];
+          for (let i = 0; i < safeFiles.images.length; i++) {
+            const file = safeFiles.images[i];
             const order = i + 1;
             const newImg = manager.create(PropertyImage, {
               property,
@@ -561,8 +562,8 @@ export class PropertiesService {
       // 4. Procesar Archivos Adjuntos - Similar a imágenes, conservar existentes
       // A diferencia de la implementación original, intentamos conservar registros existentes,
       // solo creamos/eliminos los que realmente cambian y limitamos las subidas a los archivos nuevos.
-      if ((attachedData && attachedData.length > 0) || (files.attached && files.attached.length > 0)) {
-        console.log(`📎 Processing attached files (metadata entries: ${attachedData?.length || 0}, files: ${files.attached?.length || 0})`);
+      if ((attachedData && attachedData.length > 0) || (safeFiles.attached && safeFiles.attached.length > 0)) {
+        console.log(`📎 Processing attached files (metadata entries: ${attachedData?.length || 0}, files: ${safeFiles.attached?.length || 0})`);
 
         // Obtener archivos adjuntos ya guardados en la base
         const existingAttached = await manager.find(PropertyAttached, { where: { property: { id: propertyId } } });
@@ -638,12 +639,12 @@ export class PropertiesService {
               }
             } else {
               // No hay file_url en los metadatos, debe corresponder a un archivo nuevo
-              if (!files.attached || fileCursor >= files.attached.length) {
+              if (!safeFiles.attached || fileCursor >= safeFiles.attached.length) {
                 throw new BadRequestException(
                   `Faltan archivos para las entradas de adjuntos proporcionadas (índice ${idx})`,
                 );
               }
-              const file = files.attached[fileCursor++];
+              const file = safeFiles.attached[fileCursor++];
 
               const newAtt = manager.create(PropertyAttached, {
                 property,
@@ -661,9 +662,9 @@ export class PropertiesService {
           }
 
           // Si quedaron archivos sin metadato, los añadimos al final
-          if (files.attached && fileCursor < files.attached.length) {
-            for (; fileCursor < files.attached.length; fileCursor++) {
-              const file = files.attached[fileCursor];
+          if (safeFiles.attached && fileCursor < safeFiles.attached.length) {
+            for (; fileCursor < safeFiles.attached.length; fileCursor++) {
+              const file = safeFiles.attached[fileCursor];
               const order = finalAttached.length + 1;
               const newAtt = manager.create(PropertyAttached, {
                 property,
@@ -679,10 +680,10 @@ export class PropertiesService {
               results.attached.queued++;
             }
           }
-        } else if (files.attached && files.attached.length > 0) {
+        } else if (safeFiles.attached && safeFiles.attached.length > 0) {
           // No hay metadatos, pero sí archivos: agregar todos en orden
-          for (let i = 0; i < files.attached.length; i++) {
-            const file = files.attached[i];
+          for (let i = 0; i < safeFiles.attached.length; i++) {
+            const file = safeFiles.attached[i];
             const order = i + 1;
             const newAtt = manager.create(PropertyAttached, {
               property,

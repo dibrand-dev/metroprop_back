@@ -20,15 +20,74 @@ export class AllExceptionsFilter implements ExceptionFilter {
     let status = HttpStatus.INTERNAL_SERVER_ERROR;
     let message = 'Internal server error';
     let error = 'Internal Server Error';
+    let details: any = undefined;
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
       const exceptionResponse = exception.getResponse();
-      message =
-        typeof exceptionResponse === 'object'
-          ? (exceptionResponse as any).message || exception.message
-          : exceptionResponse;
-      error = exception.name;
+      
+      // Handle enriched exceptions (e.g. from EnhancedFileFieldsInterceptor or custom throws)
+      // Any BadRequestException thrown with { message, error, details } will be handled generically.
+      if (typeof exceptionResponse === 'object') {
+        const responseObj = exceptionResponse as any;
+
+        // Pass through custom details if the thrower included them
+        if (responseObj.details) {
+          details = responseObj.details;
+        }
+
+        // Use a custom error type if the thrower specified one
+        if (responseObj.error && typeof responseObj.error === 'string' && responseObj.error !== 'Bad Request') {
+          error = responseObj.error;
+        }
+
+        // --- Validation pipe errors (class-validator) ---
+        if (status === HttpStatus.BAD_REQUEST && Array.isArray(responseObj.message)) {
+          const { fieldErrors, unexpectedFields } = this.parseValidationErrors(responseObj.message);
+
+          if (unexpectedFields.length > 0) {
+            error = 'UnexpectedFieldsError';
+            message = `Campos no permitidos: [${unexpectedFields.join(', ')}]. Verifica los campos aceptados por este endpoint.`;
+            details = { ...details, unexpectedFields };
+          } else if (Object.keys(fieldErrors).length > 0) {
+            error = 'ValidationError';
+            message = Object.entries(fieldErrors)
+              .map(([field, errors]) => `${field}: ${errors.join(', ')}`)
+              .join('; ');
+            details = { ...details, fieldErrors };
+          }
+        }
+        // --- String message (forbidNonWhitelisted, enriched exceptions, etc.) ---
+        else if (responseObj.message && typeof responseObj.message === 'string') {
+          // forbidNonWhitelisted: "property X should not exist"
+          if (responseObj.message.toLowerCase().includes('should not exist')) {
+            error = error !== 'Internal Server Error' ? error : 'UnexpectedFieldsError';
+            const matches = responseObj.message.match(/property\s+(\w+)\s+should not exist/gi);
+            if (matches) {
+              const fields = matches.map((m: string) => m.replace('property ', '').replace(' should not exist', ''));
+              message = `Campos no permitidos: [${fields.join(', ')}]. Verifica los campos aceptados por este endpoint.`;
+              details = { ...details, unexpectedFields: fields };
+            } else {
+              message = responseObj.message;
+            }
+          } else {
+            // Any other string message (enriched Multer errors, custom messages, etc.)
+            message = responseObj.message;
+          }
+        }
+      }
+
+      // Fallback: use raw exception data if nothing was set above
+      if (message === 'Internal server error') {
+        message =
+          typeof exceptionResponse === 'object'
+            ? (exceptionResponse as any).message || exception.message
+            : exceptionResponse;
+      }
+
+      if (error === 'Internal Server Error') {
+        error = exception.name;
+      }
       
       // Handle ConflictException specifically for duplicate field errors
       if (status === HttpStatus.CONFLICT && typeof message === 'string' && message.includes('Duplicate value for field')) {
@@ -124,12 +183,50 @@ export class AllExceptionsFilter implements ExceptionFilter {
       exception instanceof Error ? exception.stack : String(exception),
     );
 
-    response.status(status).json({
+    const errorResponse: any = {
       statusCode: status,
       timestamp: new Date().toISOString(),
       path: request.url,
       message,
       error,
-    });
+    };
+    
+    if (details) {
+      errorResponse.details = details;
+    }
+    
+    response.status(status).json(errorResponse);
+  }
+
+  /**
+   * Parsea errores de class-validator (array de strings u objetos) en un formato estructurado.
+   */
+  private parseValidationErrors(messages: any[]): {
+    fieldErrors: Record<string, string[]>;
+    unexpectedFields: string[];
+  } {
+    const fieldErrors: Record<string, string[]> = {};
+    const unexpectedFields: string[] = [];
+
+    for (const err of messages) {
+      if (typeof err === 'string') {
+        const match = err.match(/^property\s+(\S+)\s+should not exist$/i);
+        if (match) {
+          unexpectedFields.push(match[1]);
+        } else {
+          if (!fieldErrors['_general']) fieldErrors['_general'] = [];
+          fieldErrors['_general'].push(err);
+        }
+      } else if (typeof err === 'object' && err?.property && err?.constraints) {
+        if (err.constraints['whitelistValidation']) {
+          unexpectedFields.push(err.property);
+        } else {
+          const msgs = Object.values(err.constraints) as string[];
+          fieldErrors[err.property] = (fieldErrors[err.property] || []).concat(msgs);
+        }
+      }
+    }
+
+    return { fieldErrors, unexpectedFields };
   }
 }

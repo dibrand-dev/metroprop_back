@@ -21,10 +21,10 @@ import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 
 import { UploadedFiles, UseInterceptors } from '@nestjs/common';
-import { FilesInterceptor, FileFieldsInterceptor } from '@nestjs/platform-express';
 
 import { SaveMultimediaDto } from './dto/save-multimedia.dto';
 import { MultipartFormDataInterceptor } from '../../common/interceptors/multipart-form-data.interceptor';
+import { EnhancedFileFieldsInterceptor } from '../../common/interceptors/enhanced-file-fields.interceptor';
 
 @Controller('properties')
 export class PropertiesController {
@@ -62,27 +62,29 @@ export class PropertiesController {
    */
   @Post(':propertyId/save-multimedia')
   @UseInterceptors(
-    FileFieldsInterceptor([
-      { name: 'images', maxCount: 20 },
-      { name: 'attached', maxCount: 20 }
-    ]),
+    EnhancedFileFieldsInterceptor(
+      [{ name: 'images', maxCount: 20 }, { name: 'attached', maxCount: 20 }],
+      { endpointDescription: 'POST /properties/:id/save-multimedia' },
+    ),
     new MultipartFormDataInterceptor(['videos', 'multimedia360', 'images', 'attached'])
   )
   async saveMultimedia(
     @Param('propertyId', ParseIntPipe) propertyId: number,
     @Body() saveMultimediaDto: SaveMultimediaDto,
-    @UploadedFiles() files: { 
+    @UploadedFiles() files?: { 
       images?: Express.Multer.File[];
       attached?: Express.Multer.File[];
     },
   ) {
+    const safeFiles = files ?? {};
+
     // Validación personalizada archivo por archivo
-    this.validateUploadedFiles(files);
+    this.validateUploadedFiles(safeFiles);
     
     return this.propertiesService.saveMultimedia(
       propertyId,
       saveMultimediaDto,
-      files,
+      safeFiles,
     );
   }
 
