@@ -269,22 +269,55 @@ export class PropertiesService {
         attached: { queued: 0, errors: 0 }
       };
 
-      // 1. Procesar Videos (URLs externas)
+      // 1. Procesar Videos (URLs externas) - Conservar existentes, actualizar orden
       if (videos && videos.length > 0) {
         console.log(`🎥 Processing ${videos.length} video URLs`);
         try {
-          // Eliminar videos anteriores y crear nuevos
-          await manager.delete(PropertyVideo, { property: { id: propertyId }, is_360: false });
-          
+          // Obtener videos existentes
+          const existingVideos = await manager.find(PropertyVideo, { where: { property: { id: propertyId }, is_360: false } });
+          console.log(`📦 Found ${existingVideos.length} existing videos in DB`);
+
+          const finalVideos: PropertyVideo[] = [];
+
           for (const videoData of videos) {
-            const newVideo = manager.create(PropertyVideo, { 
-              ...videoData, 
-              property, 
-              is_360: false 
-            });
-            await manager.save(PropertyVideo, newVideo);
+            let found: PropertyVideo | undefined;
+            if (videoData.id) {
+              found = existingVideos.find(v => v.id === videoData.id);
+            } else {
+              found = existingVideos.find(v => v.url === videoData.url);
+            }
+            if (found) {
+              // Actualizar url y orden si cambiaron
+              const updates: any = {};
+              if (found.url !== videoData.url) updates.url = videoData.url;
+              if (found.order !== videoData.order) updates.order = videoData.order;
+              if (Object.keys(updates).length > 0) {
+                await manager.update(PropertyVideo, { id: found.id }, updates);
+                Object.assign(found, updates);
+              }
+              finalVideos.push(found);
+            } else {
+              // Crear nuevo
+              const newVideo = manager.create(PropertyVideo, { 
+                ...videoData, 
+                property, 
+                is_360: false 
+              });
+              const saved = await manager.save(PropertyVideo, newVideo);
+              finalVideos.push(saved as PropertyVideo);
+            }
             results.videos.processed++;
           }
+
+          // Eliminar videos no presentes en metadata
+          const idsToKeep = finalVideos.map(v => v.id);
+          const toRemove = existingVideos.filter(v => !idsToKeep.includes(v.id));
+          if (toRemove.length > 0) {
+            const removeIds = toRemove.map(v => v.id);
+            await manager.delete(PropertyVideo, removeIds);
+            console.log(`🗑️ Removed ${removeIds.length} videos no longer referenced`);
+          }
+
           console.log(`✅ Successfully processed ${results.videos.processed} videos`);
         } catch (error) {
           console.error('❌ Error processing videos:', error instanceof Error ? error.message : JSON.stringify(error));
@@ -293,22 +326,55 @@ export class PropertiesService {
         }
       }
 
-      // 2. Procesar Multimedia 360 (URLs externas)
+      // 2. Procesar Multimedia 360 (URLs externas) - Conservar existentes, actualizar orden
       if (multimedia360 && multimedia360.length > 0) {
         console.log(`🌐 Processing ${multimedia360.length} multimedia360 URLs`);
         try {
-          // Eliminar tours 360 anteriores y crear nuevos
-          await manager.delete(PropertyVideo, { property: { id: propertyId }, is_360: true });
-          
+          // Obtener multimedia360 existentes
+          const existingMultimedia360 = await manager.find(PropertyVideo, { where: { property: { id: propertyId }, is_360: true } });
+          console.log(`📦 Found ${existingMultimedia360.length} existing multimedia360 in DB`);
+
+          const finalMultimedia360: PropertyVideo[] = [];
+
           for (const videoData of multimedia360) {
-            const newVideo360 = manager.create(PropertyVideo, { 
-              ...videoData, 
-              property, 
-              is_360: true 
-            });
-            await manager.save(PropertyVideo, newVideo360);
+            let found: PropertyVideo | undefined;
+            if (videoData.id) {
+              found = existingMultimedia360.find(v => v.id === videoData.id);
+            } else {
+              found = existingMultimedia360.find(v => v.url === videoData.url);
+            }
+            if (found) {
+              // Actualizar url y orden si cambiaron
+              const updates: any = {};
+              if (found.url !== videoData.url) updates.url = videoData.url;
+              if (found.order !== videoData.order) updates.order = videoData.order;
+              if (Object.keys(updates).length > 0) {
+                await manager.update(PropertyVideo, { id: found.id }, updates);
+                Object.assign(found, updates);
+              }
+              finalMultimedia360.push(found);
+            } else {
+              // Crear nuevo
+              const newVideo360 = manager.create(PropertyVideo, { 
+                ...videoData, 
+                property, 
+                is_360: true 
+              });
+              const saved = await manager.save(PropertyVideo, newVideo360);
+              finalMultimedia360.push(saved as PropertyVideo);
+            }
             results.multimedia360.processed++;
           }
+
+          // Eliminar multimedia360 no presentes en metadata
+          const idsToKeep = finalMultimedia360.map(v => v.id);
+          const toRemove = existingMultimedia360.filter(v => !idsToKeep.includes(v.id));
+          if (toRemove.length > 0) {
+            const removeIds = toRemove.map(v => v.id);
+            await manager.delete(PropertyVideo, removeIds);
+            console.log(`🗑️ Removed ${removeIds.length} multimedia360 no longer referenced`);
+          }
+
           console.log(`✅ Successfully processed ${results.multimedia360.processed} multimedia360`);
         } catch (error) {
           console.error('❌ Error processing multimedia360:', error instanceof Error ? error.message : JSON.stringify(error));
@@ -318,111 +384,344 @@ export class PropertiesService {
       }
 
       // 3. Procesar Imágenes - Transacción atómica
-      if (files.images && files.images.length > 0) {
-        console.log(`🖼️ Processing ${files.images.length} image files`);
-        
-        // Validar correspondencia con metadatos si existen
-        if (imagesData && imagesData.length > 0) {
-          if (files.images.length !== imagesData.length) {
-            throw new BadRequestException(
-              `Mismatch: ${files.images.length} image files vs ${imagesData.length} metadata entries`
-            );
+      // A diferencia de la implementación original, intentamos
+      // conservar registros existentes, sólo creamos/eliminos los
+      // que realmente cambian y limitamos las subidas a los archivos
+      // nuevos que llegan en `files.images`.
+      if ((imagesData && imagesData.length > 0) || (files.images && files.images.length > 0)) {
+        console.log(`🖼️ Processing images (metadata entries: ${imagesData?.length || 0}, files: ${files.images?.length || 0})`);
+
+        // primero, obtener imágenes ya guardadas en la base
+        const existingImages = await manager.find(PropertyImage, { where: { property: { id: propertyId } } });
+        console.log(`📦 Found ${existingImages.length} existing images in DB`);
+
+        // estructura auxiliar para manejar el flujo
+        const finalImages: { entity: PropertyImage; order_position: number }[] = [];
+        const filesToUpload: { entity: PropertyImage; file: Express.Multer.File }[] = [];
+        const urlsToDownload: { imageId: number; originalUrl: string }[] = [];
+
+        // indice de archivos que aún no han sido usados
+        let fileCursor = 0;
+
+        // función auxiliar para saber si una url apunta a nuestro bucket/properties
+        const isOwnS3Url = (url: string): boolean => {
+          try {
+            return url.includes(`properties/${propertyId}`);
+          } catch {
+            return false;
           }
-          console.log(`📋 Using provided metadata for ${imagesData.length} images`);
-        } else {
-          console.log(`📋 Using auto-generated metadata (sequential order)`);
-        }
+        };
 
-        try {
-          // Eliminar imágenes anteriores y crear registros nuevos
-          await manager.delete(PropertyImage, { property: { id: propertyId }});
-          
-          const savedImages: PropertyImage[] = [];
-          const imageFiles = files.images;
+        // si hay metadatos, los procesamos en orden
+        if (imagesData && imagesData.length > 0) {
+          for (let idx = 0; idx < imagesData.length; idx++) {
+            const meta = imagesData[idx];
+            const order = meta.order_position ?? idx + 1;
 
-          for (let i = 0; i < imageFiles.length; i++) {
-            // Usar metadatos proporcionados o generar valores por defecto
-            const imageData = (imagesData && imagesData[i]) ? imagesData[i] : {
-              order_position: i + 1
-            };
+            if (meta.url) {
+              // el cliente señaló una url de imagen existente
+              const found = existingImages.find(img => img.url === meta.url);
 
-            const propertyImage = manager.create(PropertyImage, {
+              if (found) {
+                // sólo actualizamos el orden si cambió
+                if (found.order_position !== order) {
+                  await manager.update(PropertyImage, { id: found.id }, { order_position: order });
+                  found.order_position = order;
+                }
+
+                finalImages.push({ entity: found, order_position: order });
+              } else if (isOwnS3Url(meta.url)) {
+                // la url parece ser de nuestro propio bucket pero no está en la tabla:
+                // creamos un nuevo registro marcado como COMPLETED para no re-subir.
+                const newImg = manager.create(PropertyImage, {
+                  property,
+                  order_position: order,
+                  url: meta.url,
+                  upload_status: MediaUploadStatus.COMPLETED,
+                  retry_count: 0,
+                });
+                const saved = await manager.save(PropertyImage, newImg);
+                finalImages.push({ entity: saved as PropertyImage, order_position: order });
+              } else {
+                // la url no corresponde a S3; asumimos que es un link externo
+                // y la trataremos como si fuera un archivo que debe descargarse.
+                const newImg = manager.create(PropertyImage, {
+                  property,
+                  order_position: order,
+                  url: '',
+                  upload_status: MediaUploadStatus.PENDING,
+                  retry_count: 0,
+                });
+                const saved = await manager.save(PropertyImage, newImg);
+                finalImages.push({ entity: saved as PropertyImage, order_position: order });
+                // guardamos la url para procesarla más abajo
+                urlsToDownload.push({ imageId: saved.id!, originalUrl: meta.url });
+                results.images.queued++;
+              }
+            } else {
+              // no hay url en los metadatos, debe corresponder a un archivo nuevo
+              if (!files.images || fileCursor >= files.images.length) {
+                throw new BadRequestException(
+                  `Faltan archivos para las entradas de imagen proporcionadas (índice ${idx})`,
+                );
+              }
+              const file = files.images[fileCursor++];
+
+              const newImg = manager.create(PropertyImage, {
+                property,
+                order_position: order,
+                url: null,
+                upload_status: MediaUploadStatus.PENDING,
+                retry_count: 0,
+              });
+              const saved = await manager.save(PropertyImage, newImg);
+              finalImages.push({ entity: saved as PropertyImage, order_position: order });
+              filesToUpload.push({ entity: saved as PropertyImage, file });
+              results.images.queued++;
+            }
+          }
+
+          // si quedaron archivos sin metadato, los añadimos al final
+          if (files.images && fileCursor < files.images.length) {
+            for (; fileCursor < files.images.length; fileCursor++) {
+              const file = files.images[fileCursor];
+              const order = finalImages.length + 1;
+              const newImg = manager.create(PropertyImage, {
+                property,
+                order_position: order,
+                url: null,
+                upload_status: MediaUploadStatus.PENDING,
+                retry_count: 0,
+              });
+              const saved = await manager.save(PropertyImage, newImg);
+              finalImages.push({ entity: saved as PropertyImage, order_position: order });
+              filesToUpload.push({ entity: saved as PropertyImage, file });
+              results.images.queued++;
+            }
+          }
+        } else if (files.images && files.images.length > 0) {
+          // no hay metadatos, pero sí archivos: agregar todos en orden
+          for (let i = 0; i < files.images.length; i++) {
+            const file = files.images[i];
+            const order = i + 1;
+            const newImg = manager.create(PropertyImage, {
               property,
-              order_position: imageData.order_position,
+              order_position: order,
               url: null,
               upload_status: MediaUploadStatus.PENDING,
               retry_count: 0,
             });
-            const saved = await manager.save(PropertyImage, propertyImage);
-            savedImages.push(saved as PropertyImage);
+            const saved = await manager.save(PropertyImage, newImg);
+            finalImages.push({ entity: saved as PropertyImage, order_position: order });
+            filesToUpload.push({ entity: saved as PropertyImage, file });
             results.images.queued++;
           }
-
-          // Procesar uploads en background
-          setImmediate(() => {
-            console.log(`🚀 Starting background image upload process for ${savedImages.length} images`);
-            this.processAndUploadUploadedFiles(savedImages, imageFiles, propertyId);
-          });
-          
-          console.log(`✅ Successfully queued ${results.images.queued} images for upload`);
-        } catch (error) {
-          console.error('❌ Error processing images:', error instanceof Error ? error.message : JSON.stringify(error));
-          results.images.errors++;
-          throw error;
         }
+
+        // eliminar imágenes antiguas que no aparecen en finalImages
+        const idsToKeep = finalImages.map(f => f.entity.id);
+        const toRemove = existingImages.filter(img => !idsToKeep.includes(img.id));
+        if (toRemove.length > 0) {
+          const removeIds = toRemove.map(i => i.id);
+          await manager.delete(PropertyImage, removeIds);
+          console.log(`🗑️ Removed ${removeIds.length} images no longer referenced`);
+        }
+
+        // lanzar carga en background sólo para las nuevas imágenes
+        if (filesToUpload.length > 0) {
+          const imgs = filesToUpload.map(i => i.entity);
+          const fs = filesToUpload.map(i => i.file);
+          setImmediate(() => {
+            console.log(`🚀 Starting background image upload for ${imgs.length} new images (file payloads)`);
+            this.processAndUploadUploadedFiles(imgs, fs, propertyId);
+          });
+        }
+
+        if (urlsToDownload.length > 0) {
+          const imagesToProcess = urlsToDownload.map(u => ({
+            imageId: u.imageId,
+            originalUrl: u.originalUrl,
+            propertyId,
+          }));
+          setImmediate(() => {
+            console.log(`🚀 Starting background image download for ${urlsToDownload.length} URL images`);
+            this.processAndUploadImages(imagesToProcess);
+          });
+        }
+
+        console.log(`✅ Image processing finished, queued ${results.images.queued}`);
       }
 
-      // 4. Procesar Archivos Adjuntos - Transacción atómica
-      if (files.attached && files.attached.length > 0) {
-        console.log(`📎 Processing ${files.attached.length} attached files`);
-        
-        // Información sobre metadatos
+      // 4. Procesar Archivos Adjuntos - Similar a imágenes, conservar existentes
+      // A diferencia de la implementación original, intentamos conservar registros existentes,
+      // solo creamos/eliminos los que realmente cambian y limitamos las subidas a los archivos nuevos.
+      if ((attachedData && attachedData.length > 0) || (files.attached && files.attached.length > 0)) {
+        console.log(`📎 Processing attached files (metadata entries: ${attachedData?.length || 0}, files: ${files.attached?.length || 0})`);
+
+        // Obtener archivos adjuntos ya guardados en la base
+        const existingAttached = await manager.find(PropertyAttached, { where: { property: { id: propertyId } } });
+        console.log(`📦 Found ${existingAttached.length} existing attached files in DB`);
+
+        // Estructura auxiliar para manejar el flujo
+        const finalAttached: { entity: PropertyAttached; order: number }[] = [];
+        const filesToUpload: { entity: PropertyAttached; file: Express.Multer.File }[] = [];
+        const urlsToDownload: { attachedId: number; originalUrl: string }[] = [];
+
+        // Indice de archivos que aún no han sido usados
+        let fileCursor = 0;
+
+        // Función auxiliar para saber si una url apunta a nuestro bucket/properties
+        const isOwnS3Url = (url: string): boolean => {
+          try {
+            return url.includes(`properties/${propertyId}/attached/`);
+          } catch {
+            return false;
+          }
+        };
+
+        // Si hay metadatos, los procesamos en orden
         if (attachedData && attachedData.length > 0) {
-          console.log(`📋 Using provided metadata for ${attachedData.length} attachments`);
-        } else {
-          console.log(`📋 Using auto-generated metadata (sequential order)`);
-        }
+          for (let idx = 0; idx < attachedData.length; idx++) {
+            const meta = attachedData[idx];
+            const order = meta.order ?? idx + 1;
 
-        try {
-          // Eliminar archivos anteriores y crear registros nuevos
-          await manager.delete(PropertyAttached, { property: { id: propertyId }});
-          
-          const savedAttached: PropertyAttached[] = [];
-          const attachedFiles = files.attached;
+            if (meta.file_url) {
+              // El cliente señaló una url de archivo existente
+              const found = existingAttached.find(att => att.file_url === meta.file_url);
 
-          for (let i = 0; i < attachedFiles.length; i++) {
-            // Usar metadatos proporcionados o generar valores por defecto
-            const attachedInfo = (attachedData && attachedData[i]) ? attachedData[i] : {
-              order: i + 1,
-              description: `Documento ${i + 1}`,
-              file_url: null
-            };
+              if (found) {
+                // Solo actualizar orden si cambió
+                if (found.order !== order) {
+                  await manager.update(PropertyAttached, { id: found.id }, { order });
+                  found.order = order;
+                }
+                if (meta.description && found.description !== meta.description) {
+                  await manager.update(PropertyAttached, { id: found.id }, { description: meta.description });
+                  found.description = meta.description;
+                }
+                finalAttached.push({ entity: found, order });
+              } else if (isOwnS3Url(meta.file_url)) {
+                // La url parece ser de nuestro propio bucket pero no está en la tabla:
+                // Crear un nuevo registro marcado como COMPLETED para no re-subir.
+                const newAtt = manager.create(PropertyAttached, {
+                  property,
+                  order,
+                  description: meta.description || `Documento ${order}`,
+                  file_url: meta.file_url,
+                  upload_status: MediaUploadStatus.COMPLETED,
+                  retry_count: 0,
+                });
+                const saved = await manager.save(PropertyAttached, newAtt);
+                finalAttached.push({ entity: saved as PropertyAttached, order });
+              } else {
+                // La url no corresponde a S3; asumimos que es un link externo
+                // y la trataremos como si fuera un archivo que debe descargarse.
+                const newAtt = manager.create(PropertyAttached, {
+                  property,
+                  order,
+                  description: meta.description || `Documento ${order}`,
+                  file_url: '',
+                  upload_status: MediaUploadStatus.PENDING,
+                  retry_count: 0,
+                });
+                const saved = await manager.save(PropertyAttached, newAtt);
+                finalAttached.push({ entity: saved as PropertyAttached, order });
+                // Guardamos la url para procesarla más abajo
+                urlsToDownload.push({ attachedId: saved.id!, originalUrl: meta.file_url });
+                results.attached.queued++;
+              }
+            } else {
+              // No hay file_url en los metadatos, debe corresponder a un archivo nuevo
+              if (!files.attached || fileCursor >= files.attached.length) {
+                throw new BadRequestException(
+                  `Faltan archivos para las entradas de adjuntos proporcionadas (índice ${idx})`,
+                );
+              }
+              const file = files.attached[fileCursor++];
 
-            const propertyAttached = manager.create(PropertyAttached, {
+              const newAtt = manager.create(PropertyAttached, {
+                property,
+                order,
+                description: meta.description || `Documento ${order}`,
+                file_url: null,
+                upload_status: MediaUploadStatus.PENDING,
+                retry_count: 0,
+              });
+              const saved = await manager.save(PropertyAttached, newAtt);
+              finalAttached.push({ entity: saved as PropertyAttached, order });
+              filesToUpload.push({ entity: saved as PropertyAttached, file });
+              results.attached.queued++;
+            }
+          }
+
+          // Si quedaron archivos sin metadato, los añadimos al final
+          if (files.attached && fileCursor < files.attached.length) {
+            for (; fileCursor < files.attached.length; fileCursor++) {
+              const file = files.attached[fileCursor];
+              const order = finalAttached.length + 1;
+              const newAtt = manager.create(PropertyAttached, {
+                property,
+                order,
+                description: `Documento ${order}`,
+                file_url: null,
+                upload_status: MediaUploadStatus.PENDING,
+                retry_count: 0,
+              });
+              const saved = await manager.save(PropertyAttached, newAtt);
+              finalAttached.push({ entity: saved as PropertyAttached, order });
+              filesToUpload.push({ entity: saved as PropertyAttached, file });
+              results.attached.queued++;
+            }
+          }
+        } else if (files.attached && files.attached.length > 0) {
+          // No hay metadatos, pero sí archivos: agregar todos en orden
+          for (let i = 0; i < files.attached.length; i++) {
+            const file = files.attached[i];
+            const order = i + 1;
+            const newAtt = manager.create(PropertyAttached, {
               property,
-              order: attachedInfo.order,
-              description: attachedInfo.description || `Documento ${i + 1}`,
-              file_url: attachedInfo.file_url || '',
+              order,
+              description: `Documento ${order}`,
+              file_url: null,
               upload_status: MediaUploadStatus.PENDING,
               retry_count: 0,
             });
-            const saved = await manager.save(PropertyAttached, propertyAttached);
-            savedAttached.push(saved as PropertyAttached);
+            const saved = await manager.save(PropertyAttached, newAtt);
+            finalAttached.push({ entity: saved as PropertyAttached, order });
+            filesToUpload.push({ entity: saved as PropertyAttached, file });
             results.attached.queued++;
           }
-
-          // Procesar uploads en background
-          setImmediate(() => {
-            console.log(`🚀 Starting background attachment upload process for ${savedAttached.length} files`);
-            this.processAndUploadAttachedFiles(savedAttached, attachedFiles, propertyId);
-          });
-
-          console.log(`✅ Successfully queued ${results.attached.queued} attachments for upload`);
-        } catch (error) {
-          console.error('❌ Error processing attached files:', error instanceof Error ? error.message : JSON.stringify(error));
-          results.attached.errors++;
-          throw error;
         }
+
+        // Eliminar archivos adjuntos antiguos que no aparecen en finalAttached
+        const idsToKeep = finalAttached.map(f => f.entity.id);
+        const toRemove = existingAttached.filter(att => !idsToKeep.includes(att.id));
+        if (toRemove.length > 0) {
+          const removeIds = toRemove.map(i => i.id);
+          await manager.delete(PropertyAttached, removeIds);
+          console.log(`🗑️ Removed ${removeIds.length} attached files no longer referenced`);
+        }
+
+        // Lanzar carga en background solo para los nuevos archivos
+        if (filesToUpload.length > 0) {
+          const atts = filesToUpload.map(i => i.entity);
+          const fs = filesToUpload.map(i => i.file);
+          setImmediate(() => {
+            console.log(`🚀 Starting background attached upload for ${atts.length} new files (file payloads)`);
+            this.processAndUploadAttachedFiles(atts, fs, propertyId);
+          });
+        }
+
+        if (urlsToDownload.length > 0) {
+          // Para URLs externas, usar el método existente que descarga y sube
+          for (const u of urlsToDownload) {
+            setImmediate(() => {
+              this._processAndUploadAttached(u.attachedId, propertyId, { originalUrl: u.originalUrl });
+            });
+          }
+        }
+
+        console.log(`✅ Attached processing finished, queued ${results.attached.queued}`);
       }
 
       // Respuesta final con resumen del procesamiento

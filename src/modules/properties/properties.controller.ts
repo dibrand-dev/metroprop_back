@@ -45,10 +45,16 @@ export class PropertiesController {
    * Content-Type: multipart/form-data
    * 
    * Form fields:
-   * - videos: JSON string con array de {url, order}
-   * - multimedia360: JSON string con array de {url, order}  
-   * - images: JSON string con array de {order_position} (opcional)
-   * - attached: JSON string con array de {order, description} (opcional)
+   * - videos: JSON string con array de {url, order?, id?} (opcional). El campo `id` permite identificar
+   *   un video existente para actualizarlo en lugar de crear uno nuevo.
+   * - multimedia360: JSON string con array de {url, order?, id?} (opcional). Similar a videos.
+   * - images: JSON string con array de {order_position, url?} (opcional). La propiedad `url` permite indicar
+   *   una imagen ya existente en S3 para no volver a subirla, y también sirve para reordenar.
+   *   Si sólo se envían archivos sin metadatos, las imágenes nuevas se añadirán al final de las existentes.
+   *   Para reemplazar por completo el conjunto de imágenes es necesario enviar metadata que describa
+   *   explícitamente las imágenes que se quieran conservar (con sus urls si ya están en S3) o un array vacío.
+   * - attached: JSON string con array de {order, description?, file_url?} (opcional). Similar a imágenes,
+   *   `file_url` permite conservar archivos ya subidos a S3 sin re-subirlos.
    * 
    * Files:
    * - images: Archivos de imagen (image/jpeg, image/png, etc.)

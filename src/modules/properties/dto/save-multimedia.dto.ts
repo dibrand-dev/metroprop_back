@@ -26,6 +26,17 @@ export class PropertyImageDto {
   @IsNumber()
   @Min(1)
   order_position?: number;
+
+  // Si la imagen ya existe en S3, el cliente puede enviar
+  // la URL completa (o la clave relativa) para indicar que no
+  // debe volver a subirse. Esto también permite reordenar
+  // elementos sin necesidad de reenviar archivos.
+  @IsOptional()
+  @IsString()
+  // puede ser una URL completa o la clave relativa que usamos en S3
+  // (p.ej. "properties/123/images/456-159846.jpg"). El validador se mantiene
+  // simple para no causar falsos negativos.
+  url?: string;
 }
 
 /**
@@ -51,6 +62,12 @@ export class PropertyVideoDto {
   @IsNumber()
   @Min(1)
   order?: number;
+
+  // ID opcional para identificar un video existente y actualizarlo
+  // en lugar de crear uno nuevo (útil si la URL cambió pero es el mismo video)
+  @IsOptional()
+  @IsNumber()
+  id?: number;
 }
 
 /**
@@ -76,6 +93,12 @@ export class PropertyMultimedia360Dto {
   @IsNumber()
   @Min(1)
   order?: number;
+
+  // ID opcional para identificar un multimedia360 existente y actualizarlo
+  // en lugar de crear uno nuevo (útil si la URL cambió pero es el mismo tour)
+  @IsOptional()
+  @IsNumber()
+  id?: number;
 }
 
 /**
