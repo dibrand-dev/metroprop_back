@@ -131,6 +131,9 @@ export class Property {
   @Column({ type: 'varchar', length: 10, nullable: true, default: SurfaceMeasurement.M2 })
   surface_measurement?: SurfaceMeasurement;
 
+  @Column({ type: 'varchar', length: 10, nullable: true, default: SurfaceMeasurement.M2 })
+  roofed_surface_measurement?: SurfaceMeasurement;
+
   // ========== Información del Inmueble ==========
   @Column({ type: 'integer', nullable: true })
   age?: number;

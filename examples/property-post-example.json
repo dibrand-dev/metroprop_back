@@ -29,6 +29,8 @@
   "roofed_surface": 85.5,
   "unroofed_surface": 0,
   "semiroofed_surface": 8,
+  "surface_measurement": "m2",
+  "roofed_surface_measurement": "m2",
   "images": [
     {
       "url": "https://example.com/images/property-001-front.jpg",

@@ -274,6 +274,7 @@ create table properties
     semiroofed_surface       numeric(10, 2),
     total_surface            numeric(10, 2),
     surface_measurement      varchar(10),
+    roofed_surface_measurement varchar(10),
     age                      integer,
     property_condition       varchar(100),
     situation                varchar(100),

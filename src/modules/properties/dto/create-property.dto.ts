@@ -16,7 +16,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OperationType, PropertyStatus, PropertySubtype, PropertyType } from '../../../common/enums';
+import { OperationType, PropertyStatus, PropertySubtype, PropertyType, SurfaceMeasurement } from '../../../common/enums';
 
 export class CreatePropertyDto {
   // ========== CAMPOS OBLIGATORIOS ==========
@@ -185,9 +185,12 @@ export class CreatePropertyDto {
   total_surface?: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(10)
-  surface_measurement?: string;
+  @IsEnum(SurfaceMeasurement)
+  surface_measurement?: SurfaceMeasurement;
+
+  @IsOptional()
+  @IsEnum(SurfaceMeasurement)
+  roofed_surface_measurement?: SurfaceMeasurement;
 
   // Información del inmueble
   @IsOptional()
