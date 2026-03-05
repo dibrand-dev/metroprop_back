@@ -279,7 +279,10 @@ export class PropertiesService {
 
           const finalVideos: PropertyVideo[] = [];
 
-          for (const videoData of videos) {
+          for (let idx = 0; idx < videos.length; idx++) {
+            const videoData = videos[idx];
+            const order = videoData.order ?? idx + 1;
+            
             let found: PropertyVideo | undefined;
             if (videoData.id) {
               found = existingVideos.find(v => v.id === videoData.id);
@@ -289,8 +292,8 @@ export class PropertiesService {
             if (found) {
               // Actualizar url y orden si cambiaron
               const updates: any = {};
-              if (found.url !== videoData.url) updates.url = videoData.url;
-              if (found.order !== videoData.order) updates.order = videoData.order;
+              if (videoData.url !== undefined && found.url !== videoData.url) updates.url = videoData.url;
+              if (found.order !== order) updates.order = order;
               if (Object.keys(updates).length > 0) {
                 await manager.update(PropertyVideo, { id: found.id }, updates);
                 Object.assign(found, updates);
@@ -336,7 +339,10 @@ export class PropertiesService {
 
           const finalMultimedia360: PropertyVideo[] = [];
 
-          for (const videoData of multimedia360) {
+          for (let idx = 0; idx < multimedia360.length; idx++) {
+            const videoData = multimedia360[idx];
+            const order = videoData.order ?? idx + 1;
+            
             let found: PropertyVideo | undefined;
             if (videoData.id) {
               found = existingMultimedia360.find(v => v.id === videoData.id);
@@ -346,8 +352,8 @@ export class PropertiesService {
             if (found) {
               // Actualizar url y orden si cambiaron
               const updates: any = {};
-              if (found.url !== videoData.url) updates.url = videoData.url;
-              if (found.order !== videoData.order) updates.order = videoData.order;
+              if (videoData.url !== undefined && found.url !== videoData.url) updates.url = videoData.url;
+              if (found.order !== order) updates.order = order;
               if (Object.keys(updates).length > 0) {
                 await manager.update(PropertyVideo, { id: found.id }, updates);
                 Object.assign(found, updates);
@@ -590,14 +596,14 @@ export class PropertiesService {
               const found = existingAttached.find(att => att.file_url === meta.file_url);
 
               if (found) {
-                // Solo actualizar orden si cambió
-                if (found.order !== order) {
-                  await manager.update(PropertyAttached, { id: found.id }, { order });
-                  found.order = order;
-                }
-                if (meta.description && found.description !== meta.description) {
-                  await manager.update(PropertyAttached, { id: found.id }, { description: meta.description });
-                  found.description = meta.description;
+                // Solo actualizar orden y descripción si cambiaron
+                const updates: any = {};
+                if (found.order !== order) updates.order = order;
+                if (meta.description && found.description !== meta.description) updates.description = meta.description;
+                
+                if (Object.keys(updates).length > 0) {
+                  await manager.update(PropertyAttached, { id: found.id }, updates);
+                  Object.assign(found, updates);
                 }
                 finalAttached.push({ entity: found, order });
               } else if (isOwnS3Url(meta.file_url)) {
@@ -643,7 +649,7 @@ export class PropertiesService {
                 property,
                 order,
                 description: meta.description || `Documento ${order}`,
-                file_url: null,
+                file_url: '',
                 upload_status: MediaUploadStatus.PENDING,
                 retry_count: 0,
               });
@@ -663,7 +669,7 @@ export class PropertiesService {
                 property,
                 order,
                 description: `Documento ${order}`,
-                file_url: null,
+                file_url: '',
                 upload_status: MediaUploadStatus.PENDING,
                 retry_count: 0,
               });
@@ -682,7 +688,7 @@ export class PropertiesService {
               property,
               order,
               description: `Documento ${order}`,
-              file_url: null,
+              file_url: '',
               upload_status: MediaUploadStatus.PENDING,
               retry_count: 0,
             });
