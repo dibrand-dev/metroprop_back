@@ -16,7 +16,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OperationType, PropertyStatus, PropertySubtype, PropertyType, SurfaceMeasurement } from '../../../common/enums';
+import { OperationType, PropertyStatus, PropertySubtype, PropertyType, SurfaceMeasurement, Brightness, GarageCoverage } from '../../../common/enums';
 
 export class CreatePropertyDto {
   // ========== CAMPOS OBLIGATORIOS ==========
@@ -217,6 +217,28 @@ export class CreatePropertyDto {
   @IsString()
   @MaxLength(50)
   orientation?: string;
+
+  @IsOptional()
+  @IsEnum(Brightness)
+  brightness?: Brightness;
+
+  @IsOptional()
+  @IsEnum(GarageCoverage)
+  garage_coverage?: GarageCoverage;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  surface_front?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  surface_length?: number;
+
+  @IsOptional()
+  @IsBoolean()
+  credit_eligible?: boolean;
 
   @IsOptional()
   @IsInt()

@@ -21,7 +21,9 @@ import {
   SurfaceMeasurement,
   Orientation,
   Disposition,
-  TemporalRentPeriod 
+  TemporalRentPeriod,
+  Brightness,
+  GarageCoverage
 } from '../../../common/enums';
 
 @Entity('properties')
@@ -149,6 +151,21 @@ export class Property {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   orientation?: Orientation;
+
+  @Column({ type: 'integer', nullable: true })
+  brightness?: Brightness;
+
+  @Column({ type: 'integer', nullable: true })
+  garage_coverage?: GarageCoverage;
+
+  @Column({ type: 'integer', nullable: true })
+  surface_front?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  surface_length?: number;
+
+  @Column({ type: 'boolean', nullable: true, default: false })
+  credit_eligible?: boolean;
 
   @Column({ type: 'integer', nullable: true })
   floors_amount?: number;

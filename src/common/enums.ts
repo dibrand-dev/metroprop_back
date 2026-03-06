@@ -81,6 +81,24 @@ export enum TagType {
 }
 
 /**
+ * Luminosidad de la propiedad.
+ */
+export enum Brightness {
+  VERY_BRIGHT = 1,  // Muy luminoso
+  BRIGHT = 2,       // Luminoso
+  DIM = 3,          // Poco luminoso
+}
+
+/**
+ * Cobertura de garage/cochera.
+ */
+export enum GarageCoverage {
+  COVERED = 1,       // Cubierta
+  SEMI_COVERED = 2,  // Semi cubierta
+  UNCOVERED = 3,     // Descubierta
+}
+
+/**
  * Orientación de la propiedad.
  */
 export enum Orientation {
