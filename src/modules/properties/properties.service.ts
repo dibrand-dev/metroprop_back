@@ -20,6 +20,9 @@ import { SaveMultimediaDto } from './dto/save-multimedia.dto';
 import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { sanitizeFilename, getFileExtension, createUniqueFilename } from '../../common/helpers/file-helpers';
+import { IMAGE_SIZES, ImageSizeKey, THUMB_PREFIX } from '../../common/constants';
+import sharp from 'sharp';
+
 
 // --- IMPORTACIONES PARA DRAFT ---
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
@@ -1282,6 +1285,37 @@ export class PropertiesService {
   // =============================================
 
   /**
+   * Comprime una imagen y genera múltiples tamaños según IMAGE_SIZES.
+   * Convierte a WebP para máxima compresión sin pérdida perceptible.
+   * SVG y GIF se devuelven sin procesar.
+   */
+  private async compressImage(
+    buffer: Buffer,
+    originalMimetype: string,
+  ): Promise<{ buffers: Record<ImageSizeKey, Buffer>; mimetype: string }> {
+    const SKIP_TYPES = ['image/svg+xml', 'image/gif'];
+
+    if (SKIP_TYPES.includes(originalMimetype)) {
+      const buffers = {} as Record<ImageSizeKey, Buffer>;
+      for (const key of Object.keys(IMAGE_SIZES) as ImageSizeKey[]) {
+        buffers[key] = buffer;
+      }
+      return { buffers, mimetype: originalMimetype };
+    }
+
+    const buffers = {} as Record<ImageSizeKey, Buffer>;
+    for (const [key, config] of Object.entries(IMAGE_SIZES) as Array<[ImageSizeKey, { width: number; prefix: string }]>) {
+      buffers[key] = await sharp(buffer)
+        .rotate()                                                    // auto-corregir orientación EXIF
+        .resize({ width: config.width, withoutEnlargement: true })  // no agrandar imágenes pequeñas
+        .webp({ quality: 82 })
+        .toBuffer();
+    }
+
+    return { buffers, mimetype: 'image/webp' };
+  }
+
+  /**
    * Sube una imagen de propiedad a S3 con la estructura correcta: properties/{propertyId}/images/{filename}
    */
   async uploadImageToS3(file: Express.Multer.File, imageId: number, propertyId: number): Promise<string | null> {
@@ -1355,7 +1389,9 @@ export class PropertiesService {
 
   /**
    * Procesa y sube una imagen a S3, actualizando la base de datos.
-   * Puede recibir un buffer de archivo o una URL de imagen original.
+   * Genera todos los tamaños definidos en IMAGE_SIZES y los sube en paralelo.
+   * Solo almacena en DB la URL del tamaño FULL; el thumb se deriva
+   * anteponiendo THUMB_PREFIX al nombre del archivo.
    */
   private async _processAndUploadImage(
     imageId: number,
@@ -1363,52 +1399,63 @@ export class PropertiesService {
     imageSource: { file?: Express.Multer.File; originalUrl?: string },
   ) {
     try {
-      // Marcar como "uploading"
-      await this.propertyImageRepository.update(imageId, { 
-        upload_status: MediaUploadStatus.UPLOADING 
+      await this.propertyImageRepository.update(imageId, {
+        upload_status: MediaUploadStatus.UPLOADING,
       });
 
-      let fileToUpload: Express.Multer.File;
+      let rawBuffer: Buffer;
+      let originalMimetype: string;
+      let originalName: string;
 
       // Si se proporciona una URL, descarga la imagen primero
       if (imageSource.originalUrl) {
         const response = await axios.get(imageSource.originalUrl, {
           responseType: 'arraybuffer',
         });
-        const imageBuffer = Buffer.from(response.data, 'binary');
-        const mimeType = response.headers['content-type'] || 'image/jpeg';
-        const fileExtension = mimeType.split('/')[1] || 'jpg';
-
-        fileToUpload = {
-          buffer: imageBuffer,
-          mimetype: mimeType,
-          originalname: `${imageId}.${fileExtension}`,
-        } as Express.Multer.File;
+        rawBuffer = Buffer.from(response.data, 'binary');
+        originalMimetype = response.headers['content-type'] || 'image/jpeg';
+        const fileExtension = originalMimetype.split('/')[1] || 'jpg';
+        originalName = `${imageId}.${fileExtension}`;
       } else if (imageSource.file) {
-        fileToUpload = imageSource.file;
+        rawBuffer = imageSource.file.buffer;
+        originalMimetype = imageSource.file.mimetype;
+        originalName = imageSource.file.originalname;
       } else {
         throw new Error('Debe proporcionar un archivo o una URL original.');
       }
 
-      // Subir a S3
-      const s3Url = await this.uploadImageToS3(
-        fileToUpload,
-        imageId,
-        propertyId,
-      );
+      // Comprimir y generar todos los tamaños definidos en IMAGE_SIZES
+      const { buffers, mimetype: outputMimetype } = await this.compressImage(rawBuffer, originalMimetype);
+      const outputExtension = outputMimetype === 'image/webp' ? 'webp' : (originalName.split('.').pop() || 'jpg');
+      const baseFilename = `${imageId}-${Date.now()}.${outputExtension}`;
 
-      if (s3Url) {
-        // Actualizar como completado
-        await this.propertyImageRepository.update(imageId, { 
-          url: s3Url, 
-          upload_status: MediaUploadStatus.COMPLETED,
-          upload_completed_at: new Date(),
-          error_message: null
-        });
-        console.log(`Successfully uploaded and updated image: ${imageId}`);
-      } else {
-        throw new Error('S3 upload returned null URL');
-      }
+      // Subir todos los tamaños en paralelo
+      // Cada tamaño usa su prefix antepuesto al baseFilename (ej: "thumb_123-timestamp.webp")
+      const uploadTasks = (Object.entries(IMAGE_SIZES) as Array<[ImageSizeKey, { width: number; prefix: string }]>).map(
+        ([sizeKey, sizeConfig]) => {
+          const filename = `${sizeConfig.prefix}${baseFilename}`;
+          const s3Key = this.buildS3Key(propertyId, 'images', filename);
+          return this.s3Service.uploadFile(buffers[sizeKey], s3Key, outputMimetype).then(() => {
+            console.log(`✅ Uploaded ${sizeKey} (${sizeConfig.width}px) imageId=${imageId}: ${s3Key}`);
+            return { sizeKey, s3Key };
+          });
+        },
+      );
+      const uploadedSizes = await Promise.all(uploadTasks);
+
+      // Solo se guarda en DB la URL del tamaño FULL
+      // El cliente puede derivar el thumb anteponiendo THUMB_PREFIX al nombre del archivo
+      const fullEntry = uploadedSizes.find(u => u.sizeKey === 'FULL');
+      if (!fullEntry) throw new Error('FULL size upload did not produce a key');
+
+      await this.propertyImageRepository.update(imageId, {
+        url: fullEntry.s3Key,
+        upload_status: MediaUploadStatus.COMPLETED,
+        upload_completed_at: new Date(),
+        error_message: null,
+      });
+
+      console.log(`Successfully processed all sizes for image: ${imageId}`);
     } catch (error) {
       const err: any = error;
       let errorMsg = 'Unknown error';
@@ -1428,25 +1475,21 @@ export class PropertiesService {
       const isCircuitBreakerError = err instanceof Error && err.message.includes('Circuit Breaker');
       const errorStatus = isCircuitBreakerError ? MediaUploadStatus.RETRYING : MediaUploadStatus.FAILED;
 
-      // Marcar como fallido o reintento e incrementar retry_count
-      await this.propertyImageRepository.update(imageId, { 
+      await this.propertyImageRepository.update(imageId, {
         upload_status: errorStatus,
-        error_message: errorMsg
+        error_message: errorMsg,
       });
       await this.propertyImageRepository.increment({ id: imageId }, 'retry_count', 1);
-      
-      console.error(
-        `Failed to process image ID ${imageId}:`,
-        err?.message || error,
-      );
-      
+
+      console.error(`Failed to process image ID ${imageId}:`, err?.message || error);
+
       // Si es error de circuit breaker y tenemos URL original, programar reintento automático
       if (isCircuitBreakerError && imageSource.originalUrl) {
         const currentImage = await this.propertyImageRepository.findOne({ where: { id: imageId } });
         if (currentImage && currentImage.retry_count < 3) {
           setTimeout(() => {
             this._processAndUploadImage(imageId, propertyId, imageSource);
-          }, 60000); // Reintentar en 1 minuto
+          }, 60000);
         }
       }
     }
