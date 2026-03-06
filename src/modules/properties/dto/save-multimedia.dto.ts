@@ -1,232 +1,59 @@
-import {
-  IsArray,
-  IsOptional,
-  ValidateNested,
-  IsString,
-  IsNumber,
-  IsNotEmpty,
-  IsUrl,
-  Min,
-  MaxLength,
-} from 'class-validator';
-import { Type, Transform } from 'class-transformer';
+import { IsArray, IsOptional, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 /**
- * Normaliza un array que puede contener strings u objetos.
- * Los strings se convierten en objetos usando la clave indicada.
- * Ejemplo: "https://..." → { [urlKey]: "https://..." }
+ * Normaliza la entrada a un array de strings no vacíos.
+ * - undefined / null / {} / valor no-array → []
+ * - string suelto no vacío               → [string]
+ * - array                                → filtra items que no sean strings o estén vacíos
  */
-function normalizeStringArray<T>(value: any, urlKey: string): T[] | undefined {
-  if (value === undefined || value === null) return undefined;
+function toStringArray(value: any): string[] {
+  if (value === undefined || value === null) return [];
   if (!Array.isArray(value)) {
-    // {} vacío → [] (borrar todos)
-    if (typeof value === 'object' && Object.keys(value).length === 0) return [];
-    // string suelto → envolver como entrada existente
-    if (typeof value === 'string') return [{ [urlKey]: value } as unknown as T];
-    // objeto suelto → envolver en array
-    return [value as unknown as T];
+    if (typeof value === 'string' && value.trim() !== '') return [value];
+    return [];
   }
-  return value.map((item: any) =>
-    typeof item === 'string' ? ({ [urlKey]: item } as unknown as T) : item,
-  );
-}
-// import { ApiProperty } from '@nestjs/swagger';
-
-/**
- * DTO para metadatos de imágenes subidas
- */
-export class PropertyImageDto {
-  // @ApiProperty({
-  //   description: 'Posición de orden de la imagen (se asigna automáticamente si no se especifica)',
-  //   minimum: 1,
-  //   example: 1,
-  //   required: false,
-  // })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  order_position?: number;
-
-  // Si la imagen ya existe en S3, el cliente puede enviar
-  // la URL completa (o la clave relativa) para indicar que no
-  // debe volver a subirse. Esto también permite reordenar
-  // elementos sin necesidad de reenviar archivos.
-  @IsOptional()
-  @IsString()
-  // puede ser una URL completa o la clave relativa que usamos en S3
-  // (p.ej. "properties/123/images/456-159846.jpg"). El validador se mantiene
-  // simple para no causar falsos negativos.
-  url?: string;
+  return value.filter((item: any) => typeof item === 'string' && item.trim() !== '');
 }
 
 /**
- * DTO para videos (URLs externas como YouTube, Vimeo, etc.)
- */
-export class PropertyVideoDto {
-  // @ApiProperty({
-  //   description: 'URL del video (YouTube, Vimeo, etc.)',
-  //   example: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-  // })
-  @IsString()
-  @IsNotEmpty()
-  @IsUrl({}, { message: 'La URL del video debe ser válida' })
-  url!: string;
-
-  // @ApiProperty({
-  //   description: 'Orden de presentación del video (se asigna automáticamente si no se especifica)',
-  //   minimum: 1,
-  //   example: 1,
-  //   required: false,
-  // })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  order?: number;
-
-  // ID opcional para identificar un video existente y actualizarlo
-  // en lugar de crear uno nuevo (útil si la URL cambió pero es el mismo video)
-  @IsOptional()
-  @IsNumber()
-  id?: number;
-}
-
-/**
- * DTO para tours virtuales 360 (URLs externas)
- */
-export class PropertyMultimedia360Dto {
-  // @ApiProperty({
-  //   description: 'URL del tour virtual 360',
-  //   example: 'https://my360tour.com/property/123',
-  // })
-  @IsString()
-  @IsNotEmpty()
-  @IsUrl({}, { message: 'La URL del multimedia 360 debe ser válida' })
-  url!: string;
-
-  // @ApiProperty({
-  //   description: 'Orden de presentación del tour 360 (se asigna automáticamente si no se especifica)',
-  //   minimum: 1,
-  //   example: 1,
-  //   required: false,
-  // })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  order?: number;
-
-  // ID opcional para identificar un multimedia360 existente y actualizarlo
-  // en lugar de crear uno nuevo (útil si la URL cambió pero es el mismo tour)
-  @IsOptional()
-  @IsNumber()
-  id?: number;
-}
-
-/**
- * DTO para archivos adjuntos (PDFs, documentos, etc.)
- */
-export class PropertyAttachedDto {
-  // @ApiProperty({
-  //   description: 'Orden de presentación del archivo (se asigna automáticamente si no se especifica)',
-  //   minimum: 1,
-  //   example: 1,
-  //   required: false,
-  // })
-  @IsOptional()
-  @IsNumber()
-  @Min(1)
-  order?: number;
-
-  // @ApiProperty({
-  //   description: 'URL del archivo si ya está subido (opcional)',
-  //   required: false,
-  //   example: 'https://storage.example.com/document.pdf',
-  // })
-  @IsOptional()
-  @IsString()
-  @IsUrl({}, { message: 'La URL del archivo debe ser válida' })
-  file_url?: string;
-
-  // @ApiProperty({
-  //   description: 'Descripción del archivo adjunto',
-  //   required: false,
-  //   maxLength: 500,
-  //   example: 'Manual de usuario de la propiedad',
-  // })
-  @IsOptional()
-  @IsString()
-  @MaxLength(500, { message: 'La descripción no puede exceder 500 caracteres' })
-  description?: string;
-}
-
-/**
- * DTO principal para guardar multimedia de una propiedad
- * 
- * @description
- * Permite combinar diferentes tipos de multimedia:
- * - Videos externos (YouTube, Vimeo) con URLs
- * - Tours virtuales 360 con URLs
- * - Imágenes subidas como archivos con metadatos opcionales
- * - Archivos adjuntos (PDFs, documentos) con metadatos opcionales
+ * DTO principal para guardar multimedia de una propiedad.
+ *
+ * Todos los campos son arrays de strings (URLs).
+ *
+ * Reglas:
+ * - Campo ausente o array vacío ([], {}) → los registros existentes de ese tipo se eliminan.
+ * - Strings vacíos dentro del array son ignorados.
+ * - El orden en DB se asigna por posición en el array (índice + 1).
+ * - Para `images` y `attached`, los archivos nuevos se envían como multipart;
+ *   las URLs del array referencian archivos ya subidos (S3 o externos).
  */
 export class SaveMultimediaDto {
-  // @ApiProperty({
-  //   description: 'Metadatos de imágenes subidas (orden de presentación)',
-  //   required: false,
-  //   type: [PropertyImageDto],
-  //   example: [{ order_position: 1 }, { order_position: 2 }],
-  // })
+  /** URLs de imágenes existentes. Archivos nuevos van como multipart `images`. */
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => normalizeStringArray<PropertyImageDto>(value, 'url'))
-  @ValidateNested({ each: true })
-  @Type(() => PropertyImageDto)
-  images?: PropertyImageDto[];
+  @IsString({ each: true })
+  @Transform(({ value }) => toStringArray(value))
+  images?: string[];
 
-  // @ApiProperty({
-  //   description: 'Videos externos con URLs y orden',
-  //   required: false,
-  //   type: [PropertyVideoDto],
-  //   example: [
-  //     { url: 'https://www.youtube.com/watch?v=video1', order: 1 },
-  //     { url: 'https://www.youtube.com/watch?v=video2', order: 2 }
-  //   ],
-  // })
+  /** URLs de videos externos (YouTube, Vimeo, etc.) */
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => normalizeStringArray<PropertyVideoDto>(value, 'url'))
-  @ValidateNested({ each: true })
-  @Type(() => PropertyVideoDto)
-  videos?: PropertyVideoDto[];
+  @IsString({ each: true })
+  @Transform(({ value }) => toStringArray(value))
+  videos?: string[];
 
-  // @ApiProperty({
-  //   description: 'Tours virtuales 360 con URLs y orden',
-  //   required: false,
-  //   type: [PropertyMultimedia360Dto],
-  //   example: [
-  //     { url: 'https://my360tour.com/tour1', order: 1 },
-  //     { url: 'https://my360tour.com/tour2', order: 2 }
-  //   ],
-  // })
+  /** URLs de tours virtuales 360 */
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => normalizeStringArray<PropertyMultimedia360Dto>(value, 'url'))
-  @ValidateNested({ each: true })
-  @Type(() => PropertyMultimedia360Dto)
-  multimedia360?: PropertyMultimedia360Dto[];
+  @IsString({ each: true })
+  @Transform(({ value }) => toStringArray(value))
+  multimedia360?: string[];
 
-  // @ApiProperty({
-  //   description: 'Metadatos de archivos adjuntos (orden y descripción)',
-  //   required: false,
-  //   type: [PropertyAttachedDto],
-  //   example: [
-  //     { order: 1, description: 'Manual de usuario' },
-  //     { order: 2, description: 'Planos de la propiedad' }
-  //   ],
-  // })
+  /** URLs de adjuntos existentes. Archivos nuevos van como multipart `attached`. */
   @IsOptional()
   @IsArray()
-  @Transform(({ value }) => normalizeStringArray<PropertyAttachedDto>(value, 'file_url'))
-  @ValidateNested({ each: true })
-  @Type(() => PropertyAttachedDto)
-  attached?: PropertyAttachedDto[];
+  @IsString({ each: true })
+  @Transform(({ value }) => toStringArray(value))
+  attached?: string[];
 }
