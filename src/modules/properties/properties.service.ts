@@ -248,7 +248,16 @@ export class PropertiesService {
     }
 
     // Desestructurar datos del DTO (con fallback a objeto vacío si el DTO es undefined)
-    const { videos, multimedia360, images: imagesData, attached: attachedData } = saveMultimediaDto || {};
+    const { videos: rawVideos, multimedia360: rawMultimedia360, images: rawImagesData, attached: rawAttachedData } = saveMultimediaDto || {};
+
+    // Normalizar: cualquier valor no-array se convierte en []
+    // Esto garantiza que campos ausentes (undefined), vacíos ({}) o [] siempre
+    // resulten en un array, lo que borra los registros existentes no referenciados.
+    const toArray = <T>(v: T[] | undefined): T[] => (Array.isArray(v) ? v : []);
+    const videos = toArray(rawVideos);
+    const multimedia360 = toArray(rawMultimedia360);
+    const imagesData = toArray(rawImagesData);
+    const attachedData = toArray(rawAttachedData);
 
     // Logging estructurado de entrada
     const inputSummary = {
@@ -270,8 +279,9 @@ export class PropertiesService {
         attached: { queued: 0, errors: 0 }
       };
 
-      // 1. Procesar Videos (URLs externas) - Conservar existentes, actualizar orden
-      if (videos && videos.length > 0) {
+      // 1. Procesar Videos (URLs externas) - Sincronizar con array recibido
+      // Array vacío = eliminar todos los existentes
+      {
         console.log(`🎥 Processing ${videos.length} video URLs`);
         try {
           // Obtener videos existentes
@@ -330,8 +340,9 @@ export class PropertiesService {
         }
       }
 
-      // 2. Procesar Multimedia 360 (URLs externas) - Conservar existentes, actualizar orden
-      if (multimedia360 && multimedia360.length > 0) {
+      // 2. Procesar Multimedia 360 (URLs externas) - Sincronizar con array recibido
+      // Array vacío = eliminar todos los existentes
+      {
         console.log(`🌐 Processing ${multimedia360.length} multimedia360 URLs`);
         try {
           // Obtener multimedia360 existentes
@@ -391,11 +402,9 @@ export class PropertiesService {
       }
 
       // 3. Procesar Imágenes - Transacción atómica
-      // A diferencia de la implementación original, intentamos
-      // conservar registros existentes, sólo creamos/eliminos los
-      // que realmente cambian y limitamos las subidas a los archivos
-      // nuevos que llegan en `files.images`.
-      if ((imagesData && imagesData.length > 0) || (safeFiles.images && safeFiles.images.length > 0)) {
+      // Sincronizar con array recibido + archivos nuevos.
+      // Array vacío sin archivos = eliminar todas las existentes.
+      {
         console.log(`🖼️ Processing images (metadata entries: ${imagesData?.length || 0}, files: ${safeFiles.images?.length || 0})`);
 
         // primero, obtener imágenes ya guardadas en la base
@@ -559,10 +568,9 @@ export class PropertiesService {
         console.log(`✅ Image processing finished, queued ${results.images.queued}`);
       }
 
-      // 4. Procesar Archivos Adjuntos - Similar a imágenes, conservar existentes
-      // A diferencia de la implementación original, intentamos conservar registros existentes,
-      // solo creamos/eliminos los que realmente cambian y limitamos las subidas a los archivos nuevos.
-      if ((attachedData && attachedData.length > 0) || (safeFiles.attached && safeFiles.attached.length > 0)) {
+      // 4. Procesar Archivos Adjuntos - Sincronizar con array recibido + archivos nuevos.
+      // Array vacío sin archivos = eliminar todos los existentes.
+      {
         console.log(`📎 Processing attached files (metadata entries: ${attachedData?.length || 0}, files: ${safeFiles.attached?.length || 0})`);
 
         // Obtener archivos adjuntos ya guardados en la base

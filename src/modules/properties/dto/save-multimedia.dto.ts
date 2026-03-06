@@ -9,7 +9,27 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
+
+/**
+ * Normaliza un array que puede contener strings u objetos.
+ * Los strings se convierten en objetos usando la clave indicada.
+ * Ejemplo: "https://..." → { [urlKey]: "https://..." }
+ */
+function normalizeStringArray<T>(value: any, urlKey: string): T[] | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!Array.isArray(value)) {
+    // {} vacío → [] (borrar todos)
+    if (typeof value === 'object' && Object.keys(value).length === 0) return [];
+    // string suelto → envolver como entrada existente
+    if (typeof value === 'string') return [{ [urlKey]: value } as unknown as T];
+    // objeto suelto → envolver en array
+    return [value as unknown as T];
+  }
+  return value.map((item: any) =>
+    typeof item === 'string' ? ({ [urlKey]: item } as unknown as T) : item,
+  );
+}
 // import { ApiProperty } from '@nestjs/swagger';
 
 /**
@@ -157,6 +177,7 @@ export class SaveMultimediaDto {
   // })
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) => normalizeStringArray<PropertyImageDto>(value, 'url'))
   @ValidateNested({ each: true })
   @Type(() => PropertyImageDto)
   images?: PropertyImageDto[];
@@ -172,6 +193,7 @@ export class SaveMultimediaDto {
   // })
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) => normalizeStringArray<PropertyVideoDto>(value, 'url'))
   @ValidateNested({ each: true })
   @Type(() => PropertyVideoDto)
   videos?: PropertyVideoDto[];
@@ -187,6 +209,7 @@ export class SaveMultimediaDto {
   // })
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) => normalizeStringArray<PropertyMultimedia360Dto>(value, 'url'))
   @ValidateNested({ each: true })
   @Type(() => PropertyMultimedia360Dto)
   multimedia360?: PropertyMultimedia360Dto[];
@@ -202,6 +225,7 @@ export class SaveMultimediaDto {
   // })
   @IsOptional()
   @IsArray()
+  @Transform(({ value }) => normalizeStringArray<PropertyAttachedDto>(value, 'file_url'))
   @ValidateNested({ each: true })
   @Type(() => PropertyAttachedDto)
   attached?: PropertyAttachedDto[];
