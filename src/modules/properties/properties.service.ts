@@ -291,32 +291,18 @@ export class PropertiesService {
           const finalVideos: PropertyVideo[] = [];
 
           for (let idx = 0; idx < videos.length; idx++) {
-            const videoData = videos[idx];
-            const order = videoData.order ?? idx + 1;
-            
-            let found: PropertyVideo | undefined;
-            if (videoData.id) {
-              found = existingVideos.find(v => v.id === videoData.id);
-            } else {
-              found = existingVideos.find(v => v.url === videoData.url);
-            }
+            const url = videos[idx];
+            const order = idx + 1;
+
+            const found = existingVideos.find(v => v.url === url);
             if (found) {
-              // Actualizar url y orden si cambiaron
-              const updates: any = {};
-              if (videoData.url !== undefined && found.url !== videoData.url) updates.url = videoData.url;
-              if (found.order !== order) updates.order = order;
-              if (Object.keys(updates).length > 0) {
-                await manager.update(PropertyVideo, { id: found.id }, updates);
-                Object.assign(found, updates);
+              if (found.order !== order) {
+                await manager.update(PropertyVideo, { id: found.id }, { order });
+                found.order = order;
               }
               finalVideos.push(found);
             } else {
-              // Crear nuevo
-              const newVideo = manager.create(PropertyVideo, { 
-                ...videoData, 
-                property, 
-                is_360: false 
-              });
+              const newVideo = manager.create(PropertyVideo, { url, property, is_360: false, order });
               const saved = await manager.save(PropertyVideo, newVideo);
               finalVideos.push(saved as PropertyVideo);
             }
@@ -352,32 +338,18 @@ export class PropertiesService {
           const finalMultimedia360: PropertyVideo[] = [];
 
           for (let idx = 0; idx < multimedia360.length; idx++) {
-            const videoData = multimedia360[idx];
-            const order = videoData.order ?? idx + 1;
-            
-            let found: PropertyVideo | undefined;
-            if (videoData.id) {
-              found = existingMultimedia360.find(v => v.id === videoData.id);
-            } else {
-              found = existingMultimedia360.find(v => v.url === videoData.url);
-            }
+            const url = multimedia360[idx];
+            const order = idx + 1;
+
+            const found = existingMultimedia360.find(v => v.url === url);
             if (found) {
-              // Actualizar url y orden si cambiaron
-              const updates: any = {};
-              if (videoData.url !== undefined && found.url !== videoData.url) updates.url = videoData.url;
-              if (found.order !== order) updates.order = order;
-              if (Object.keys(updates).length > 0) {
-                await manager.update(PropertyVideo, { id: found.id }, updates);
-                Object.assign(found, updates);
+              if (found.order !== order) {
+                await manager.update(PropertyVideo, { id: found.id }, { order });
+                found.order = order;
               }
               finalMultimedia360.push(found);
             } else {
-              // Crear nuevo
-              const newVideo360 = manager.create(PropertyVideo, { 
-                ...videoData, 
-                property, 
-                is_360: true 
-              });
+              const newVideo360 = manager.create(PropertyVideo, { url, property, is_360: true, order });
               const saved = await manager.save(PropertyVideo, newVideo360);
               finalMultimedia360.push(saved as PropertyVideo);
             }
@@ -416,9 +388,6 @@ export class PropertiesService {
         const filesToUpload: { entity: PropertyImage; file: Express.Multer.File }[] = [];
         const urlsToDownload: { imageId: number; originalUrl: string }[] = [];
 
-        // indice de archivos que aún no han sido usados
-        let fileCursor = 0;
-
         // función auxiliar para saber si una url apunta a nuestro bucket/properties
         const isOwnS3Url = (url: string): boolean => {
           try {
@@ -428,98 +397,49 @@ export class PropertiesService {
           }
         };
 
-        // si hay metadatos, los procesamos en orden
-        if (imagesData && imagesData.length > 0) {
-          for (let idx = 0; idx < imagesData.length; idx++) {
-            const meta = imagesData[idx];
-            const order = meta.order_position ?? idx + 1;
+        // 1. Procesar URLs de imágenes existentes (array de strings)
+        for (let idx = 0; idx < imagesData.length; idx++) {
+          const url = imagesData[idx];
+          const order = idx + 1;
 
-            if (meta.url) {
-              // el cliente señaló una url de imagen existente
-              const found = existingImages.find(img => img.url === meta.url);
-
-              if (found) {
-                // sólo actualizamos el orden si cambió
-                if (found.order_position !== order) {
-                  await manager.update(PropertyImage, { id: found.id }, { order_position: order });
-                  found.order_position = order;
-                }
-
-                finalImages.push({ entity: found, order_position: order });
-              } else if (isOwnS3Url(meta.url)) {
-                // la url parece ser de nuestro propio bucket pero no está en la tabla:
-                // creamos un nuevo registro marcado como COMPLETED para no re-subir.
-                const newImg = manager.create(PropertyImage, {
-                  property,
-                  order_position: order,
-                  url: meta.url,
-                  upload_status: MediaUploadStatus.COMPLETED,
-                  retry_count: 0,
-                });
-                const saved = await manager.save(PropertyImage, newImg);
-                finalImages.push({ entity: saved as PropertyImage, order_position: order });
-              } else {
-                // la url no corresponde a S3; asumimos que es un link externo
-                // y la trataremos como si fuera un archivo que debe descargarse.
-                const newImg = manager.create(PropertyImage, {
-                  property,
-                  order_position: order,
-                  url: '',
-                  upload_status: MediaUploadStatus.PENDING,
-                  retry_count: 0,
-                });
-                const saved = await manager.save(PropertyImage, newImg);
-                finalImages.push({ entity: saved as PropertyImage, order_position: order });
-                // guardamos la url para procesarla más abajo
-                urlsToDownload.push({ imageId: saved.id!, originalUrl: meta.url });
-                results.images.queued++;
-              }
-            } else {
-              // no hay url en los metadatos, debe corresponder a un archivo nuevo
-              if (!safeFiles.images || fileCursor >= safeFiles.images.length) {
-                throw new BadRequestException(
-                  `Faltan archivos para las entradas de imagen proporcionadas (índice ${idx})`,
-                );
-              }
-              const file = safeFiles.images[fileCursor++];
-
-              const newImg = manager.create(PropertyImage, {
-                property,
-                order_position: order,
-                url: null,
-                upload_status: MediaUploadStatus.PENDING,
-                retry_count: 0,
-              });
-              const saved = await manager.save(PropertyImage, newImg);
-              finalImages.push({ entity: saved as PropertyImage, order_position: order });
-              filesToUpload.push({ entity: saved as PropertyImage, file });
-              results.images.queued++;
+          const found = existingImages.find(img => img.url === url);
+          if (found) {
+            if (found.order_position !== order) {
+              await manager.update(PropertyImage, { id: found.id }, { order_position: order });
+              found.order_position = order;
             }
+            finalImages.push({ entity: found, order_position: order });
+          } else if (isOwnS3Url(url)) {
+            // URL propia de S3 no registrada en DB → registrar como completada
+            const newImg = manager.create(PropertyImage, {
+              property,
+              order_position: order,
+              url,
+              upload_status: MediaUploadStatus.COMPLETED,
+              retry_count: 0,
+            });
+            const saved = await manager.save(PropertyImage, newImg);
+            finalImages.push({ entity: saved as PropertyImage, order_position: order });
+          } else {
+            // URL externa → descargar y subir a S3
+            const newImg = manager.create(PropertyImage, {
+              property,
+              order_position: order,
+              url: '',
+              upload_status: MediaUploadStatus.PENDING,
+              retry_count: 0,
+            });
+            const saved = await manager.save(PropertyImage, newImg);
+            finalImages.push({ entity: saved as PropertyImage, order_position: order });
+            urlsToDownload.push({ imageId: saved.id!, originalUrl: url });
+            results.images.queued++;
           }
+        }
 
-          // si quedaron archivos sin metadato, los añadimos al final
-          if (safeFiles.images && fileCursor < safeFiles.images.length) {
-            for (; fileCursor < safeFiles.images.length; fileCursor++) {
-              const file = safeFiles.images[fileCursor];
-              const order = finalImages.length + 1;
-              const newImg = manager.create(PropertyImage, {
-                property,
-                order_position: order,
-                url: null,
-                upload_status: MediaUploadStatus.PENDING,
-                retry_count: 0,
-              });
-              const saved = await manager.save(PropertyImage, newImg);
-              finalImages.push({ entity: saved as PropertyImage, order_position: order });
-              filesToUpload.push({ entity: saved as PropertyImage, file });
-              results.images.queued++;
-            }
-          }
-        } else if (safeFiles.images && safeFiles.images.length > 0) {
-          // no hay metadatos, pero sí archivos: agregar todos en orden
-          for (let i = 0; i < safeFiles.images.length; i++) {
-            const file = safeFiles.images[i];
-            const order = i + 1;
+        // 2. Procesar archivos nuevos (el orden continúa después de las URLs)
+        if (safeFiles.images && safeFiles.images.length > 0) {
+          for (const file of safeFiles.images) {
+            const order = finalImages.length + 1;
             const newImg = manager.create(PropertyImage, {
               property,
               order_position: order,
@@ -582,9 +502,6 @@ export class PropertiesService {
         const filesToUpload: { entity: PropertyAttached; file: Express.Multer.File }[] = [];
         const urlsToDownload: { attachedId: number; originalUrl: string }[] = [];
 
-        // Indice de archivos que aún no han sido usados
-        let fileCursor = 0;
-
         // Función auxiliar para saber si una url apunta a nuestro bucket/properties
         const isOwnS3Url = (url: string): boolean => {
           try {
@@ -594,105 +511,51 @@ export class PropertiesService {
           }
         };
 
-        // Si hay metadatos, los procesamos en orden
-        if (attachedData && attachedData.length > 0) {
-          for (let idx = 0; idx < attachedData.length; idx++) {
-            const meta = attachedData[idx];
-            const order = meta.order ?? idx + 1;
+        // 1. Procesar URLs de adjuntos existentes (array de strings)
+        for (let idx = 0; idx < attachedData.length; idx++) {
+          const fileUrl = attachedData[idx];
+          const order = idx + 1;
 
-            if (meta.file_url) {
-              // El cliente señaló una url de archivo existente
-              const found = existingAttached.find(att => att.file_url === meta.file_url);
-
-              if (found) {
-                // Solo actualizar orden y descripción si cambiaron
-                const updates: any = {};
-                if (found.order !== order) updates.order = order;
-                if (meta.description && found.description !== meta.description) updates.description = meta.description;
-                
-                if (Object.keys(updates).length > 0) {
-                  await manager.update(PropertyAttached, { id: found.id }, updates);
-                  Object.assign(found, updates);
-                }
-                finalAttached.push({ entity: found, order });
-              } else if (isOwnS3Url(meta.file_url)) {
-                // La url parece ser de nuestro propio bucket pero no está en la tabla:
-                // Crear un nuevo registro marcado como COMPLETED para no re-subir.
-                const newAtt = manager.create(PropertyAttached, {
-                  property,
-                  order,
-                  description: meta.description || `Documento ${order}`,
-                  file_url: meta.file_url,
-                  upload_status: MediaUploadStatus.COMPLETED,
-                  retry_count: 0,
-                });
-                const saved = await manager.save(PropertyAttached, newAtt);
-                finalAttached.push({ entity: saved as PropertyAttached, order });
-              } else {
-                // La url no corresponde a S3; asumimos que es un link externo
-                // y la trataremos como si fuera un archivo que debe descargarse.
-                const newAtt = manager.create(PropertyAttached, {
-                  property,
-                  order,
-                  description: meta.description || `Documento ${order}`,
-                  file_url: '',
-                  upload_status: MediaUploadStatus.PENDING,
-                  retry_count: 0,
-                });
-                const saved = await manager.save(PropertyAttached, newAtt);
-                finalAttached.push({ entity: saved as PropertyAttached, order });
-                // Guardamos la url para procesarla más abajo
-                urlsToDownload.push({ attachedId: saved.id!, originalUrl: meta.file_url });
-                results.attached.queued++;
-              }
-            } else {
-              // No hay file_url en los metadatos, debe corresponder a un archivo nuevo
-              if (!safeFiles.attached || fileCursor >= safeFiles.attached.length) {
-                throw new BadRequestException(
-                  `Faltan archivos para las entradas de adjuntos proporcionadas (índice ${idx})`,
-                );
-              }
-              const file = safeFiles.attached[fileCursor++];
-
-              const newAtt = manager.create(PropertyAttached, {
-                property,
-                order,
-                description: meta.description || `Documento ${order}`,
-                file_url: '',
-                upload_status: MediaUploadStatus.PENDING,
-                retry_count: 0,
-              });
-              const saved = await manager.save(PropertyAttached, newAtt);
-              finalAttached.push({ entity: saved as PropertyAttached, order });
-              filesToUpload.push({ entity: saved as PropertyAttached, file });
-              results.attached.queued++;
+          const found = existingAttached.find(att => att.file_url === fileUrl);
+          if (found) {
+            if (found.order !== order) {
+              await manager.update(PropertyAttached, { id: found.id }, { order });
+              found.order = order;
             }
+            finalAttached.push({ entity: found, order });
+          } else if (isOwnS3Url(fileUrl)) {
+            // URL propia de S3 no registrada en DB → registrar como completada
+            const newAtt = manager.create(PropertyAttached, {
+              property,
+              order,
+              description: `Documento ${order}`,
+              file_url: fileUrl,
+              upload_status: MediaUploadStatus.COMPLETED,
+              retry_count: 0,
+            });
+            const saved = await manager.save(PropertyAttached, newAtt);
+            finalAttached.push({ entity: saved as PropertyAttached, order });
+          } else {
+            // URL externa → descargar y subir a S3
+            const newAtt = manager.create(PropertyAttached, {
+              property,
+              order,
+              description: `Documento ${order}`,
+              file_url: '',
+              upload_status: MediaUploadStatus.PENDING,
+              retry_count: 0,
+            });
+            const saved = await manager.save(PropertyAttached, newAtt);
+            finalAttached.push({ entity: saved as PropertyAttached, order });
+            urlsToDownload.push({ attachedId: saved.id!, originalUrl: fileUrl });
+            results.attached.queued++;
           }
+        }
 
-          // Si quedaron archivos sin metadato, los añadimos al final
-          if (safeFiles.attached && fileCursor < safeFiles.attached.length) {
-            for (; fileCursor < safeFiles.attached.length; fileCursor++) {
-              const file = safeFiles.attached[fileCursor];
-              const order = finalAttached.length + 1;
-              const newAtt = manager.create(PropertyAttached, {
-                property,
-                order,
-                description: `Documento ${order}`,
-                file_url: '',
-                upload_status: MediaUploadStatus.PENDING,
-                retry_count: 0,
-              });
-              const saved = await manager.save(PropertyAttached, newAtt);
-              finalAttached.push({ entity: saved as PropertyAttached, order });
-              filesToUpload.push({ entity: saved as PropertyAttached, file });
-              results.attached.queued++;
-            }
-          }
-        } else if (safeFiles.attached && safeFiles.attached.length > 0) {
-          // No hay metadatos, pero sí archivos: agregar todos en orden
-          for (let i = 0; i < safeFiles.attached.length; i++) {
-            const file = safeFiles.attached[i];
-            const order = i + 1;
+        // 2. Procesar archivos nuevos (el orden continúa después de las URLs)
+        if (safeFiles.attached && safeFiles.attached.length > 0) {
+          for (const file of safeFiles.attached) {
+            const order = finalAttached.length + 1;
             const newAtt = manager.create(PropertyAttached, {
               property,
               order,
