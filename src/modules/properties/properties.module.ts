@@ -8,6 +8,7 @@ import { PropertyImage } from './entities/property-image.entity';
 import { PropertyAttribute } from './entities/property-attribute.entity';
 import { PropertyOperation } from './entities/property-operation.entity';
 import { PropertyTag } from './entities/property-tag.entity';
+import { Tag } from '../tags/entities/tag.entity';
 
 import { PropertyVideo } from './entities/property-video.entity';
 import { PropertyAttached } from './entities/property-attached.entity';
@@ -22,6 +23,7 @@ import { S3Service } from '../../common/s3.service';
       PropertyAttribute,
       PropertyOperation,
       PropertyTag,
+      Tag,
       PropertyVideo,
       PropertyAttached,
     ]),

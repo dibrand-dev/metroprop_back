@@ -842,9 +842,10 @@ export class PropertiesService {
   async update(
     id: number,
     updatePropertyDto: UpdatePropertyDto,
-  ): Promise<Property> {
+  ): Promise<{ data: Property; warnings?: string[] }> {
     const { tags, ...propertyData } = updatePropertyDto;
     const property = await this.findOne(id);
+    const warnings: string[] = [];
 
     // Verificar si se está intentando cambiar el reference_code a uno que ya existe
     if (
@@ -870,19 +871,38 @@ export class PropertiesService {
       // Eliminar los tags antiguos
       await this.propertyTagRepository.delete({ property: { id } });
 
-      // Crear los nuevos tags
-      const newTags = tags.map((tagId) =>
-        this.propertyTagRepository.create({
-          tag_id: tagId,
-          property,
-        }),
-      );
-      await this.propertyTagRepository.save(newTags);
-      property.tags = newTags;
+      if (tags.length > 0) {
+        // 1 SELECT para validar cuáles existen
+        const existingTags = await this.dataSource.query(
+          `SELECT id FROM tags WHERE id = ANY($1)`,
+          [tags],
+        );
+        const existingIds = new Set(existingTags.map((t: { id: number }) => t.id));
+        const validTagIds = tags.filter((tagId) => existingIds.has(tagId));
+        const invalidTagIds = tags.filter((tagId) => !existingIds.has(tagId));
+
+        // 1 INSERT bulk con los válidos
+        if (validTagIds.length > 0) {
+          const newTags = validTagIds.map((tagId) =>
+            this.propertyTagRepository.create({
+              tag_id: tagId,
+              property: { id } as Property,
+            }),
+          );
+          await this.propertyTagRepository.save(newTags);
+        }
+
+        if (invalidTagIds.length > 0) {
+          warnings.push(
+            `Los siguientes tag IDs no existen y fueron ignorados: ${invalidTagIds.join(', ')}`,
+          );
+        }
+      }
     }
 
-
-    return this.propertyRepository.save(property);
+    await this.propertyRepository.save(property);
+    const result = await this.findOne(id);
+    return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
 
   /**
@@ -978,113 +998,33 @@ export class PropertiesService {
   }
 
   /**
-   * Obtener el estado de uploads para una propiedad específica
+   * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
-  async getUploadStatus(propertyId: number) {
-    const property = await this.findOne(propertyId);
+  async getMultimedia(propertyId: number) {
+    const property = await this.propertyRepository
+      .createQueryBuilder('property')
+      .leftJoinAndSelect('property.images', 'image')
+      .leftJoinAndSelect('property.videos', 'video')
+      .leftJoinAndSelect('property.attached', 'attached')
+      .where('property.id = :id', { id: propertyId })
+      .andWhere('property.deleted = :deleted', { deleted: false })
+      .orderBy('image.order_position', 'ASC')
+      .addOrderBy('video.order', 'ASC')
+      .addOrderBy('attached.order', 'ASC')
+      .getOne();
+
     if (!property) {
       throw new NotFoundException(`Propiedad con ID ${propertyId} no encontrada`);
     }
 
-    // Obtener estado de imágenes
-    const imagesStatus = await this.propertyImageRepository
-      .createQueryBuilder('image')
-      .select([
-        'image.id',
-        'image.url', 
-        'image.upload_status',
-        'image.retry_count',
-        'image.error_message',
-        'image.upload_completed_at',
-        'image.order_position'
-      ])
-      .where('image.property = :propertyId', { propertyId })
-      .orderBy('image.order_position', 'ASC')
-      .getMany();
-
-    // Obtener estado de archivos adjuntos
-    const attachedStatus = await this.propertyAttachedRepository
-      .createQueryBuilder('attached')
-      .select([
-        'attached.id',
-        'attached.file_url',
-        'attached.upload_status', 
-        'attached.retry_count',
-        'attached.error_message',
-        'attached.upload_completed_at',
-        'attached.order'
-      ])
-      .where('attached.property = :propertyId', { propertyId })
-      .orderBy('attached.order', 'ASC')
-      .getMany();
-
-    // Calcular estadísticas
-    const imageStats = this.calculateUploadStats(imagesStatus);
-    const attachedStats = this.calculateUploadStats(attachedStatus);
-
-    const allUploads = [...imagesStatus, ...attachedStatus];
-    const overallStats = this.calculateUploadStats(allUploads);
+    const allVideos = property.videos ?? [];
 
     return {
-      propertyId,
-      overall: {
-        ...overallStats,
-        isCompleted: overallStats.pending === 0 && overallStats.uploading === 0,
-        hasErrors: overallStats.failed > 0
-      },
-      images: {
-        count: imagesStatus.length,
-        stats: imageStats,
-        items: imagesStatus
-      },
-      attached: {
-        count: attachedStatus.length,
-        stats: attachedStats,
-        items: attachedStatus
-      },
-      lastUpdated: new Date()
+      images: property.images ?? [],
+      videos: allVideos.filter(v => !v.is_360),
+      videos360: allVideos.filter(v => v.is_360),
+      attached: property.attached ?? [],
     };
-  }
-
-  /**
-   * Helper para calcular estadísticas de upload
-   */
-  private calculateUploadStats(items: any[]) {
-    const stats = {
-      total: items.length,
-      pending: 0,
-      uploading: 0,
-      completed: 0,
-      failed: 0,
-      retrying: 0,
-      progressPercentage: 0
-    };
-
-    items.forEach(item => {
-      switch (item.upload_status) {
-        case MediaUploadStatus.PENDING:
-          stats.pending++;
-          break;
-        case MediaUploadStatus.UPLOADING:
-          stats.uploading++;
-          break;
-        case MediaUploadStatus.COMPLETED:
-          stats.completed++;
-          break;
-        case MediaUploadStatus.FAILED:
-          stats.failed++;
-          break;
-        case MediaUploadStatus.RETRYING:
-          stats.retrying++;
-          break;
-      }
-    });
-
-    stats.progressPercentage = stats.total > 0 
-      ? Math.round((stats.completed / stats.total) * 100) 
-      : 0;
-
-    return stats;
   }
 
   /**

@@ -137,12 +137,12 @@ export class PropertiesController {
   }
 
   /**
-   * GET /properties/:propertyId/upload-status
-   * Obtener estado de uploads de multimedia para una propiedad
+   * GET /properties/:propertyId/multimedia
+   * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
-  @Get(':propertyId/upload-status')
-  async getUploadStatus(@Param('propertyId', ParseIntPipe) propertyId: number) {
-    return this.propertiesService.getUploadStatus(propertyId);
+  @Get(':propertyId/multimedia')
+  async getMultimedia(@Param('propertyId', ParseIntPipe) propertyId: number) {
+    return this.propertiesService.getMultimedia(propertyId);
   }
 
   /**
