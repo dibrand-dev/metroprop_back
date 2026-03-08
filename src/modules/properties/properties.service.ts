@@ -84,7 +84,7 @@ export class PropertiesService {
   /**
    * Si se envían images, tags, operations, videos, multimedia360 o attached, se crearán automáticamente
    */
-  async create(createPropertyDto: CreatePropertyDto): Promise<Property> {
+  async create(createPropertyDto: CreatePropertyDto): Promise<{ data: Property; warnings?: string[] }> {
     // 1. Extraer las relaciones y multimedia del DTO
     const { 
       images, 
@@ -95,6 +95,7 @@ export class PropertiesService {
       attached, 
       ...propertyData 
     } = createPropertyDto as any;
+    const warnings: string[] = [];
 
     // Verificar que no exista una propiedad con el mismo reference_code
     const existingProperty = await this.propertyRepository.findOne({
@@ -146,13 +147,29 @@ export class PropertiesService {
 
     // 3. Crear y asociar los tags
     if (tags && tags.length > 0) {
-      const newTags = tags.map((tagId: number) => {
-        return this.propertyTagRepository.create({
-          tag_id: tagId,
-          property: savedProperty,
-        });
-      });
-      await this.propertyTagRepository.save(newTags);
+      const existingTags = await this.dataSource.query(
+        `SELECT id FROM tags WHERE id = ANY($1)`,
+        [tags],
+      );
+      const existingIds = new Set(existingTags.map((t: { id: number }) => t.id));
+      const validTagIds = (tags as number[]).filter((tagId) => existingIds.has(tagId));
+      const invalidTagIds = (tags as number[]).filter((tagId) => !existingIds.has(tagId));
+
+      if (validTagIds.length > 0) {
+        const newTags = validTagIds.map((tagId) =>
+          this.propertyTagRepository.create({
+            tag_id: tagId,
+            property: savedProperty,
+          }),
+        );
+        await this.propertyTagRepository.save(newTags);
+      }
+
+      if (invalidTagIds.length > 0) {
+        warnings.push(
+          `Los siguientes tag IDs no existen y fueron ignorados: ${invalidTagIds.join(', ')}`,
+        );
+      }
     }
 
     // 4. Crear y asociar las operaciones
@@ -224,7 +241,8 @@ export class PropertiesService {
     }
 
     // 8. Retornar la propiedad con todas sus relaciones cargadas
-    return this.findOne(savedProperty.id!);
+    const result = await this.findOne(savedProperty.id!);
+    return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
 
   /**
