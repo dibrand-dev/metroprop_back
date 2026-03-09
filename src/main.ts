@@ -46,7 +46,9 @@ async function bootstrap() {
       'Content-Type', 
       'Accept',
       'Authorization',
-      'Cache-Control'
+      'Cache-Control',
+      'X-Api-Key',
+      'X-Api-Secret'
     ],
     exposedHeaders: ['X-Total-Count'],
     credentials: true,

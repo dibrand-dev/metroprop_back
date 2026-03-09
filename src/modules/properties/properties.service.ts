@@ -24,7 +24,6 @@ import { IMAGE_SIZES, ImageSizeKey, THUMB_PREFIX } from '../../common/constants'
 import sharp from 'sharp';
 
 
-// --- IMPORTACIONES PARA DRAFT ---
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 import { 
   PropertyStatus, 
