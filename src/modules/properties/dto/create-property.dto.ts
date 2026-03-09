@@ -16,7 +16,7 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { OperationType, PropertyStatus, PropertySubtype, PropertyType, SurfaceMeasurement, Brightness, GarageCoverage } from '../../../common/enums';
+import { OperationType, PropertyStatus, PropertySubtype, PropertyType, SurfaceMeasurement, Brightness, GarageCoverage, PublicationPlan } from '../../../common/enums';
 
 export class CreatePropertyDto {
   // ========== CAMPOS OBLIGATORIOS ==========
@@ -258,6 +258,11 @@ export class CreatePropertyDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^[A-Z]{3}$/, { message: 'currency_expenses debe ser código ISO de 3 letras (ej: ARS, USD)' })
+  currency_expenses?: string;
+
+  @IsOptional()
+  @IsString()
   commission?: string;
 
   @IsOptional()
@@ -269,6 +274,11 @@ export class CreatePropertyDto {
   @IsString()
   @MaxLength(50)
   period?: string;
+
+  // Plan de publicación
+  @IsOptional()
+  @IsEnum(PublicationPlan)
+  selected_plan?: PublicationPlan;
 
   // Precio por metro cuadrado
   @IsOptional()

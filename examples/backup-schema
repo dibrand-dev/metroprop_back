@@ -296,6 +296,7 @@ create table properties
     price_square_meter      numeric(15, 2),
     currency                 varchar(3)              not null,
     period                   varchar(50),
+    selected_plan            integer,
     producer_user            varchar(255),
     branch_id                integer,
     key_contact              varchar(255),

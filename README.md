@@ -264,6 +264,7 @@ axios.post('http://localhost:3000/properties/with-relations', propertyData)
 | operation_type | String, Required |
 | price | Positive, Required |
 | currency | Matches: ^[A-Z]{3}$ |
+| currency_expenses | Matches: ^[A-Z]{3}$ (Optional) |
 | geo_lat | Range: -90 to 90 |
 | geo_long | Range: -180 to 180 |
 
@@ -938,6 +939,7 @@ CREATE DATABASE metroprop_db;
 | `operation_type` | String, Required |
 | `price` | IsPositive, IsNumber, Required |
 | `currency` | Matches: ^[A-Z]{3}$ (ISO), Required |
+| `currency_expenses` | Matches: ^[A-Z]{3}$ (ISO), Optional |
 | `geo_lat` | Min: -90, Max: 90 |
 | `geo_long` | Min: -180, Max: 180 |
 | Numeric amounts | Min: 0 |

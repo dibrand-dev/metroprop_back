@@ -23,7 +23,8 @@ import {
   Disposition,
   TemporalRentPeriod,
   Brightness,
-  GarageCoverage
+  GarageCoverage,
+  PublicationPlan
 } from '../../../common/enums';
 
 @Entity('properties')
@@ -177,6 +178,9 @@ export class Property {
   @Column({ type: 'integer', nullable: true })
   expenses?: number;
 
+  @Column({ type: 'varchar', length: 3, nullable: true })
+  currency_expenses?: Currency;
+
   @Column({ type: 'varchar', length: 50, nullable: true })
   commission?: string;
 
@@ -195,6 +199,9 @@ export class Property {
 
   @Column({ type: 'integer', nullable: true })
   period?: TemporalRentPeriod;
+
+  @Column({ type: 'integer', nullable: true, default: PublicationPlan.PUBLICATION_FREE })
+  selected_plan?: PublicationPlan;
 
   @Column({ type: 'numeric', precision: 15, scale: 2, nullable: true })
   price_square_meter?: number;

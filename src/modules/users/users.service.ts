@@ -87,8 +87,18 @@ export class UsersService {
    * Busca un usuario por email incluyendo la relación de organización (si existe).
    * Útil para distinguir entre usuario profesional y simple.
    */
-  async findByEmailWithOrganization(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email }, relations: ['organization'] });
+  async findByEmailWithOrganization(email: string, safe: boolean = false): Promise<User | null> {
+    const user = await this.usersRepository.findOne({ where: { email }, relations: ['organization'] });
+
+    if (!user) return null;
+
+    if (safe) {
+      // Excluir campos sensibles mediante destructuring
+      const { password, email_verification_token, password_reset_token, password_reset_token_expires, ...safeUser } = user;
+      return safeUser as User;
+    }
+
+    return user;
   }
 
   async update(id: number, updateUserDto: UpdateUserDto): Promise<User> {
