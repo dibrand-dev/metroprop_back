@@ -12,17 +12,12 @@ import { PropertyOperation } from './entities/property-operation.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 
-import { S3Service } from '../../common/s3.service';
-import { ImageUploadService } from '../../common/image-upload/image-upload.service';
+import { MediaService } from '../../common/media/media.service';
 import { PropertyVideo } from './entities/property-video.entity';
 import { PropertyAttached } from './entities/property-attached.entity';
 import { SaveMultimediaDto } from './dto/save-multimedia.dto';
-import { ConfigService } from '@nestjs/config';
 import axios from 'axios';
 import { sanitizeFilename, getFileExtension, createUniqueFilename } from '../../common/helpers/file-helpers';
-import { IMAGE_SIZES, ImageSizeKey, THUMB_PREFIX } from '../../common/constants';
-import sharp from 'sharp';
-
 
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 import { 
@@ -54,10 +49,8 @@ export class PropertiesService {
     private propertyVideoRepository: Repository<PropertyVideo>,
     @InjectRepository(PropertyAttached)
     private propertyAttachedRepository: Repository<PropertyAttached>,
-    private readonly s3Service: S3Service,
-    private readonly imageUploadService: ImageUploadService,
+    private readonly mediaService: MediaService,
     private readonly dataSource: DataSource,
-    private readonly configService: ConfigService,
   ) {}
 
   /**
@@ -208,13 +201,9 @@ export class PropertiesService {
 
     // 7. Crear archivos adjuntos si se proporcionan
     if (attached && Array.isArray(attached) && attached.length > 0) {
-      console.log(`🚨 DEBUG create - Processing ${attached.length} attached files`);
-      
       const savedAttachedList: PropertyAttached[] = [];
       
       for (const attachedData of attached) {
-        console.log(`🚨 DEBUG create - attachedData:`, attachedData);
-        
         const propertyAttached = this.propertyAttachedRepository.create({
           ...attachedData,
           property: savedProperty,
@@ -229,7 +218,6 @@ export class PropertiesService {
         
         // Si tiene URL, procesar para descargar y subir a S3
         if (attachedData.file_url && attachedData.file_url.startsWith('http') && savedAttached.id) {
-          console.log(`🚀 create - Processing URL: ${attachedData.file_url}`);
           setImmediate(() => {
             this._processAndUploadAttached(savedAttached.id!, savedProperty.id!, { originalUrl: attachedData.file_url! });
           });
@@ -238,7 +226,6 @@ export class PropertiesService {
       
       console.log(`📁 create - Queued ${savedAttachedList.length} attached files for processing`);
     }
-
     // 8. Retornar la propiedad con todas sus relaciones cargadas
     const result = await this.findOne(savedProperty.id!);
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
@@ -654,55 +641,41 @@ export class PropertiesService {
     files: Express.Multer.File[],
     propertyId: number,
   ) {
-    // Preparar promesas para procesamiento en paralelo
     const uploadPromises = [];
-    
+
     for (let i = 0; i < savedAttached.length; i++) {
         const attached = savedAttached[i];
         const file = files[i];
-        
-        console.log(`🔍 DEBUG processAndUploadAttachedFiles - Processing attached[${i}]:`);
-        console.log(`  - attached.id: ${attached.id}`);
-        console.log(`  - attached.file_url: "${attached.file_url}"`);
-        console.log(`  - file exists: ${!!file}`);
-        console.log(`  - is URL: ${attached.file_url && attached.file_url.startsWith('http')}`);
-        
-        // Si el attached ya tiene una URL pero no hay archivo, procesar como URL 
+
+        // Si el adjunto ya tiene una URL pero no hay archivo, procesarlo como URL
         if (attached.file_url && attached.file_url.startsWith('http') && !file) {
-          console.log(`🚀 Processing attached as URL: ${attached.file_url}`);
           uploadPromises.push(
             this._processAndUploadAttached(attached.id, propertyId, { originalUrl: attached.file_url! })
           );
           continue;
         }
-        
-        // Si no hay archivo, saltar
-        if (!file) {
-          continue;
-        }
-        
-        // Crear promesa para upload del archivo
+
+        if (!file) continue;
+
         const uploadPromise = (async () => {
           try {
-              // Marcar como "uploading"
               await this.propertyAttachedRepository.update(attached.id, { 
                 upload_status: MediaUploadStatus.UPLOADING 
               });
 
-              // Usar helpers para construir s3Key y procesar upload
-              const s3Key = this.buildS3Key(propertyId, 'attached', file.originalname, attached.id);
-              await this.uploadAndUpdateEntity(
-                this.propertyAttachedRepository,
-                attached.id,
-                file.buffer,
-                s3Key,
-                file.mimetype,
-                { fileUrlField: 'file_url' }
-              );
+              const cleanFilename = this.cleanFilenameForUrl(file.originalname, attached.id);
+              const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
+
+              await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
+              await this.propertyAttachedRepository.update(attached.id, {
+                file_url: s3Key,
+                upload_status: MediaUploadStatus.COMPLETED,
+                upload_completed_at: new Date(),
+                error_message: null,
+              });
 
               console.log(`Successfully uploaded attached file: ${attached.id}`);
           } catch (error) {
-              // Usar helper para manjo de errores
               await this.handleUploadError(
                 this.propertyAttachedRepository,
                 attached.id,
@@ -710,14 +683,13 @@ export class PropertiesService {
                 'Failed to upload attached file'
               );
 
-              // Si es error de circuit breaker, programar reintento automático
               const isCircuitBreakerError = error instanceof Error && error.message.includes('Circuit Breaker');
               if (isCircuitBreakerError) {
                 const currentAttached = await this.propertyAttachedRepository.findOne({ where: { id: attached.id } });
                 if (currentAttached && currentAttached.retry_count < 3) {
                   setTimeout(() => {
                     this.retryAttachedUpload(attached.id, file, propertyId);
-                  }, 60000); // Reintentar en 1 minuto
+                  }, 60000);
                 }
               }
           }
@@ -726,7 +698,6 @@ export class PropertiesService {
         uploadPromises.push(uploadPromise);
     }
 
-    // Ejecutar todas las subidas en paralelo
     await Promise.all(uploadPromises);
   }
 
@@ -737,23 +708,22 @@ export class PropertiesService {
     try {
       await this.propertyAttachedRepository.update(attachedId, { 
         upload_status: MediaUploadStatus.UPLOADING,
-        error_message: null
+        error_message: null,
       });
 
-      // Usar helpers para construir s3Key y procesar upload
-      const s3Key = this.buildS3Key(propertyId, 'attached', file.originalname, attachedId);
-      await this.uploadAndUpdateEntity(
-        this.propertyAttachedRepository,
-        attachedId,
-        file.buffer,
-        s3Key,
-        file.mimetype,
-        { fileUrlField: 'file_url' }
-      );
-      
+      const cleanFilename = this.cleanFilenameForUrl(file.originalname, attachedId);
+      const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
+
+      await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
+      await this.propertyAttachedRepository.update(attachedId, {
+        file_url: s3Key,
+        upload_status: MediaUploadStatus.COMPLETED,
+        upload_completed_at: new Date(),
+        error_message: null,
+      });
+
       console.log(`Successfully retried attached file upload: ${attachedId}`);
     } catch (error) {
-      // Usar helper para manejo de errores
       await this.handleUploadError(
         this.propertyAttachedRepository,
         attachedId,
@@ -1073,7 +1043,7 @@ export class PropertiesService {
    * Obtener estado del servicio S3 y circuit breaker
    */
   async getS3ServiceStatus() {
-    const healthCheck = await this.s3Service.healthCheck();
+    const healthCheck = await this.mediaService.getS3Status();
     return {
       ...healthCheck,
       timestamp: new Date(),
@@ -1106,27 +1076,12 @@ export class PropertiesService {
   }
 
   // =============================================
-  // MULTIMEDIA UPLOAD HELPERS (DRY)
+  // MULTIMEDIA UPLOAD HELPERS
   // =============================================
 
   /**
-   * Construir s3Key de forma consistente para cualquier tipo de archivo
-   */
-  private buildS3Key(propertyId: number, mediaType: 'images' | 'attached', filename: string, entityId?: number): string {
-    const environment = this.configService.get('NODE_ENV');
-    const pathPrefix = environment === 'production' ? '' : 'localhost/';
-    
-    // Para archivos adjuntos, limpiar el nombre y agregar el ID de la entidad
-    if (mediaType === 'attached' && entityId) {
-      const cleanedFilename = this.cleanFilenameForUrl(filename, entityId);
-      return `${pathPrefix}properties/${propertyId}/${mediaType}/${cleanedFilename}`;
-    }
-    
-    return `${pathPrefix}properties/${propertyId}/${mediaType}/${filename}`;
-  }
-
-  /**
-   * Limpiar nombre de archivo para que sea seguro para URL y único
+   * Limpiar nombre de archivo adjunto para que sea seguro para URL y único.
+   * Específico para la convención de naming de adjuntos de propiedades.
    */
   private cleanFilenameForUrl(originalFilename: string, entityId: number): string {
     const sanitizedBasename = sanitizeFilename(originalFilename);
@@ -1135,32 +1090,7 @@ export class PropertiesService {
   }
 
   /**
-   * Upload genérico a S3 + actualización de entidad
-   */
-  private async uploadAndUpdateEntity<T extends Record<string, any>>(
-    repository: Repository<T>,
-    entityId: number,
-    fileBuffer: Buffer,
-    s3Key: string,
-    mimetype: string,
-    updateFields: { fileUrlField: keyof T }
-  ): Promise<void> {
-    // Subir a S3
-    await this.s3Service.uploadFile(fileBuffer, s3Key, mimetype);
-    
-    // Actualizar entidad con éxito
-    const updateData = {
-      [updateFields.fileUrlField]: s3Key,
-      upload_status: MediaUploadStatus.COMPLETED,
-      upload_completed_at: new Date(),
-      error_message: null
-    } as any;
-    
-    await repository.update(entityId, updateData);
-  }
-
-  /**
-   * Manejo consistente de errores de upload
+   * Manejo consistente de errores de upload: actualiza status y conteo de reintentos en DB.
    */
   private async handleUploadError<T extends Record<string, any>>(
     repository: Repository<T>,
@@ -1187,67 +1117,31 @@ export class PropertiesService {
   // =============================================
 
   /**
-   * Comprime una imagen y genera múltiples tamaños según IMAGE_SIZES.
-   * Convierte a WebP para máxima compresión sin pérdida perceptible.
-   * SVG y GIF se devuelven sin procesar.
-   */
-  private async compressImage(
-    buffer: Buffer,
-    originalMimetype: string,
-  ): Promise<{ buffers: Record<ImageSizeKey, Buffer>; mimetype: string }> {
-    const SKIP_TYPES = ['image/svg+xml', 'image/gif'];
-
-    if (SKIP_TYPES.includes(originalMimetype)) {
-      const buffers = {} as Record<ImageSizeKey, Buffer>;
-      for (const key of Object.keys(IMAGE_SIZES) as ImageSizeKey[]) {
-        buffers[key] = buffer;
-      }
-      return { buffers, mimetype: originalMimetype };
-    }
-
-    const buffers = {} as Record<ImageSizeKey, Buffer>;
-    for (const [key, config] of Object.entries(IMAGE_SIZES) as Array<[ImageSizeKey, { width: number; prefix: string }]>) {
-      buffers[key] = await sharp(buffer)
-        .rotate()                                                    // auto-corregir orientación EXIF
-        .resize({ width: config.width, withoutEnlargement: true })  // no agrandar imágenes pequeñas
-        .webp({ quality: 82 })
-        .toBuffer();
-    }
-
-    return { buffers, mimetype: 'image/webp' };
-  }
-
-  /**
    * Sube una imagen de propiedad a S3 con la estructura correcta: properties/{propertyId}/images/{filename}
    */
   async uploadImageToS3(file: Express.Multer.File, imageId: number, propertyId: number): Promise<string | null> {
     try {
-      // Generar el key con la estructura correcta
       const timestamp = Date.now();
       const fileExtension = file.originalname.split('.').pop() || 'jpg';
       const filename = `${imageId}-${timestamp}.${fileExtension}`;
-      
-      // Usar helper para construir s3Key y procesar upload
-      const s3Key = this.buildS3Key(propertyId, 'images', filename);
-      await this.uploadAndUpdateEntity(
-        this.propertyImageRepository,
-        imageId,
-        file.buffer,
-        s3Key,
-        file.mimetype,
-        { fileUrlField: 'url' }
-      );
+      const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/images`, filename);
 
-      return s3Key; // Retornar la ruta relativa
+      await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
+      await this.propertyImageRepository.update(imageId, {
+        url: s3Key,
+        upload_status: MediaUploadStatus.COMPLETED,
+        upload_completed_at: new Date(),
+        error_message: null,
+      });
+
+      return s3Key;
     } catch (error) {
-      // Usar helper para manejo de errores
       await this.handleUploadError(
         this.propertyImageRepository,
         imageId,
         error,
         'Failed to upload image'
       );
-      
       return null;
     }
   }
@@ -1291,7 +1185,7 @@ export class PropertiesService {
 
   /**
    * Procesa y sube una imagen a S3, actualizando la base de datos.
-   * Genera todos los tamaños definidos en IMAGE_SIZES y los sube en paralelo.
+   * Delega la compresión y el upload multi-tamaño a MediaService.
    * Solo almacena en DB la URL del tamaño FULL; el thumb se deriva
    * anteponiendo THUMB_PREFIX al nombre del archivo.
    */
@@ -1305,53 +1199,14 @@ export class PropertiesService {
         upload_status: MediaUploadStatus.UPLOADING,
       });
 
-      let rawBuffer: Buffer;
-      let originalMimetype: string;
-      let originalName: string;
+      const folder = `properties/${propertyId}/images`;
+      const keys = await this.mediaService.uploadImageWithSizes(imageSource, folder, imageId);
 
-      // Si se proporciona una URL, descarga la imagen primero
-      if (imageSource.originalUrl) {
-        const response = await axios.get(imageSource.originalUrl, {
-          responseType: 'arraybuffer',
-        });
-        rawBuffer = Buffer.from(response.data, 'binary');
-        originalMimetype = response.headers['content-type'] || 'image/jpeg';
-        const fileExtension = originalMimetype.split('/')[1] || 'jpg';
-        originalName = `${imageId}.${fileExtension}`;
-      } else if (imageSource.file) {
-        rawBuffer = imageSource.file.buffer;
-        originalMimetype = imageSource.file.mimetype;
-        originalName = imageSource.file.originalname;
-      } else {
-        throw new Error('Debe proporcionar un archivo o una URL original.');
-      }
-
-      // Comprimir y generar todos los tamaños definidos en IMAGE_SIZES
-      const { buffers, mimetype: outputMimetype } = await this.compressImage(rawBuffer, originalMimetype);
-      const outputExtension = outputMimetype === 'image/webp' ? 'webp' : (originalName.split('.').pop() || 'jpg');
-      const baseFilename = `${imageId}-${Date.now()}.${outputExtension}`;
-
-      // Subir todos los tamaños en paralelo
-      // Cada tamaño usa su prefix antepuesto al baseFilename (ej: "thumb_123-timestamp.webp")
-      const uploadTasks = (Object.entries(IMAGE_SIZES) as Array<[ImageSizeKey, { width: number; prefix: string }]>).map(
-        ([sizeKey, sizeConfig]) => {
-          const filename = `${sizeConfig.prefix}${baseFilename}`;
-          const s3Key = this.buildS3Key(propertyId, 'images', filename);
-          return this.s3Service.uploadFile(buffers[sizeKey], s3Key, outputMimetype).then(() => {
-            console.log(`✅ Uploaded ${sizeKey} (${sizeConfig.width}px) imageId=${imageId}: ${s3Key}`);
-            return { sizeKey, s3Key };
-          });
-        },
-      );
-      const uploadedSizes = await Promise.all(uploadTasks);
-
-      // Solo se guarda en DB la URL del tamaño FULL
-      // El cliente puede derivar el thumb anteponiendo THUMB_PREFIX al nombre del archivo
-      const fullEntry = uploadedSizes.find(u => u.sizeKey === 'FULL');
-      if (!fullEntry) throw new Error('FULL size upload did not produce a key');
+      const fullKey = keys['FULL'];
+      if (!fullKey) throw new Error('FULL size upload did not produce a key');
 
       await this.propertyImageRepository.update(imageId, {
-        url: fullEntry.s3Key,
+        url: fullKey,
         upload_status: MediaUploadStatus.COMPLETED,
         upload_completed_at: new Date(),
         error_message: null,
@@ -1385,7 +1240,6 @@ export class PropertiesService {
 
       console.error(`Failed to process image ID ${imageId}:`, err?.message || error);
 
-      // Si es error de circuit breaker y tenemos URL original, programar reintento automático
       if (isCircuitBreakerError && imageSource.originalUrl) {
         const currentImage = await this.propertyImageRepository.findOne({ where: { id: imageId } });
         if (currentImage && currentImage.retry_count < 3) {
@@ -1398,47 +1252,26 @@ export class PropertiesService {
   }
 
   /**
-   * Procesar y subir archivo adjunto (privado)
-   * Puede recibir un buffer de archivo o una URL de archivo original.
+   * Procesar y subir archivo adjunto (privado).
+   * Delega la descarga desde URL y el upload a MediaService.
    */
   private async _processAndUploadAttached(
     attachedId: number,
     propertyId: number,
     attachedSource: { file?: Express.Multer.File; originalUrl?: string },
   ) {
-    console.log(`🔍 DEBUG _processAndUploadAttached - Starting:`);
-    console.log(`  - attachedId: ${attachedId}`);
-    console.log(`  - propertyId: ${propertyId}`);
-    console.log(`  - originalUrl: ${attachedSource.originalUrl}`);
-    console.log(`  - has file: ${!!attachedSource.file}`);
-    
     try {
       await this.propertyAttachedRepository.update(attachedId, { 
         upload_status: MediaUploadStatus.UPLOADING,
-        error_message: null
+        error_message: null,
       });
 
       let fileBuffer: Buffer;
       let filename: string;
       let mimetype: string;
 
-      // Si se proporciona una URL, descarga el archivo primero
       if (attachedSource.originalUrl) {
-        const response = await axios.get(attachedSource.originalUrl, {
-          responseType: 'arraybuffer',
-          timeout: 30000,
-          validateStatus: (status) => status < 400,
-        });
-
-        fileBuffer = Buffer.from(response.data);
-        
-        // Obtener el filename de la URL o generar uno por defecto
-        const urlParts = attachedSource.originalUrl.split('/');
-        const lastPart = urlParts[urlParts.length - 1];
-        filename = lastPart.includes('.') ? lastPart.split('?')[0] : `attached_${attachedId}`;
-        
-        // Obtener mimetype del header o asumir por defecto
-        mimetype = response.headers['content-type'] || 'application/octet-stream';
+        ({ buffer: fileBuffer, filename, mimetype } = await this.mediaService.downloadFromUrl(attachedSource.originalUrl));
       } else if (attachedSource.file) {
         fileBuffer = attachedSource.file.buffer;
         filename = attachedSource.file.originalname;
@@ -1447,20 +1280,19 @@ export class PropertiesService {
         throw new Error('No file source provided');
       }
 
-      // Subir a S3 usando helpers
-      const s3Key = this.buildS3Key(propertyId, 'attached', filename, attachedId);
-      await this.uploadAndUpdateEntity(
-        this.propertyAttachedRepository,
-        attachedId,
-        fileBuffer,
-        s3Key,
-        mimetype,
-        { fileUrlField: 'file_url' }
-      );
+      const cleanFilename = this.cleanFilenameForUrl(filename, attachedId);
+      const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
+
+      await this.mediaService.uploadFile(fileBuffer, s3Key, mimetype);
+      await this.propertyAttachedRepository.update(attachedId, {
+        file_url: s3Key,
+        upload_status: MediaUploadStatus.COMPLETED,
+        upload_completed_at: new Date(),
+        error_message: null,
+      });
 
       console.log(`Successfully processed attached file: ${attachedId}`);
     } catch (error) {
-      // Manejo específico de errores de descarga de URL
       let contextInfo = 'Failed to process attached file';
       if (axios.isAxiosError(error)) {
         if (error.response?.status === 404) {
@@ -1471,23 +1303,21 @@ export class PropertiesService {
           contextInfo = error.message || 'Network error downloading file';
         }
       }
-      
-      // Usar helper para el resto del manejo de errores
+
       await this.handleUploadError(
         this.propertyAttachedRepository,
         attachedId,
         error,
         contextInfo
       );
-      
-      // Si es error de circuit breaker y tenemos URL original, programar reintento automático
+
       const isCircuitBreakerError = error instanceof Error && error.message.includes('Circuit Breaker');
       if (isCircuitBreakerError && attachedSource.originalUrl) {
         const currentAttached = await this.propertyAttachedRepository.findOne({ where: { id: attachedId } });
         if (currentAttached && currentAttached.retry_count < 3) {
           setTimeout(() => {
             this._processAndUploadAttached(attachedId, propertyId, attachedSource);
-          }, 60000); // Reintentar en 1 minuto
+          }, 60000);
         }
       }
     }

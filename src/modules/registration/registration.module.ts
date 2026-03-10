@@ -14,8 +14,6 @@ import { User } from '../users/entities/user.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
 
-import { S3Service } from '../../common/s3.service';
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([User, Organization, Branch]),
@@ -38,7 +36,6 @@ import { S3Service } from '../../common/s3.service';
     UsersService,
     OrganizationsService,
     BranchesService,
-    S3Service,
   ],
   exports: [RegistrationService],
 })

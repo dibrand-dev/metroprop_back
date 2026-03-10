@@ -13,8 +13,6 @@ import { Tag } from '../tags/entities/tag.entity';
 import { PropertyVideo } from './entities/property-video.entity';
 import { PropertyAttached } from './entities/property-attached.entity';
 
-import { S3Service } from '../../common/s3.service';
-
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -30,7 +28,7 @@ import { S3Service } from '../../common/s3.service';
     ImageUploadModule,
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService, S3Service],
+  providers: [PropertiesService],
   exports: [PropertiesService],
 })
 export class PropertiesModule {}
