@@ -12,7 +12,7 @@ export class AuthService {
   ) {}
 
   async login(loginDto: LoginDto) {
-    const user = await this.usersService.findByEmail(loginDto.email);
+    const user = await this.usersService.findByEmailWithOrganization(loginDto.email);
 
     if (!user || !user.password) {
       throw new UnauthorizedException('El correo o la contraseña ingresados son incorrectos');
@@ -38,14 +38,12 @@ export class AuthService {
       role: user.role,
     });
 
+    // Excluir campos sensibles antes de devolver
+    const { password, email_verification_token, password_reset_token, password_reset_token_expires, ...safeUser } = user;
+
     return {
       access_token,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        role: user.role,
-      },
+      user: safeUser,
     };
   }
 

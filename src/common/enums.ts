@@ -187,3 +187,12 @@ export enum TemporalRentPeriod {
   PRIMER_QUINCENA_DICIEMBRE = 29,     // 1er quincena de diciembre
   SEGUNDA_QUINCENA_DICIEMBRE = 30,    // 2da quincena de diciembre
 }
+
+/**
+ * Plan de publicación para una propiedad.
+ */
+export enum PublicationPlan {
+  PUBLICATION_DRAFT = 0,    // Borrador (oculto para usuarios)
+  PUBLICATION_FREE = 1,     // Plan gratuito
+  PUBLICATION_PREMIUM = 2,  // Plan premium
+}

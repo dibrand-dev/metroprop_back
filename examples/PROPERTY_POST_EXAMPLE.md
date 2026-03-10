@@ -64,6 +64,9 @@ Este archivo contiene un ejemplo completo de un request POST para crear una prop
 - **roofed_surface**: Superficie techada
 - **unroofed_surface**: Superficie descubierta
 - **semiroofed_surface**: Superficie semi-techada
+- **expenses**: Monto de gastos mensuales
+- **currency_expenses**: Moneda del gastos (código ISO de 3 letras)
+- **selected_plan**: Plan de publicación (1=Gratuito, 2=Premium)
 
 ## Endpoint
 
@@ -83,10 +86,11 @@ La API retornará la propiedad creada con:
 
 1. **reference_code** debe ser único en la BD
 2. **currency** debe ser código ISO de 3 letras (ARS, USD, EUR, etc)
-3. **tag_type** debe estar entre 1 y 3
-4. **price** debe ser un número positivo
-5. **geo_lat** debe estar entre -90 y 90
-6. **geo_long** debe estar entre -180 y 180
-7. Todas las imágenes deben tener URLs válidas
-8. Se pueden incluir de 1 a N operaciones
+3. **currency_expenses** (opcional) debe ser código ISO de 3 letras (ARS, USD, EUR, etc) - especifica la moneda para los gastos
+4. **tag_type** debe estar entre 1 y 3
+5. **price** debe ser un número positivo
+6. **geo_lat** debe estar entre -90 y 90
+7. **geo_long** debe estar entre -180 y 180
+8. Todas las imágenes deben tener URLs válidas
+9. Se pueden incluir de 1 a N operaciones
 
