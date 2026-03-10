@@ -699,7 +699,7 @@ export class PropertiesService {
                 file.mimetype,
                 { fileUrlField: 'file_url' }
               );
-              
+
               console.log(`Successfully uploaded attached file: ${attached.id}`);
           } catch (error) {
               // Usar helper para manjo de errores
@@ -709,7 +709,7 @@ export class PropertiesService {
                 error,
                 'Failed to upload attached file'
               );
-              
+
               // Si es error de circuit breaker, programar reintento automático
               const isCircuitBreakerError = error instanceof Error && error.message.includes('Circuit Breaker');
               if (isCircuitBreakerError) {
@@ -722,10 +722,10 @@ export class PropertiesService {
               }
           }
         })();
-        
+
         uploadPromises.push(uploadPromise);
     }
-    
+
     // Ejecutar todas las subidas en paralelo
     await Promise.all(uploadPromises);
   }
@@ -775,6 +775,7 @@ export class PropertiesService {
       city?: string;
       min_price?: number;
       max_price?: number;
+      organization_id?: number;
     },
   ): Promise<{ data: Property[]; total: number }> {
     const query = this.propertyRepository
@@ -801,6 +802,12 @@ export class PropertiesService {
     if (filters?.max_price) {
       query.andWhere('property.price <= :max_price', {
         max_price: filters.max_price,
+      });
+    }
+
+    if (filters?.organization_id) {
+      query.andWhere('property.organization_id = :organization_id', {
+        organization_id: filters.organization_id,
       });
     }
 
@@ -934,68 +941,6 @@ export class PropertiesService {
     await this.propertyRepository.save(property);
 
     return { message: `Propiedad ${id} eliminada correctamente` };
-  }
-
-  /**
-   * Restaurar una propiedad eliminada
-   */
-  async restore(id: number): Promise<Property> {
-    const property = await this.propertyRepository.findOne({
-      where: { id },
-    });
-
-    if (!property) {
-      throw new NotFoundException(`Propiedad con ID ${id} no encontrada`);
-    }
-
-    if (!property.deleted) {
-      throw new BadRequestException(
-        'Esta propiedad no ha sido eliminada, no hay nada que restaurar',
-      );
-    }
-
-    property.deleted = false;
-    property.deleted_at = null;
-
-    return this.propertyRepository.save(property);
-  }
-
-  /**
-   * Obtener estadísticas de propiedades
-   */
-  async getStats(): Promise<any> {
-    const total = await this.propertyRepository.count({
-      where: { deleted: false },
-    });
-
-    const byStatus = await this.propertyRepository
-      .createQueryBuilder('property')
-      .select('property.status', 'status')
-      .addSelect('COUNT(*)', 'count')
-      .where('property.deleted = :deleted', { deleted: false })
-      .groupBy('property.status')
-      .getRawMany();
-
-    const byPropertyType = await this.propertyRepository
-      .createQueryBuilder('property')
-      .select('property.property_type', 'property_type')
-      .addSelect('COUNT(*)', 'count')
-      .where('property.deleted = :deleted', { deleted: false })
-      .groupBy('property.property_type')
-      .getRawMany();
-
-    const avgPrice = await this.propertyRepository
-      .createQueryBuilder('property')
-      .select('AVG(property.price)', 'avg_price')
-      .where('property.deleted = :deleted', { deleted: false })
-      .getRawOne();
-
-    return {
-      total,
-      byStatus,
-      byPropertyType,
-      avgPrice: parseFloat(avgPrice?.avg_price || 0),
-    };
   }
 
   /**

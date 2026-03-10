@@ -188,16 +188,6 @@ export class PropertiesController {
   }
 
   /**
-   * GET /properties/stats
-   * Obtener estadísticas de propiedades
-   * Nota: DEBE estar antes de GET :id para evitar conflicto
-   */
-  @Get('stats')
-  getStats() {
-    return this.propertiesService.getStats();
-  }
-
-  /**
    * GET /properties/search
    * Buscar propiedades por texto
    * Nota: DEBE estar antes de GET :id para evitar conflicto
@@ -277,12 +267,4 @@ export class PropertiesController {
     return this.propertiesService.remove(id);
   }
 
-  /**
-   * PATCH /properties/:id/restore
-   * Restaurar una propiedad eliminada
-   */
-  @Patch(':id/restore')
-  restore(@Param('id', ParseIntPipe) id: number) {
-    return this.propertiesService.restore(id);
-  }
 }
