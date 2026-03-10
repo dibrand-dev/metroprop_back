@@ -14,6 +14,7 @@ import { PartnersModule } from './modules/partners/partners.module';
 import { EmailModule } from './common/email/email.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { TagsModule } from './modules/tags/tags.module';
+import { DevelopersModule } from './modules/developers/developers.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -65,6 +66,7 @@ import { TagsModule } from './modules/tags/tags.module';
     EmailModule,
     LocationsModule,
     TagsModule,
+    DevelopersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

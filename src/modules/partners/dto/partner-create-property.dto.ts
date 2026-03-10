@@ -26,8 +26,6 @@ import {
   Brightness,
   GarageCoverage,
 } from '../../../common/enums';
-import { PartnerCompanyDto } from './partner-company.dto';
-import { PartnerAdministratorDto } from './partner-administrator.dto';
 
 // ========== Sub-DTOs ==========
 
@@ -118,17 +116,12 @@ export class PartnerAttachedDto {
 // ========== Main DTO ==========
 
 export class PartnerCreatePropertyDto {
-  // ========== COMPANY & ADMINISTRATOR ==========
+  // ========== ORGANIZATION / BRANCH REFERENCE ==========
 
-  @IsNotEmpty({ message: 'company es obligatorio' })
-  @ValidateNested()
-  @Type(() => PartnerCompanyDto)
-  company!: PartnerCompanyDto;
-
-  @IsNotEmpty({ message: 'administrator es obligatorio' })
-  @ValidateNested()
-  @Type(() => PartnerAdministratorDto)
-  administrator!: PartnerAdministratorDto;
+  @IsNotEmpty({ message: 'branch_reference_id es obligatorio' })
+  @IsInt({ message: 'branch_reference_id debe ser un número entero' })
+  @IsPositive()
+  branch_reference_id!: number;
 
   // ========== REQUIRED PROPERTY FIELDS ==========
 

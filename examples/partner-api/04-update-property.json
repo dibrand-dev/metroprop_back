@@ -1,0 +1,19 @@
+{
+  "info": "PUT /api/partner/v1/properties/PROP-DEMO-001 — Actualizar propiedad existente",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "url": "/api/partner/v1/properties/PROP-DEMO-001",
+  "body": {
+    "publication_title": "Departamento 3 ambientes con terraza - ACTUALIZADO",
+    "description": "Descripción actualizada del departamento con nueva información.",
+    "room_amount": 4,
+    "expenses": 52000
+  },
+  "expected_response": {
+    "success": true,
+    "data": { "id": 1, "reference_code": "PROP-DEMO-001", "publication_title": "Departamento 3 ambientes con terraza - ACTUALIZADO" }
+  }
+}

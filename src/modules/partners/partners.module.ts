@@ -18,6 +18,8 @@ import { PropertyTag } from '../properties/entities/property-tag.entity';
 import { PropertyVideo } from '../properties/entities/property-video.entity';
 import { PropertyAttached } from '../properties/entities/property-attached.entity';
 import { PropertiesModule } from '../properties/properties.module';
+import { EmailModule } from '../../common/email/email.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
@@ -35,6 +37,8 @@ import { PropertiesModule } from '../properties/properties.module';
     ]),
     ImageUploadModule,
     PropertiesModule,
+    EmailModule,
+    UsersModule,
   ],
   providers: [PartnersService, PartnerApiService, ApiKeyAuthGuard],
   controllers: [PartnersController, PartnerApiController],

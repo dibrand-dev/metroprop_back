@@ -1,0 +1,34 @@
+{
+  "info": "POST /api/partner/v1/organizations",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "body": {
+    "company_name": "Inmobiliaria Demo S.A.",
+    "company_logo": "https://ejemplo.com/logo-demo.png",
+    "address": "Av. Corrientes 1234, Piso 5",
+    "phone": "+5411-4567-8901",
+    "alternative_phone": "+5411-4567-8902",
+    "contact_email": "contacto@inmobiliariademo.com",
+    "contact_time": "Lunes a Viernes 9:00 a 18:00",
+    "country_id": 1,
+    "state_id": 1,
+    "location_id": 1,
+    "sublocation_id": 1,
+    "professional_type": "inmobiliario",
+    "cuit": "30-71234567-9",
+    "admin_name": "Juan Pérez",
+    "admin_email": "juan.perez@inmobiliariademo.com",
+    "admin_phone": "+5411-1234-5678"
+  },
+  "expected_response": {
+    "success": true,
+    "data": {
+      "organization_id": 1,
+      "branch_id": 1,
+      "admin_user_id": 1
+    }
+  }
+}

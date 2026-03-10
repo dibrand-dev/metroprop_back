@@ -1,0 +1,25 @@
+{
+  "info": "POST /api/partner/v1/properties/PROP-DEMO-001/images — Agregar imágenes a propiedad",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "url": "/api/partner/v1/properties/PROP-DEMO-001/images",
+  "body": {
+    "images": [
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/nueva-foto-1.jpg",
+        "is_blueprint": false,
+        "description": "Foto nueva del baño",
+        "order_position": 6
+      },
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/nueva-foto-2.jpg",
+        "is_blueprint": false,
+        "description": "Foto nueva del dormitorio 2",
+        "order_position": 7
+      }
+    ]
+  }
+}

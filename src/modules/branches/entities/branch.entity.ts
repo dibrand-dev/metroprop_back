@@ -14,6 +14,10 @@ import { User } from '../../users/entities/user.entity';
 
 @Entity('branches')
 @Index('idx_branches_organization', ['organization'])
+@Index('idx_branches_location_id', ['location_id'])
+@Index('idx_branches_country_id', ['country_id'])
+@Index('idx_branches_state_id', ['state_id'])
+@Index('idx_branches_sub_location_id', ['sub_location_id'])
 export class Branch {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -41,6 +45,15 @@ export class Branch {
 
   @Column({ type: 'varchar', nullable: true })
   location_id?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  country_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  state_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  sub_location_id?: number;
 
   @Column({ type: 'varchar', nullable: true })
   full_location?: string;

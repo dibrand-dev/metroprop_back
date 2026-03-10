@@ -20,7 +20,10 @@ import { PropertyAttached } from '../properties/entities/property-attached.entit
 import { Partner } from './entities/partner.entity';
 
 import { PropertiesService } from '../properties/properties.service';
+import { UsersService } from '../users/users.service';
+import { EmailService } from '../../common/email/email.service';
 
+import { PartnerCreateOrganizationDto } from './dto/partner-create-organization.dto';
 import { PartnerCreatePropertyDto } from './dto/partner-create-property.dto';
 import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
 import { PartnerAddImagesDto } from './dto/partner-add-images.dto';
@@ -52,8 +55,120 @@ export class PartnerApiService {
     @InjectRepository(PropertyAttached)
     private readonly propertyAttachedRepo: Repository<PropertyAttached>,
     private readonly propertiesService: PropertiesService,
+    private readonly usersService: UsersService,
+    private readonly emailService: EmailService,
     private readonly dataSource: DataSource,
   ) {}
+
+  // ================================================================
+  // CREATE ORGANIZATION + BRANCH + ADMIN USER
+  // ================================================================
+
+  async createOrganization(
+    dto: PartnerCreateOrganizationDto,
+    partner: Partner,
+  ): Promise<{ organization_id: number; branch_id: number; admin_user_id: number }> {
+    return this.dataSource.transaction(async (manager) => {
+      // 1. Create Organization
+      const organization = manager.create(Organization, {
+        company_name: dto.company_name,
+        company_logo: dto.company_logo,
+        email: dto.contact_email,
+        address: dto.address,
+        phone: dto.phone,
+        alternative_phone: dto.alternative_phone,
+        contact_time: dto.contact_time,
+        country_id: dto.country_id,
+        state_id: dto.state_id,
+        location_id: dto.location_id?.toString(),
+        sub_location_id: dto.sublocation_id,
+        professional_type: dto.professional_type,
+        cuit: dto.cuit || undefined,
+        external_reference: `partner-${partner.id}-org`,
+        source_partner_id: partner.id,
+        deleted: false,
+      });
+      const savedOrg = await manager.save(Organization, organization);
+      this.logger.log(`Created organization ${savedOrg.id} for partner ${partner.id}`);
+
+      // 2. Create Branch (mirror org data)
+      const branch = manager.create(Branch, {
+        branch_name: dto.company_name,
+        email: dto.contact_email,
+        phone: dto.phone,
+        alternative_phone: dto.alternative_phone,
+        contact_time: dto.contact_time,
+        address: dto.address,
+        country_id: dto.country_id,
+        state_id: dto.state_id,
+        location_id: dto.location_id?.toString(),
+        sub_location_id: dto.sublocation_id,
+        organization: savedOrg,
+        deleted: false,
+      });
+      const savedBranch = await manager.save(Branch, branch);
+      this.logger.log(`Created branch ${savedBranch.id} for organization ${savedOrg.id}`);
+
+      // 3. Create Admin User
+      // Check if user with this email already exists
+      const existingUser = await manager.findOne(User, {
+        where: { email: dto.admin_email },
+      });
+
+      if (existingUser) {
+        throw new BadRequestException(
+          `El email ${dto.admin_email} ya se encuentra registrado. Use otro email para el administrador.`,
+        );
+      }
+
+      const randomPassword = crypto.randomBytes(16).toString('hex');
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+
+      const user = manager.create(User, {
+        name: dto.admin_name,
+        email: dto.admin_email,
+        password: hashedPassword,
+        phone: dto.admin_phone,
+        organization: { id: savedOrg.id } as Organization,
+        is_verified: false,
+      });
+      const savedUser = await manager.save(User, user);
+
+      // Link user to branch
+      await manager
+        .createQueryBuilder()
+        .relation(User, 'branches')
+        .of(savedUser)
+        .add(savedBranch.id);
+
+      // Set as org admin
+      await manager.update(Organization, savedOrg.id, {
+        admin_user: { id: savedUser.id } as User,
+      });
+
+      this.logger.log(`Created admin user ${savedUser.id} (${dto.admin_email}) for organization ${savedOrg.id}`);
+
+      // 4. Send welcome email (non-blocking)
+      try {
+        const verificationToken = await this.usersService.setEmailVerificationToken(savedUser.id);
+        await this.emailService.sendProfessionalWelcomeEmail(
+          savedUser.email,
+          savedUser.name,
+          verificationToken,
+        );
+        this.logger.log(`Welcome email sent to ${savedUser.email}`);
+      } catch (emailError) {
+        this.logger.error(`Error sending welcome email to ${savedUser.email}: ${emailError}`);
+      }
+
+      return {
+        organization_id: savedOrg.id,
+        branch_id: savedBranch.id,
+        admin_user_id: savedUser.id,
+      };
+    });
+  }
 
   // ================================================================
   // CREATE / UPSERT PROPERTY
@@ -63,14 +178,20 @@ export class PartnerApiService {
     dto: PartnerCreatePropertyDto,
     partner: Partner,
   ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
-    // 1. Resolver o crear Organization + Branch + User
-    const { organization, branch, user } = await this.resolveCompanyAndAdmin(
-      dto.company,
-      dto.administrator,
+    // 1. Resolve the branch + org from branch_reference_id, scoped to partner
+    const { organization, branch } = await this.resolveBranchForPartner(
+      dto.branch_reference_id,
       partner,
     );
 
-    // 2. Buscar propiedad existente por reference_code + organization_id (upsert)
+    // 2. Get admin user of the org
+    const orgWithAdmin = await this.organizationRepo.findOne({
+      where: { id: organization.id },
+      relations: ['admin_user'],
+    });
+    const userId = orgWithAdmin?.admin_user?.id;
+
+    // 3. Check if property already exists (upsert by reference_code + org)
     const existing = await this.propertyRepo.findOne({
       where: {
         reference_code: dto.reference_code,
@@ -81,18 +202,15 @@ export class PartnerApiService {
     });
 
     if (existing) {
-      // UPDATE: excluir company/administrator, pasar resto como update
-      const { company, administrator, operations, images, videos, multimedia360, attached, tags, ...scalarFields } = dto;
+      const { branch_reference_id, operations, images, videos, multimedia360, attached, tags, ...scalarFields } = dto;
       const updateResult = await this.updatePropertyInternal(
         existing,
         { ...scalarFields, operations, tags },
-        organization,
-        branch,
-        user,
+        organization.id,
+        branch.id,
+        userId,
       );
 
-      // Si venían multimedia en el POST inicial, agregarlas
-      const multimediaWarnings: string[] = [];
       if (images && images.length > 0) {
         await this.addImagesToProperty(existing.id!, images);
       }
@@ -114,8 +232,8 @@ export class PartnerApiService {
       };
     }
 
-    // CREATE: nueva propiedad
-    return this.createPropertyInternal(dto, organization, branch, user);
+    // CREATE new property
+    return this.createPropertyInternal(dto, organization.id, branch.id, userId);
   }
 
   // ================================================================
@@ -129,13 +247,7 @@ export class PartnerApiService {
   ): Promise<{ data: Property; warnings?: string[] }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
-    const updateResult = await this.updatePropertyInternal(
-      property,
-      dto,
-      undefined,
-      undefined,
-      undefined,
-    );
+    const updateResult = await this.updatePropertyInternal(property, dto);
 
     const result = await this.propertiesService.findOne(property.id!);
     return {
@@ -172,8 +284,7 @@ export class PartnerApiService {
   ): Promise<{ data: Property }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
-    // PropertyStatus.NO_DISPONIBLE = 4
-    property.status = 4 as any;
+    property.status = 4 as any; // PropertyStatus.NO_DISPONIBLE
     await this.propertyRepo.save(property);
 
     const result = await this.propertiesService.findOne(property.id!);
@@ -277,121 +388,29 @@ export class PartnerApiService {
   // ================================================================
 
   /**
-   * Resuelve (find-or-create) Organization + Branch + User para un partner.
-   * Usa external_reference del company DTO + source_partner_id para deduplicar.
+   * Validates that a branch belongs to an organization owned by this partner.
    */
-  private async resolveCompanyAndAdmin(
-    companyDto: PartnerCreatePropertyDto['company'],
-    adminDto: PartnerCreatePropertyDto['administrator'],
+  private async resolveBranchForPartner(
+    branchId: number,
     partner: Partner,
-  ): Promise<{ organization: Organization; branch: Branch; user: User }> {
-    return this.dataSource.transaction(async (manager) => {
-      // --- Organization ---
-      let organization = await manager.findOne(Organization, {
-        where: {
-          source_partner_id: partner.id,
-          external_reference: companyDto.reference_id,
-          deleted: false,
-        },
-      });
-
-      if (!organization) {
-        organization = manager.create(Organization, {
-          company_name: companyDto.company_name,
-          email: companyDto.email,
-          phone: companyDto.phone,
-          alternative_phone: companyDto.alternative_phone,
-          address: companyDto.address,
-          contact_time: companyDto.contact_time,
-          cuit: companyDto.cuit || undefined,
-          fiscal_condition: companyDto.fiscal_condition,
-          social_reason: companyDto.social_reason,
-          professional_type: companyDto.professional_type,
-          location_id: companyDto.location_id?.toString(),
-          full_location: companyDto.full_location,
-          geo_lat: companyDto.geo_lat?.toString(),
-          geo_long: companyDto.geo_long?.toString(),
-          external_reference: companyDto.reference_id,
-          source_partner_id: partner.id,
-          deleted: false,
-        });
-        organization = await manager.save(Organization, organization);
-        this.logger.log(
-          `Created organization ${organization.id} (ext_ref=${companyDto.reference_id}) for partner ${partner.id}`,
-        );
-      } else {
-        // Update org fields if they changed
-        let changed = false;
-        const updates: Partial<Organization> = {};
-        if (companyDto.company_name && companyDto.company_name !== organization.company_name) {
-          updates.company_name = companyDto.company_name; changed = true;
-        }
-        if (companyDto.email && companyDto.email !== organization.email) {
-          updates.email = companyDto.email; changed = true;
-        }
-        if (companyDto.phone !== undefined && companyDto.phone !== organization.phone) {
-          updates.phone = companyDto.phone; changed = true;
-        }
-        if (changed) {
-          await manager.update(Organization, organization.id, updates);
-          Object.assign(organization, updates);
-        }
-      }
-
-      // --- Branch (one default branch per org) ---
-      let branch = await manager.findOne(Branch, {
-        where: { organization: { id: organization.id } },
-      });
-
-      if (!branch) {
-        branch = manager.create(Branch, {
-          branch_name: companyDto.company_name,
-          email: companyDto.email,
-          phone: companyDto.phone,
-          organization,
-        });
-        branch = await manager.save(Branch, branch);
-        this.logger.log(`Created branch ${branch.id} for organization ${organization.id}`);
-      }
-
-      // --- User (admin) ---
-      let user = await manager.findOne(User, {
-        where: { email: adminDto.email },
-      });
-
-      if (!user) {
-        // Generate a random password — the partner user doesn't login via password
-        const randomPassword = crypto.randomBytes(16).toString('hex');
-        const bcrypt = await import('bcryptjs');
-        const hashedPassword = await bcrypt.hash(randomPassword, 10);
-
-        user = manager.create(User, {
-          name: adminDto.name,
-          email: adminDto.email,
-          password: hashedPassword,
-          phone: adminDto.phone,
-          organization: { id: organization.id } as Organization,
-          is_verified: true,
-        });
-        user = await manager.save(User, user);
-
-        // Link user to branch
-        await manager
-          .createQueryBuilder()
-          .relation(User, 'branches')
-          .of(user)
-          .add(branch.id);
-
-        // Set as org admin
-        await manager.update(Organization, organization.id, {
-          admin_user: { id: user.id } as User,
-        });
-
-        this.logger.log(`Created admin user ${user.id} (${adminDto.email}) for organization ${organization.id}`);
-      }
-
-      return { organization, branch, user };
+  ): Promise<{ organization: Organization; branch: Branch }> {
+    const branch = await this.branchRepo.findOne({
+      where: { id: branchId, deleted: false },
+      relations: ['organization'],
     });
+
+    if (!branch) {
+      throw new NotFoundException(`Branch ${branchId} no encontrada`);
+    }
+
+    const org = branch.organization;
+    if (!org || org.deleted || org.source_partner_id !== partner.id) {
+      throw new BadRequestException(
+        `Branch ${branchId} no pertenece a una organización de este partner`,
+      );
+    }
+
+    return { organization: org, branch };
   }
 
   /**
@@ -399,13 +418,12 @@ export class PartnerApiService {
    */
   private async createPropertyInternal(
     dto: PartnerCreatePropertyDto,
-    organization: Organization,
-    branch: Branch,
-    user: User,
+    organizationId: number,
+    branchId: number,
+    userId?: number,
   ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
     const {
-      company,
-      administrator,
+      branch_reference_id,
       images,
       tags,
       operations,
@@ -424,9 +442,9 @@ export class PartnerApiService {
       operation_type: firstOp.operation_type as any,
       price: firstOp.price,
       currency: firstOp.currency as any,
-      organization_id: organization.id,
-      branch_id: branch.id,
-      user_id: user.id,
+      organization_id: organizationId,
+      branch_id: branchId,
+      user_id: userId,
       deleted: false,
     } as any);
 
@@ -444,7 +462,7 @@ export class PartnerApiService {
 
     // Tags
     if (tags && tags.length > 0) {
-      const tagWarnings = await this.syncTags(propertyId, tags, { id: propertyId } as Property);
+      const tagWarnings = await this.syncTags(propertyId, tags);
       warnings.push(...tagWarnings);
     }
 
@@ -482,18 +500,17 @@ export class PartnerApiService {
   private async updatePropertyInternal(
     property: Property,
     dto: Partial<PartnerUpdatePropertyDto> & { operations?: any[]; tags?: number[] },
-    organization?: Organization,
-    branch?: Branch,
-    user?: User,
+    organizationId?: number,
+    branchId?: number,
+    userId?: number,
   ): Promise<{ warnings: string[] }> {
     const { operations, tags, ...scalarFields } = dto;
     const warnings: string[] = [];
 
-    // Scalar fields
     const updateData: any = { ...scalarFields };
-    if (organization) updateData.organization_id = organization.id;
-    if (branch) updateData.branch_id = branch.id;
-    if (user) updateData.user_id = user.id;
+    if (organizationId) updateData.organization_id = organizationId;
+    if (branchId) updateData.branch_id = branchId;
+    if (userId) updateData.user_id = userId;
 
     // Update denormalized fields from first operation if operations provided
     if (operations && operations.length > 0) {
@@ -522,7 +539,7 @@ export class PartnerApiService {
     if (tags !== undefined) {
       await this.propertyTagRepo.delete({ property: { id: property.id } });
       if (tags.length > 0) {
-        const tagWarnings = await this.syncTags(property.id!, tags, property);
+        const tagWarnings = await this.syncTags(property.id!, tags);
         warnings.push(...tagWarnings);
       }
     }
@@ -537,7 +554,6 @@ export class PartnerApiService {
     referenceCode: string,
     partner: Partner,
   ): Promise<Property> {
-    // Get all organization IDs belonging to this partner
     const orgIds = await this.organizationRepo
       .createQueryBuilder('org')
       .select('org.id')
@@ -546,9 +562,7 @@ export class PartnerApiService {
       .getMany();
 
     if (orgIds.length === 0) {
-      throw new NotFoundException(
-        `No se encontraron organizaciones para este partner`,
-      );
+      throw new NotFoundException(`No se encontraron organizaciones para este partner`);
     }
 
     const ids = orgIds.map((o) => o.id);
@@ -575,7 +589,6 @@ export class PartnerApiService {
   private async syncTags(
     propertyId: number,
     tagIds: number[],
-    property: Property,
   ): Promise<string[]> {
     const warnings: string[] = [];
     const existingTags = await this.dataSource.query(
@@ -603,7 +616,7 @@ export class PartnerApiService {
   }
 
   /**
-   * Add images to a property (PENDING status, delegated to PropertiesService background processing).
+   * Add images to a property (PENDING status, fire-and-forget background processing).
    */
   private async addImagesToProperty(
     propertyId: number,
@@ -630,7 +643,6 @@ export class PartnerApiService {
       });
     }
 
-    // Delegate background processing to PropertiesService (fire-and-forget)
     if (imagesToProcess.length > 0) {
       (this.propertiesService as any).processAndUploadImages(imagesToProcess);
     }

@@ -9,8 +9,10 @@ import {
   MaxLength,
   MinLength,
   Matches,
-  IsNumber
+  IsNumber,
+  IsEnum,
 } from 'class-validator';
+import { ProfessionalType } from '../../../common/enums';
 
 export class CreateOrganizationDto {
   @IsOptional()
@@ -70,9 +72,8 @@ export class CreateOrganizationDto {
   geo_long?: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  professional_type?: string;
+  @IsEnum(ProfessionalType)
+  professional_type?: ProfessionalType;
 
   @IsOptional()
   @IsString()

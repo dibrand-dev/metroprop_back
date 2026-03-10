@@ -60,6 +60,8 @@ create index idx_permissions_deleted
 create index idx_permissions_resource
     on permissions (resource);
 
+create type organizations_professional_type_enum as enum ('inmobiliario', 'inversor', 'otros');
+
 create table organizations
 (
     id                serial
@@ -73,10 +75,13 @@ create table organizations
     contact_time      varchar,
     email             varchar                 not null,
     location_id       varchar,
+    country_id        integer,
+    state_id          integer,
+    sub_location_id   integer,
     full_location     varchar,
     geo_lat           varchar,
     geo_long          varchar,
-    professional_type varchar,
+    professional_type organizations_professional_type_enum,
     admin_user        integer,
     social_reason     varchar,
     fiscal_condition  varchar,
@@ -85,12 +90,35 @@ create table organizations
     updated_at        timestamp default now() not null,
     deleted           boolean   default false not null,
     deleted_at        timestamp,
-    logo_status       varchar
+    logo_status       varchar,
+    external_reference VARCHAR(255) NULL,
+    source_partner_id INTEGER NULL
 );
 
 create unique index idx_organizations_cuit_unique
     on organizations (cuit)
     where (deleted = false);
+
+create index idx_organizations_location_id
+    on organizations (location_id);
+
+create index idx_organizations_country_id
+    on organizations (country_id);
+
+create index idx_organizations_state_id
+    on organizations (state_id);
+
+create index idx_organizations_sub_location_id
+    on organizations (sub_location_id);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uk_organizations_partner_external_ref
+ON organizations (source_partner_id, external_reference)
+WHERE source_partner_id IS NOT NULL AND external_reference IS NOT NULL;
+
+-- 5. Índice para búsqueda rápida por partner
+CREATE INDEX IF NOT EXISTS idx_organizations_source_partner
+ON organizations (source_partner_id)
+WHERE source_partner_id IS NOT NULL;
 
 create table branches
 (
@@ -105,6 +133,9 @@ create table branches
     contact_time      varchar,
     email             varchar                 not null,
     location_id       varchar,
+    country_id        integer,
+    state_id          integer,
+    sub_location_id   integer,
     full_location     varchar,
     geo_lat           numeric(10, 8),
     geo_long          numeric(11, 8),
@@ -121,6 +152,18 @@ create table branches
 
 create index idx_branches_organization
     on branches (organization_id);
+
+create index idx_branches_location_id
+    on branches (location_id);
+
+create index idx_branches_country_id
+    on branches (country_id);
+
+create index idx_branches_state_id
+    on branches (state_id);
+
+create index idx_branches_sub_location_id
+    on branches (sub_location_id);
 
 create table users
 (

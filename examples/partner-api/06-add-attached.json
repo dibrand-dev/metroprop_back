@@ -1,0 +1,18 @@
+{
+  "info": "POST /api/partner/v1/properties/PROP-DEMO-001/attached — Agregar adjuntos a propiedad",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "url": "/api/partner/v1/properties/PROP-DEMO-001/attached",
+  "body": {
+    "attached": [
+      {
+        "file_url": "https://ejemplo.com/propiedades/demo-001/plano-catastral.pdf",
+        "description": "Plano catastral del inmueble",
+        "order": 3
+      }
+    ]
+  }
+}
