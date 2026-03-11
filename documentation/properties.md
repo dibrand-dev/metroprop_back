@@ -60,10 +60,6 @@ curl -X POST http://localhost:3000/properties/123/upload-images \
 - Query params: skip, take, property_type, status, min_price, max_price (opcional)
 - Body: _No requiere body._
 
-### GET /properties/stats
-- Descripción: Estadísticas de propiedades.
-- Body: _No requiere body._
-
 ### GET /properties/search
 - Descripción: Buscar propiedades.
 - Query params: q (texto de búsqueda)
@@ -89,8 +85,4 @@ curl -X POST http://localhost:3000/properties/123/upload-images \
 
 ### DELETE /properties/:id
 - Descripción: Eliminar propiedad.
-- Body: _No requiere body._
-
-### PATCH /properties/:id/restore
-- Descripción: Restaurar propiedad eliminada.
 - Body: _No requiere body._

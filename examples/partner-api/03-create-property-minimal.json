@@ -1,0 +1,27 @@
+{
+  "info": "POST /api/partner/v1/properties — Crear propiedad con los campos MÍNIMOS obligatorios",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "body": {
+    "branch_reference_id": 1,
+    "reference_code": "PROP-MIN-001",
+    "publication_title": "Departamento 2 ambientes en Belgrano",
+    "property_type": 1,
+    "status": 1,
+    "operations": [
+      {
+        "operation_type": "venta",
+        "currency": "USD",
+        "price": 120000
+      }
+    ]
+  },
+  "expected_response": {
+    "success": true,
+    "created": true,
+    "data": { "id": 2, "reference_code": "PROP-MIN-001" }
+  }
+}

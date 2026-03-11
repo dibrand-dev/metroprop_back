@@ -144,6 +144,15 @@ export enum Currency {
 }
 
 /**
+ * Tipos de perfil profesional para organizaciones.
+ */
+export enum ProfessionalType {
+  INMOBILIARIO = 'inmobiliario',
+  INVERSOR = 'inversor',
+  OTROS = 'otros',
+}
+
+/**
  * Períodos para alquiler temporal (solo para OperationType.ALQUILER_TEMPORAL).
  */
 export enum TemporalRentPeriod {

@@ -20,7 +20,7 @@ export class PropertyOperation {
   @Column({ type: 'varchar', length: 50, nullable: true })
   period?: string;
 
-  @ManyToOne(() => Property, (property) => property.operations, {
+  @ManyToOne(() => Property, {
     onDelete: 'CASCADE',
     nullable: false,
   })

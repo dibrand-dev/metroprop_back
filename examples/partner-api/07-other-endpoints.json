@@ -1,0 +1,34 @@
+{
+  "info": "Otros endpoints disponibles (no requieren body o usan URL params)",
+  "headers_comunes": {
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "endpoints": {
+    "GET_property": {
+      "method": "GET",
+      "url": "/api/partner/v1/properties/PROP-DEMO-001",
+      "description": "Obtener datos de una propiedad por reference_code"
+    },
+    "DELETE_property": {
+      "method": "DELETE",
+      "url": "/api/partner/v1/properties/PROP-DEMO-001",
+      "description": "Eliminar propiedad (soft delete)"
+    },
+    "DEACTIVATE_property": {
+      "method": "POST",
+      "url": "/api/partner/v1/properties/PROP-DEMO-001/deactivate",
+      "description": "Desactivar propiedad (poner en NO_DISPONIBLE)"
+    },
+    "DELETE_image": {
+      "method": "DELETE",
+      "url": "/api/partner/v1/properties/PROP-DEMO-001/images/123",
+      "description": "Eliminar una imagen por ID de la propiedad"
+    },
+    "DELETE_attached": {
+      "method": "DELETE",
+      "url": "/api/partner/v1/properties/PROP-DEMO-001/attached/456",
+      "description": "Eliminar un adjunto por ID de la propiedad"
+    }
+  }
+}

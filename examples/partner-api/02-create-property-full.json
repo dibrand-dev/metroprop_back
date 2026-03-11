@@ -1,0 +1,170 @@
+{
+  "info": "POST /api/partner/v1/properties — Crear propiedad con TODA la data posible",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "body": {
+    "branch_reference_id": 1,
+
+    "reference_code": "PROP-DEMO-001",
+    "publication_title": "Hermoso departamento 3 ambientes con balcón terraza en Palermo",
+    "publication_title_en": "Beautiful 3-room apartment with terrace balcony in Palermo",
+    "property_type": 1,
+    "property_subtype": 1,
+    "status": 1,
+    "description": "Amplio departamento de 3 ambientes ubicado en el corazón de Palermo. Cuenta con living-comedor, cocina americana totalmente equipada, 2 dormitorios (1 en suite), 2 baños, lavadero independiente y un hermoso balcón terraza con vista panorámica. Edificio con amenities: pileta, SUM, gimnasio y seguridad 24hs. Cochera cubierta incluida.",
+    "internal_comments": "Propiedad del dueño directo. Llave en oficina central. Cliente premium.",
+
+    "street": "Av. Santa Fe",
+    "number": "3450",
+    "floor": "12",
+    "apartment": "A",
+    "postal_code": "C1425BGN",
+    "location_id": 1,
+    "country_id": 1,
+    "state_id": 1,
+    "sub_location_id": 1,
+    "geo_lat": -34.5882,
+    "geo_long": -58.4094,
+    "show_exact_location": true,
+
+    "suite_amount": 1,
+    "room_amount": 3,
+    "bathroom_amount": 2,
+    "toilet_amount": 1,
+    "parking_lot_amount": 1,
+
+    "surface": 85.5,
+    "roofed_surface": 75.0,
+    "unroofed_surface": 10.5,
+    "semiroofed_surface": 0,
+    "total_surface": 85.5,
+    "surface_measurement": 1,
+    "roofed_surface_measurement": 1,
+    "surface_front": 8,
+    "surface_length": 12,
+
+    "age": 5,
+    "property_condition": "Excelente",
+    "situation": "Disponible",
+    "dispositions": "Frente",
+    "orientation": "Norte",
+    "brightness": 1,
+    "garage_coverage": 1,
+    "credit_eligible": true,
+    "floors_amount": 1,
+    "zonification": "Residencial",
+    "construction_year": "2019",
+    "last_renovation": "2023",
+
+    "expenses": 45000,
+    "commission": "3% + IVA",
+    "network_share": "50/50",
+    "price_square_meter": 2800,
+
+    "producer_user": "María García",
+    "key_contact": "Tel: 4567-8901 (preguntar por María)",
+    "key_agent_user": "Carlos López",
+    "key_location": "Palermo, CABA",
+    "key_reference_code": "INT-REF-PAL-001",
+    "maintenance_user": "Roberto Fernández",
+
+    "development": "Torre Palermo Park",
+    "network_information": "Compartida en red CIMA",
+    "transaction_requirements": "Garantía propietaria o seguro de caución",
+
+    "owner_name": "Ricardo Sánchez",
+    "owner_phone": "+5411-9876-5432",
+    "owner_email": "ricardo.sanchez@email.com",
+
+    "operations": [
+      {
+        "operation_type": "venta",
+        "currency": "USD",
+        "price": 239000
+      },
+      {
+        "operation_type": "alquiler",
+        "currency": "ARS",
+        "price": 350000,
+        "period": "mensual"
+      }
+    ],
+
+    "images": [
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/living.jpg",
+        "is_blueprint": false,
+        "description": "Living comedor principal",
+        "order_position": 1
+      },
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/dormitorio-suite.jpg",
+        "is_blueprint": false,
+        "description": "Dormitorio en suite",
+        "order_position": 2
+      },
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/cocina.jpg",
+        "is_blueprint": false,
+        "description": "Cocina americana equipada",
+        "order_position": 3
+      },
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/terraza.jpg",
+        "is_blueprint": false,
+        "description": "Balcón terraza con vista panorámica",
+        "order_position": 4
+      },
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/plano.jpg",
+        "is_blueprint": true,
+        "description": "Plano del departamento",
+        "order_position": 5
+      }
+    ],
+
+    "videos": [
+      {
+        "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+        "provider": "youtube",
+        "title": "Recorrido virtual departamento Palermo",
+        "order": 1
+      }
+    ],
+
+    "multimedia360": [
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/tour-360-living.html",
+        "order": 1
+      },
+      {
+        "url": "https://ejemplo.com/propiedades/demo-001/tour-360-terraza.html",
+        "order": 2
+      }
+    ],
+
+    "attached": [
+      {
+        "file_url": "https://ejemplo.com/propiedades/demo-001/ficha-tecnica.pdf",
+        "description": "Ficha técnica del departamento",
+        "order": 1
+      },
+      {
+        "file_url": "https://ejemplo.com/propiedades/demo-001/reglamento-consorcio.pdf",
+        "description": "Reglamento del consorcio",
+        "order": 2
+      }
+    ],
+
+    "tags": [1, 5, 12, 23, 45]
+  },
+  "expected_response": {
+    "success": true,
+    "created": true,
+    "data": { "id": 1, "reference_code": "PROP-DEMO-001", "...": "resto de campos de la propiedad" },
+    "warnings": null
+  }
+}

@@ -1,7 +1,5 @@
-import { S3Service } from '../../common/s3.service';
+import { MediaService } from '../../common/media/media.service';
 import { USER_IMAGE_FOLDER } from '../../common/constants';
-import { ImageUploadService } from '../../common/image-upload/image-upload.service';
-import { ImageUploadConfig } from '../../common/image-upload/dto/image-upload-config.dto';
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Int32, Repository } from 'typeorm';
@@ -18,8 +16,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User)
     private usersRepository: Repository<User>,
-    private readonly s3Service: S3Service,
-    private readonly imageUploadService: ImageUploadService,
+    private readonly mediaService: MediaService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -137,15 +134,13 @@ export class UsersService {
    * El path final será users/147/avatar.jpg
    */
   async uploadAvatarToS3(file: Express.Multer.File, userId: number): Promise<string | null> {
-    const config: ImageUploadConfig<any> = {
+    const result = await this.mediaService.uploadEntityImage(file, {
       repository: this.usersRepository,
       entityId: userId,
       imageFieldName: 'avatar',
       statusFieldName: 'avatar_status',
       s3Folder: USER_IMAGE_FOLDER,
-      primaryKeyField: 'id',
-    };
-    const result = await this.imageUploadService.uploadImage(file, config);
+    });
     return result.url;
   }
 

@@ -1,8 +1,10 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { S3Module } from './common/s3.module';
 import { UsersModule } from './modules/users/users.module';
 import { OrganizationsModule } from './modules/organizations/organizations.module';
 import { BranchesModule } from './modules/branches/branches.module';
@@ -13,12 +15,18 @@ import { PartnersModule } from './modules/partners/partners.module';
 import { EmailModule } from './common/email/email.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { TagsModule } from './modules/tags/tags.module';
+import { DevelopersModule } from './modules/developers/developers.module';
 @Module({
   imports: [
+    S3Module,
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env',
     }),
+    ThrottlerModule.forRoot([{
+      ttl: 60000,
+      limit: 100,
+    }]),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -60,6 +68,7 @@ import { TagsModule } from './modules/tags/tags.module';
     EmailModule,
     LocationsModule,
     TagsModule,
+    DevelopersModule,
   ],
   controllers: [AppController],
   providers: [AppService],

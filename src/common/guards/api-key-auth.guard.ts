@@ -20,12 +20,15 @@ export class ApiKeyAuthGuard implements CanActivate {
     const request = context.switchToHttp().getRequest<Request>();
     const apiKey = this.extractApiKey(request);
     const apiSecret = this.extractApiSecret(request);
+    const clientIp = request.ip || request.socket?.remoteAddress || 'unknown';
 
     if (!apiKey) {
+      console.warn(`⚠️ Partner API auth failed: Missing API Key | IP: ${clientIp} | ${request.method} ${request.originalUrl}`);
       throw new UnauthorizedException('API Key is required');
     }
 
     if (!apiSecret) {
+      console.warn(`⚠️ Partner API auth failed: Missing API Secret | IP: ${clientIp} | ${request.method} ${request.originalUrl}`);
       throw new UnauthorizedException('API Secret is required');
     }
 
@@ -33,13 +36,18 @@ export class ApiKeyAuthGuard implements CanActivate {
       where: { 
         app_key: apiKey,
         app_secret: apiSecret,
-        deleted: false,
-        status: 1 // assuming 1 is active status
+        deleted: false
       }
     });
 
     if (!partner) {
+      console.warn(`⚠️ Partner API auth failed: Invalid credentials | IP: ${clientIp} | Key: ${apiKey.substring(0, 8)}... | ${request.method} ${request.originalUrl}`);
       throw new UnauthorizedException('Invalid API Key or Secret');
+    }
+
+    if(!partner.status) {
+      console.warn(`⚠️ Partner API auth failed: Inactive partner | IP: ${clientIp} | ${request.method} ${request.originalUrl}`);
+      throw new UnauthorizedException('Partner account is inactive');
     }
 
     // Add partner info to request for use in controllers
@@ -49,20 +57,18 @@ export class ApiKeyAuthGuard implements CanActivate {
   }
 
   private extractApiKey(request: Request): string | undefined {
-    // Check for API key in multiple locations
     return (
       request.headers['x-api-key'] as string ||
-      request.headers['api-key'] as string ||
-      request.query['api_key'] as string
+      request.headers['api-key'] as string || 
+      undefined
     );
   }
 
   private extractApiSecret(request: Request): string | undefined {
-    // Check for API secret in multiple locations
     return (
       request.headers['x-api-secret'] as string ||
       request.headers['api-secret'] as string ||
-      request.query['api_secret'] as string
+      undefined
     );
   }
 }

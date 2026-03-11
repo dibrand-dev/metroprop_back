@@ -1,9 +1,14 @@
 import { Module } from '@nestjs/common';
-import { ImageUploadService } from './image-upload.service';
-import { S3Service } from '../s3.service';
+import { MediaModule } from '../media/media.module';
 
+/**
+ * ImageUploadModule ahora es un thin re-export de MediaModule.
+ * Se mantiene para compatibilidad con los módulos que ya lo importan.
+ * Todos los feature modules que importan ImageUploadModule tienen acceso
+ * automáticamente a MediaService sin necesidad de cambiar sus imports.
+ */
 @Module({
-  providers: [ImageUploadService, S3Service],
-  exports: [ImageUploadService],
+  imports: [MediaModule],
+  exports: [MediaModule],
 })
 export class ImageUploadModule {}
