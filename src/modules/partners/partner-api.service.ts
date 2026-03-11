@@ -312,30 +312,7 @@ export class PartnerApiService {
     });
     const saved = await this.propertyImageRepo.save(imageRecord);
 
-    const fileBuffer = file.buffer;
-    const mimeType = file.mimetype;
-    const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
-    const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/images`, `${Date.now()}-${saved.id}.${ext}`);
-    const url = this.mediaService.buildPublicUrl(s3Key);
-
-    setImmediate(async () => {
-      try {
-        await this.mediaService.uploadFile(fileBuffer, s3Key, mimeType);
-        await this.propertyImageRepo.update(saved.id!, {
-          url,
-          upload_status: MediaUploadStatus.COMPLETED,
-          upload_completed_at: new Date(),
-        });
-        this.logger.log(`Image ${saved.id} uploaded for property ${referenceCode}`);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        await this.propertyImageRepo.update(saved.id!, {
-          upload_status: MediaUploadStatus.FAILED,
-          error_message: errorMsg,
-        });
-        this.logger.error(`Image ${saved.id} upload failed: ${errorMsg}`);
-      }
-    });
+    this.scheduleImageUpload(saved.id!, property.id!, file, referenceCode);
 
     return {
       image_reference_id: saved.id!,
@@ -353,6 +330,7 @@ export class PartnerApiService {
     imageId: number,
     dto: PartnerPatchImageDto,
     partner: Partner,
+    file?: Express.Multer.File,
   ): Promise<{ image_reference_id: number; upload_status: string | undefined; error_message?: string | null; informacion_adicional: string }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
@@ -367,7 +345,16 @@ export class PartnerApiService {
     if (dto.description !== undefined) image.description = dto.description;
     if (dto.order_position !== undefined) image.order_position = dto.order_position;
 
+    if (file) {
+      image.upload_status = MediaUploadStatus.PENDING;
+      image.error_message = null;
+    }
+
     await this.propertyImageRepo.save(image);
+
+    if (file) {
+      this.scheduleImageUpload(image.id!, property.id!, file, referenceCode);
+    }
 
     return {
       image_reference_id: image.id!,
@@ -423,30 +410,7 @@ export class PartnerApiService {
     });
     const saved = await this.propertyAttachedRepo.save(attRecord);
 
-    const fileBuffer = file.buffer;
-    const mimeType = file.mimetype;
-    const ext = (file.originalname.split('.').pop() || 'pdf').toLowerCase();
-    const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/attached`, `${Date.now()}-${saved.id}.${ext}`);
-    const url = this.mediaService.buildPublicUrl(s3Key);
-
-    setImmediate(async () => {
-      try {
-        await this.mediaService.uploadFile(fileBuffer, s3Key, mimeType);
-        await this.propertyAttachedRepo.update(saved.id!, {
-          file_url: url,
-          upload_status: MediaUploadStatus.COMPLETED,
-          upload_completed_at: new Date(),
-        });
-        this.logger.log(`Attached ${saved.id} uploaded for property ${referenceCode}`);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        await this.propertyAttachedRepo.update(saved.id!, {
-          upload_status: MediaUploadStatus.FAILED,
-          error_message: errorMsg,
-        });
-        this.logger.error(`Attached ${saved.id} upload failed: ${errorMsg}`);
-      }
-    });
+    this.scheduleAttachedUpload(saved.id!, property.id!, file, referenceCode);
 
     return {
       attached_reference_id: saved.id!,
@@ -464,6 +428,7 @@ export class PartnerApiService {
     attachedId: number,
     dto: PartnerPatchAttachedDto,
     partner: Partner,
+    file?: Express.Multer.File,
   ): Promise<{ attached_reference_id: number; upload_status: string | undefined; error_message?: string | null; informacion_adicional: string }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
@@ -477,7 +442,16 @@ export class PartnerApiService {
     if (dto.description !== undefined) att.description = dto.description;
     if (dto.order !== undefined) att.order = dto.order;
 
+    if (file) {
+      att.upload_status = MediaUploadStatus.PENDING;
+      att.error_message = null;
+    }
+
     await this.propertyAttachedRepo.save(att);
+
+    if (file) {
+      this.scheduleAttachedUpload(att.id!, property.id!, file, referenceCode);
+    }
 
     return {
       attached_reference_id: att.id!,
@@ -662,6 +636,72 @@ export class PartnerApiService {
       this.logger.warn(`Failed to create agent user ${agentEmail}: ${reason}`);
       return { userId: adminUserId, agentWarnings };
     }
+  }
+
+  /**
+   * Fire-and-forget: uploads a file to S3 and updates the image record on completion/failure.
+   */
+  private scheduleImageUpload(
+    imageId: number,
+    propertyId: number,
+    file: Express.Multer.File,
+    referenceCode: string,
+  ): void {
+    const { buffer, mimetype, originalname } = file;
+    const ext = (originalname.split('.').pop() || 'jpg').toLowerCase();
+    const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/images`, `${Date.now()}-${imageId}.${ext}`);
+
+    setImmediate(async () => {
+      try {
+        await this.mediaService.uploadFile(buffer, s3Key, mimetype);
+        await this.propertyImageRepo.update(imageId, {
+          url: s3Key,
+          upload_status: MediaUploadStatus.COMPLETED,
+          upload_completed_at: new Date(),
+        });
+        this.logger.log(`Image ${imageId} uploaded for property ${referenceCode}`);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        await this.propertyImageRepo.update(imageId, {
+          upload_status: MediaUploadStatus.FAILED,
+          error_message: errorMsg,
+        });
+        this.logger.error(`Image ${imageId} upload failed: ${errorMsg}`);
+      }
+    });
+  }
+
+  /**
+   * Fire-and-forget: uploads a file to S3 and updates the attached record on completion/failure.
+   */
+  private scheduleAttachedUpload(
+    attachedId: number,
+    propertyId: number,
+    file: Express.Multer.File,
+    referenceCode: string,
+  ): void {
+    const { buffer, mimetype, originalname } = file;
+    const ext = (originalname.split('.').pop() || 'pdf').toLowerCase();
+    const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, `${Date.now()}-${attachedId}.${ext}`);
+
+    setImmediate(async () => {
+      try {
+        await this.mediaService.uploadFile(buffer, s3Key, mimetype);
+        await this.propertyAttachedRepo.update(attachedId, {
+          file_url: s3Key,
+          upload_status: MediaUploadStatus.COMPLETED,
+          upload_completed_at: new Date(),
+        });
+        this.logger.log(`Attached ${attachedId} uploaded for property ${referenceCode}`);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        await this.propertyAttachedRepo.update(attachedId, {
+          upload_status: MediaUploadStatus.FAILED,
+          error_message: errorMsg,
+        });
+        this.logger.error(`Attached ${attachedId} upload failed: ${errorMsg}`);
+      }
+    });
   }
 
   /**

@@ -13,10 +13,12 @@ import {
   HttpStatus,
   Query,
 } from '@nestjs/common';
+import { ApiExcludeController } from '@nestjs/swagger';
 import { PartnersService } from './partners.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 
+@ApiExcludeController()
 @Controller('partners')
 export class PartnersController {
   constructor(private readonly partnersService: PartnersService) {}
