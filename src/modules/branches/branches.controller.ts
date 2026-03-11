@@ -2,7 +2,8 @@ import { UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Controller, Get, Post, Put, Delete, Param, Body } from '@nestjs/common';
 import { BranchesService } from './branches.service';
-import { Branch } from './entities/branch.entity';
+import { CreateBranchDto } from './dto/create-branch.dto';
+import { UpdateBranchDto } from './dto/update-branch.dto';
 
 @Controller('branches')
 export class BranchesController {
@@ -19,12 +20,12 @@ export class BranchesController {
   }
 
   @Post()
-  create(@Body() data: Partial<Branch>) {
+  create(@Body() data: CreateBranchDto) {
     return this.branchesService.create(data);
   }
 
   @Put(':id')
-  update(@Param('id') id: number, @Body() data: Partial<Branch>) {
+  update(@Param('id') id: number, @Body() data: UpdateBranchDto) {
     return this.branchesService.update(id, data);
   }
 

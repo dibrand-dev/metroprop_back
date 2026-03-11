@@ -323,9 +323,11 @@
     <a href="#ep-get-prop">GET Obtener Propiedad</a>
     <a href="#ep-delete-prop">DELETE Eliminar Propiedad</a>
     <a href="#ep-deactivate">POST Desactivar Propiedad</a>
-    <a href="#ep-add-images">POST Agregar Imágenes</a>
+    <a href="#ep-upload-image">POST Subir Imagen</a>
+    <a href="#ep-patch-image">PATCH Actualizar Imagen</a>
     <a href="#ep-del-image">DELETE Eliminar Imagen</a>
-    <a href="#ep-add-attached">POST Agregar Adjuntos</a>
+    <a href="#ep-upload-attached">POST Subir Adjunto</a>
+    <a href="#ep-patch-attached">PATCH Actualizar Adjunto</a>
     <a href="#ep-del-attached">DELETE Eliminar Adjunto</a>
   </div>
 
@@ -358,8 +360,8 @@
     <a href="#ex-create-prop-full">Crear Propiedad (completo)</a>
     <a href="#ex-create-prop-min">Crear Propiedad (mínimo)</a>
     <a href="#ex-update-prop">Actualizar Propiedad</a>
-    <a href="#ex-add-images">Agregar Imágenes</a>
-    <a href="#ex-add-attached">Agregar Adjuntos</a>
+    <a href="#ex-upload-image">Subir Imagen</a>
+    <a href="#ex-upload-attached">Subir Adjunto</a>
   </div>
 </nav>
 
@@ -452,7 +454,12 @@
   <p>
     Crea una nueva propiedad vinculada a un <code>branch_reference_id</code>. 
     Si ya existe una propiedad con el mismo <code>reference_code</code> en la organización, se actualiza automáticamente (upsert).
+    Incluye soporte para videos y multimedia 360.
   </p>
+  <div class="alert alert-info">
+    <strong>Imágenes y adjuntos</strong> se gestionan mediante endpoints dedicados:
+    <code>POST /uploadImage</code> y <code>POST /uploadAttached</code> (multipart/form-data).
+  </div>
 
   <h2 id="ep-update-prop">PUT Actualizar Propiedad</h2>
   <div class="endpoint-box">
@@ -482,33 +489,74 @@
   </div>
   <p>Cambia el estado a <code>NO_DISPONIBLE</code> (4). La propiedad queda visible pero inactiva.</p>
 
-  <h2 id="ep-add-images">POST Agregar Imágenes</h2>
+  <h2 id="ep-upload-image">POST Subir Imagen</h2>
   <div class="endpoint-box">
     <span class="badge badge-post">POST</span>
-    <code>/api/partner/v1/properties/{referenceCode}/images</code>
+    <code>/api/partner/v1/properties/{referenceCode}/uploadImage</code>
   </div>
-  <p>Agrega imágenes por URL. Se procesan en background y se suben a S3 automáticamente.</p>
+  <p>
+    Sube un archivo de imagen directamente a la propiedad via <code>multipart/form-data</code>.
+    Retorna inmediatamente con un <code>image_reference_id</code> y <code>upload_status=pending</code>.
+    El archivo se procesa y sube a S3 en background.
+  </p>
+  <div class="auth-box">
+    <h4>Campos del form</h4>
+    <table>
+      <tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+      <tr><td><code>file</code></td><td>binary</td><td>Sí</td><td>Archivo de imagen (jpg, png, webp, etc.)</td></tr>
+      <tr><td><code>description</code></td><td>string</td><td>No</td><td>Descripción de la imagen</td></tr>
+      <tr><td><code>order_position</code></td><td>integer</td><td>No</td><td>Posición de orden (0+)</td></tr>
+      <tr><td><code>is_blueprint</code></td><td>boolean</td><td>No</td><td>Si es un plano (<code>true</code> / <code>false</code>)</td></tr>
+    </table>
+  </div>
+
+  <h2 id="ep-patch-image">PATCH Actualizar Metadata Imagen</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-put">PATCH</span>
+    <code>/api/partner/v1/properties/{referenceCode}/image/{imageReferenceCode}</code>
+  </div>
+  <p>Actualiza descripción, posición o flag de plano de una imagen existente. No reemplaza el archivo. Usar el <code>image_reference_id</code> retornado al subir.</p>
 
   <h2 id="ep-del-image">DELETE Eliminar Imagen</h2>
   <div class="endpoint-box">
     <span class="badge badge-delete">DELETE</span>
-    <code>/api/partner/v1/properties/{referenceCode}/images/{imageId}</code>
+    <code>/api/partner/v1/properties/{referenceCode}/image/{imageReferenceCode}</code>
   </div>
-  <p>Elimina una imagen específica por su ID numérico.</p>
+  <p>Elimina una imagen usando su <code>image_reference_id</code> (ID numérico retornado al subir la imagen).</p>
 
-  <h2 id="ep-add-attached">POST Agregar Adjuntos</h2>
+  <h2 id="ep-upload-attached">POST Subir Adjunto</h2>
   <div class="endpoint-box">
     <span class="badge badge-post">POST</span>
-    <code>/api/partner/v1/properties/{referenceCode}/attached</code>
+    <code>/api/partner/v1/properties/{referenceCode}/uploadAttached</code>
   </div>
-  <p>Agrega archivos adjuntos (PDF, documentos) por URL.</p>
+  <p>
+    Sube un archivo adjunto directamente a la propiedad via <code>multipart/form-data</code>.
+    Retorna inmediatamente con un <code>attached_reference_id</code> y <code>upload_status=pending</code>.
+    El archivo se procesa y sube a S3 en background.
+  </p>
+  <div class="auth-box">
+    <h4>Campos del form</h4>
+    <table>
+      <tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr>
+      <tr><td><code>file</code></td><td>binary</td><td>Sí</td><td>Archivo adjunto (pdf, doc, xls, etc.)</td></tr>
+      <tr><td><code>description</code></td><td>string</td><td>No</td><td>Descripción del adjunto</td></tr>
+      <tr><td><code>order</code></td><td>integer</td><td>No</td><td>Posición de orden (0+)</td></tr>
+    </table>
+  </div>
+
+  <h2 id="ep-patch-attached">PATCH Actualizar Metadata Adjunto</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-put">PATCH</span>
+    <code>/api/partner/v1/properties/{referenceCode}/attached/{attachedReferenceCode}</code>
+  </div>
+  <p>Actualiza descripción u orden de un adjunto. No reemplaza el archivo. Usar el <code>attached_reference_id</code> retornado al subir.</p>
 
   <h2 id="ep-del-attached">DELETE Eliminar Adjunto</h2>
   <div class="endpoint-box">
     <span class="badge badge-delete">DELETE</span>
-    <code>/api/partner/v1/properties/{referenceCode}/attached/{attachedId}</code>
+    <code>/api/partner/v1/properties/{referenceCode}/attached/{attachedReferenceCode}</code>
   </div>
-  <p>Elimina un archivo adjunto específico por su ID numérico.</p>
+  <p>Elimina un adjunto usando su <code>attached_reference_id</code> (ID numérico retornado al subir el adjunto).</p>
 
   <!-- ===== ENTITIES ===== -->
 
@@ -894,35 +942,57 @@
   <span class="key">"expenses"</span>: <span class="number">52000</span>
 }</div>
 
-  <h2 id="ex-add-images">Ejemplo: Agregar Imágenes</h2>
+  <h2 id="ex-upload-image">Ejemplo: Subir Imagen</h2>
   <div class="endpoint-box">
     <span class="badge badge-post">POST</span>
-    <code>/api/partner/v1/properties/PROP-DEMO-001/images</code>
+    <code>/api/partner/v1/properties/PROP-DEMO-001/uploadImage</code>
   </div>
-  <div class="code-block">{
-  <span class="key">"images"</span>: [
-    {
-      <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/nueva-foto.jpg"</span>,
-      <span class="key">"is_blueprint"</span>: <span class="number">false</span>,
-      <span class="key">"description"</span>: <span class="string">"Foto del baño"</span>,
-      <span class="key">"order_position"</span>: <span class="number">6</span>
-    }
-  ]
+  <p>Enviar como <code>multipart/form-data</code>. Ejemplo con curl:</p>
+  <div class="code-block"><span class="comment"># curl</span>
+curl -X POST \
+  -H <span class="string">'x-api-key: tu_api_key'</span> \
+  -H <span class="string">'x-api-secret: tu_api_secret'</span> \
+  -F <span class="string">'file=@/ruta/a/imagen.jpg'</span> \
+  -F <span class="string">'description=Living comedor'</span> \
+  -F <span class="string">'order_position=1'</span> \
+  -F <span class="string">'is_blueprint=false'</span> \
+  <span class="string">'https://api.metroprop.com/api/partner/v1/properties/PROP-DEMO-001/uploadImage'</span></div>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"image_reference_id"</span>: <span class="number">42</span>,            <span class="comment">// &larr; usar para PATCH y DELETE</span>
+    <span class="key">"upload_status"</span>: <span class="string">"pending"</span>,
+    <span class="key">"informacion_adicional"</span>: <span class="string">"Recordá utilizar este ID de referencia para eliminar o modificar esta imagen en el portal"</span>
+  }
 }</div>
+  <div class="alert alert-info">
+    El <code>upload_status</code> cambia a <code>completed</code> cuando S3 termina el procesamiento.
+    Si hay error, cambia a <code>failed</code> y se incluye <code>error_message</code>.
+    Podés consultar el estado con <code>PATCH</code> (que retorna el status actual).
+  </div>
 
-  <h2 id="ex-add-attached">Ejemplo: Agregar Adjuntos</h2>
+  <h2 id="ex-upload-attached">Ejemplo: Subir Adjunto</h2>
   <div class="endpoint-box">
     <span class="badge badge-post">POST</span>
-    <code>/api/partner/v1/properties/PROP-DEMO-001/attached</code>
+    <code>/api/partner/v1/properties/PROP-DEMO-001/uploadAttached</code>
   </div>
-  <div class="code-block">{
-  <span class="key">"attached"</span>: [
-    {
-      <span class="key">"file_url"</span>: <span class="string">"https://ejemplo.com/plano-catastral.pdf"</span>,
-      <span class="key">"description"</span>: <span class="string">"Plano catastral"</span>,
-      <span class="key">"order"</span>: <span class="number">1</span>
-    }
-  ]
+  <div class="code-block"><span class="comment"># curl</span>
+curl -X POST \
+  -H <span class="string">'x-api-key: tu_api_key'</span> \
+  -H <span class="string">'x-api-secret: tu_api_secret'</span> \
+  -F <span class="string">'file=@/ruta/al/plano.pdf'</span> \
+  -F <span class="string">'description=Plano catastral'</span> \
+  -F <span class="string">'order=1'</span> \
+  <span class="string">'https://api.metroprop.com/api/partner/v1/properties/PROP-DEMO-001/uploadAttached'</span></div>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"attached_reference_id"</span>: <span class="number">15</span>,         <span class="comment">// &larr; usar para PATCH y DELETE</span>
+    <span class="key">"upload_status"</span>: <span class="string">"pending"</span>,
+    <span class="key">"informacion_adicional"</span>: <span class="string">"Recordá utilizar este ID de referencia para eliminar o modificar este adjunto en el portal"</span>
+  }
 }</div>
 
 </main>

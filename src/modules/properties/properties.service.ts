@@ -7,9 +7,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
-import { PropertyTag } from './entities/property-tag.entity';
-import { PropertyOperation } from './entities/property-operation.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
+import { PropertyWriteService } from './property-write.service';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 
 import { MediaService } from '../../common/media/media.service';
@@ -20,16 +19,10 @@ import axios from 'axios';
 import { sanitizeFilename, getFileExtension, createUniqueFilename } from '../../common/helpers/file-helpers';
 
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
-import { 
-  PropertyStatus, 
-  MediaUploadStatus, 
-  PropertyType, 
-  OperationType, 
+import {
+  PropertyStatus,
+  MediaUploadStatus,
   Currency,
-  SurfaceMeasurement,
-  Orientation,
-  Disposition,
-  TemporalRentPeriod 
 } from '../../common/enums';
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
@@ -41,16 +34,13 @@ export class PropertiesService {
     private propertyRepository: Repository<Property>,
     @InjectRepository(PropertyImage)
     private propertyImageRepository: Repository<PropertyImage>,
-    @InjectRepository(PropertyTag)
-    private propertyTagRepository: Repository<PropertyTag>,
-    @InjectRepository(PropertyOperation)
-    private propertyOperationRepository: Repository<PropertyOperation>,
-     @InjectRepository(PropertyVideo)
+    @InjectRepository(PropertyVideo)
     private propertyVideoRepository: Repository<PropertyVideo>,
     @InjectRepository(PropertyAttached)
     private propertyAttachedRepository: Repository<PropertyAttached>,
     private readonly mediaService: MediaService,
     private readonly dataSource: DataSource,
+    private readonly propertyWriteService: PropertyWriteService,
   ) {}
 
   /**
@@ -74,20 +64,18 @@ export class PropertiesService {
   }
 
   /**
-   * Si se envían images, tags, operations, videos, multimedia360 o attached, se crearán automáticamente
+   * Si se envían images, tags, videos, multimedia360 o attached, se crearán automáticamente
    */
   async create(createPropertyDto: CreatePropertyDto): Promise<{ data: Property; warnings?: string[] }> {
     // 1. Extraer las relaciones y multimedia del DTO
-    const { 
-      images, 
-      tags, 
-      operations, 
-      videos, 
-      multimedia360, 
-      attached, 
-      ...propertyData 
+    const {
+      images,
+      tags,
+      videos,
+      multimedia360,
+      attached,
+      ...propertyData
     } = createPropertyDto as any;
-    const warnings: string[] = [];
 
     // Verificar que no exista una propiedad con el mismo reference_code
     const existingProperty = await this.propertyRepository.findOne({
@@ -100,15 +88,13 @@ export class PropertiesService {
       );
     }
 
-    // Crear la propiedad base
-    const newProperty = this.propertyRepository.create({
-      ...propertyData,
-      deleted: false,
-    });
+    // Crear la propiedad base y sincronizar tags, videos y multimedia360
+    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+      { ...propertyData, deleted: false },
+      { tags, videos, multimedia360 },
+    );
 
-    const savedProperty = await this.propertyRepository.save(newProperty) as unknown as Property;
-
-    // 2. Guardar imágenes si se proporcionan
+    // 2. Guardar imágenes si se proporcionan (fire-and-forget)
     if (images && images.length > 0) {
       const imagesToProcess: {
         imageId: number;
@@ -118,14 +104,13 @@ export class PropertiesService {
       for (const imageData of images) {
         const propertyImage = this.propertyImageRepository.create({
           ...imageData,
-          url: imageData.url ?? '', // Si no hay url, poner string vacío para compatibilidad
+          url: imageData.url ?? '',
           property: savedProperty,
-          upload_status: MediaUploadStatus.PENDING, // Será procesada en background
+          upload_status: MediaUploadStatus.PENDING,
           retry_count: 0,
         });
         const savedImage = await this.propertyImageRepository.save(propertyImage) as unknown as PropertyImage;
 
-        // Añadir a la lista de imágenes para procesar en segundo plano
         imagesToProcess.push({
           imageId: savedImage.id!,
           originalUrl: savedImage.url ?? '',
@@ -137,85 +122,22 @@ export class PropertiesService {
       this.processAndUploadImages(imagesToProcess);
     }
 
-    // 3. Crear y asociar los tags
-    if (tags && tags.length > 0) {
-      const existingTags = await this.dataSource.query(
-        `SELECT id FROM tags WHERE id = ANY($1)`,
-        [tags],
-      );
-      const existingIds = new Set(existingTags.map((t: { id: number }) => t.id));
-      const validTagIds = (tags as number[]).filter((tagId) => existingIds.has(tagId));
-      const invalidTagIds = (tags as number[]).filter((tagId) => !existingIds.has(tagId));
-
-      if (validTagIds.length > 0) {
-        const newTags = validTagIds.map((tagId) =>
-          this.propertyTagRepository.create({
-            tag_id: tagId,
-            property: savedProperty,
-          }),
-        );
-        await this.propertyTagRepository.save(newTags);
-      }
-
-      if (invalidTagIds.length > 0) {
-        warnings.push(
-          `Los siguientes tag IDs no existen y fueron ignorados: ${invalidTagIds.join(', ')}`,
-        );
-      }
-    }
-
-    // 4. Crear y asociar las operaciones
-    if (operations && Array.isArray(operations) && operations.length > 0) {
-      for (const operationData of operations) {
-        const propertyOperation = this.propertyOperationRepository.create({
-          ...operationData,
-          property: savedProperty,
-        });
-        await this.propertyOperationRepository.save(propertyOperation);
-      }
-    }
-
-    // 5. Crear videos si se proporcionan
-    if (videos && Array.isArray(videos) && videos.length > 0) {
-      for (const videoData of videos) {
-        const propertyVideo = this.propertyVideoRepository.create({
-          ...videoData,
-          property: savedProperty,
-          is_360: false,
-        });
-        await this.propertyVideoRepository.save(propertyVideo);
-      }
-    }
-
-    // 6. Crear multimedia 360 si se proporcionan
-    if (multimedia360 && Array.isArray(multimedia360) && multimedia360.length > 0) {
-      for (const videoData of multimedia360) {
-        const propertyVideo360 = this.propertyVideoRepository.create({
-          ...videoData,
-          property: savedProperty,
-          is_360: true,
-        });
-        await this.propertyVideoRepository.save(propertyVideo360);
-      }
-    }
-
-    // 7. Crear archivos adjuntos si se proporcionan
+    // 3. Crear archivos adjuntos si se proporcionan (fire-and-forget)
     if (attached && Array.isArray(attached) && attached.length > 0) {
       const savedAttachedList: PropertyAttached[] = [];
-      
+
       for (const attachedData of attached) {
         const propertyAttached = this.propertyAttachedRepository.create({
           ...attachedData,
           property: savedProperty,
-          // Si viene con file_url, marcar como PENDING para procesamiento
-          upload_status: attachedData.file_url ? MediaUploadStatus.PENDING : MediaUploadStatus.PENDING,
-          upload_completed_at: null, // Será actualizado cuando se complete
+          upload_status: MediaUploadStatus.PENDING,
+          upload_completed_at: null,
           retry_count: 0,
         });
         const saveResult = await this.propertyAttachedRepository.save(propertyAttached);
         const savedAttached = Array.isArray(saveResult) ? saveResult[0] : saveResult;
         savedAttachedList.push(savedAttached);
-        
+
         // Si tiene URL, procesar para descargar y subir a S3
         if (attachedData.file_url && attachedData.file_url.startsWith('http') && savedAttached.id) {
           setImmediate(() => {
@@ -223,10 +145,11 @@ export class PropertiesService {
           });
         }
       }
-      
+
       console.log(`📁 create - Queued ${savedAttachedList.length} attached files for processing`);
     }
-    // 8. Retornar la propiedad con todas sus relaciones cargadas
+
+    // 4. Retornar la propiedad con todas sus relaciones cargadas
     const result = await this.findOne(savedProperty.id!);
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
@@ -799,7 +722,7 @@ export class PropertiesService {
         id,
         deleted: false,
       },
-      relations: ['images', 'attributes', 'operations', 'tags', 'videos', 'attached'],
+      relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
     });
 
     if (!property) {
@@ -818,7 +741,7 @@ export class PropertiesService {
         reference_code,
         deleted: false,
       },
-      relations: ['images', 'attributes', 'operations', 'tags', 'videos', 'attached'],
+      relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
     });
 
     if (!property) {
@@ -839,7 +762,6 @@ export class PropertiesService {
   ): Promise<{ data: Property; warnings?: string[] }> {
     const { tags, ...propertyData } = updatePropertyDto;
     const property = await this.findOne(id);
-    const warnings: string[] = [];
 
     // Verificar si se está intentando cambiar el reference_code a uno que ya existe
     if (
@@ -857,44 +779,12 @@ export class PropertiesService {
       }
     }
 
-    // Actualizar los campos de la propiedad
-    Object.assign(property, propertyData);
+    const { warnings } = await this.propertyWriteService.updatePropertyCore(
+      property,
+      propertyData,
+      { tags },
+    );
 
-    // Actualizar los tags si se proporcionan
-    if (tags) {
-      // Eliminar los tags antiguos
-      await this.propertyTagRepository.delete({ property: { id } });
-
-      if (tags.length > 0) {
-        // 1 SELECT para validar cuáles existen
-        const existingTags = await this.dataSource.query(
-          `SELECT id FROM tags WHERE id = ANY($1)`,
-          [tags],
-        );
-        const existingIds = new Set(existingTags.map((t: { id: number }) => t.id));
-        const validTagIds = tags.filter((tagId) => existingIds.has(tagId));
-        const invalidTagIds = tags.filter((tagId) => !existingIds.has(tagId));
-
-        // 1 INSERT bulk con los válidos
-        if (validTagIds.length > 0) {
-          const newTags = validTagIds.map((tagId) =>
-            this.propertyTagRepository.create({
-              tag_id: tagId,
-              property: { id } as Property,
-            }),
-          );
-          await this.propertyTagRepository.save(newTags);
-        }
-
-        if (invalidTagIds.length > 0) {
-          warnings.push(
-            `Los siguientes tag IDs no existen y fueron ignorados: ${invalidTagIds.join(', ')}`,
-          );
-        }
-      }
-    }
-
-    await this.propertyRepository.save(property);
     const result = await this.findOne(id);
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }

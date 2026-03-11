@@ -4,6 +4,8 @@ import { BRANCH_IMAGE_FOLDER } from '../../common/constants';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Branch } from './entities/branch.entity';
+import { CreateBranchDto } from './dto/create-branch.dto';
+import { UpdateBranchDto } from './dto/update-branch.dto';
 
 @Injectable()
 export class BranchesService {
@@ -36,15 +38,23 @@ export class BranchesService {
     return branch;
   }
 
-  create(data: Partial<Branch>) {
-    const branch = this.repo.create(data);
+  create(data: CreateBranchDto | (Partial<Branch> & { organizationId?: number })): Promise<Branch> {
+    const { organizationId, ...rest } = data as any;
+    const branch = this.repo.create(rest as Partial<Branch>);
+    if (organizationId) {
+      (branch as any).organization = { id: organizationId };
+    }
     return this.repo.save(branch);
   }
 
-  async update(id: number, data: Partial<Branch>) {
+  async update(id: number, data: UpdateBranchDto | (Partial<Branch> & { organizationId?: number })): Promise<Branch> {
     const branch = await this.findOne(id);
-    Object.assign(branch, data);
-    return this.repo.save(branch);
+    const { organizationId, ...rest } = data as any;
+    Object.assign(branch, rest);
+    if (organizationId !== undefined) {
+      (branch as any).organization = organizationId ? { id: organizationId } : null;
+    }
+    return this.repo.save(branch as Branch);
   }
 
   async remove(id: number) {

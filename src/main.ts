@@ -27,14 +27,20 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // CORS Configuration
-  const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3000';
-  
+  const port = configService.get<number>('PORT', 3000);
+  // The server's own origin is always allowed (covers Swagger UI at same host:port)
+  const serverOrigin = `http://localhost:${port}`;
+  const rawOrigins = process.env.CORS_ORIGIN || serverOrigin;
+  const allowedOrigins = [
+    ...new Set([serverOrigin, ...rawOrigins.split(',').map((o) => o.trim())]),
+  ];
+
   app.enableCors({
     origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, etc.)
+      // Allow requests with no origin (mobile apps, curl, server-to-server)
       if (!origin) return callback(null, true);
-      
-      if (origin === corsOrigin) {
+      // Allow same-origin Swagger requests and any explicitly configured origin
+      if (allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
         console.warn(`🚫 CORS: Blocked request from origin: ${origin}`);
@@ -94,7 +100,6 @@ async function bootstrap() {
   });
   SwaggerModule.setup('api/partner/docs', app, document);
 
-  const port = configService.get<number>('PORT') || 3000;
   await app.listen(port, () => {
     console.log(`🚀 Application is running on: http://localhost:${port}`);
     console.log(`📖 Partner API Swagger: http://localhost:${port}/api/partner/docs`);

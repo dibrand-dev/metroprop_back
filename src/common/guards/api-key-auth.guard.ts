@@ -28,7 +28,7 @@ export class ApiKeyAuthGuard implements CanActivate {
     }
 
     if (!apiSecret) {
-      console.warn(`⚠️ Partner API auth failed: Missing API Secret | IP: ${clientIp} | Key: ${apiKey.substring(0, 8)}... | ${request.method} ${request.originalUrl}`);
+      console.warn(`⚠️ Partner API auth failed: Missing API Secret | IP: ${clientIp} | ${request.method} ${request.originalUrl}`);
       throw new UnauthorizedException('API Secret is required');
     }
 
@@ -36,14 +36,18 @@ export class ApiKeyAuthGuard implements CanActivate {
       where: { 
         app_key: apiKey,
         app_secret: apiSecret,
-        deleted: false,
-        status: 1
+        deleted: false
       }
     });
 
     if (!partner) {
       console.warn(`⚠️ Partner API auth failed: Invalid credentials | IP: ${clientIp} | Key: ${apiKey.substring(0, 8)}... | ${request.method} ${request.originalUrl}`);
       throw new UnauthorizedException('Invalid API Key or Secret');
+    }
+
+    if(!partner.status) {
+      console.warn(`⚠️ Partner API auth failed: Inactive partner | IP: ${clientIp} | ${request.method} ${request.originalUrl}`);
+      throw new UnauthorizedException('Partner account is inactive');
     }
 
     // Add partner info to request for use in controllers

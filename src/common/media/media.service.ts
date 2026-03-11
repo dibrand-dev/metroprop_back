@@ -48,6 +48,16 @@ export class MediaService {
     return `${this.getPathPrefix()}${folder}/${filename}`;
   }
 
+  /**
+   * Construye la URL pública completa de un objeto en S3 a partir de su key.
+   * Centraliza la lógica bucket+region para que los módulos no la dupliquen.
+   */
+  buildPublicUrl(key: string): string {
+    const bucket = this.configService.get<string>('AWS_S3_BUCKET_NAME')!;
+    const region = this.configService.get<string>('AWS_REGION', 'us-east-1');
+    return `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
+  }
+
   // =========================================================
   // S3 UPLOAD (raw)
   // =========================================================

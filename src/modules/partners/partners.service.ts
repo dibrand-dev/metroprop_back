@@ -77,12 +77,6 @@ export class PartnersService {
     return partner;
   }
 
-  async findByAppKey(app_key: string): Promise<Partner | null> {
-    return this.partnersRepository.findOne({
-      where: { app_key, deleted: false },
-    });
-  }
-
   async update(id: number, updatePartnerDto: UpdatePartnerDto): Promise<Partner> {
     const partner = await this.findById(id);
 
@@ -112,8 +106,4 @@ export class PartnersService {
     await this.partnersRepository.save(partner);
   }
 
-  async hardDelete(id: number): Promise<void> {
-    const partner = await this.findById(id);
-    await this.partnersRepository.remove(partner);
-  }
 }

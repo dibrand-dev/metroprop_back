@@ -9,7 +9,6 @@ import {
 } from 'typeorm';
 import { PropertyImage } from './property-image.entity';
 import { PropertyAttribute } from './property-attribute.entity';
-import { PropertyOperation } from './property-operation.entity';
 import { PropertyTag } from './property-tag.entity';
 import { PropertyVideo } from './property-video.entity';
 import { PropertyAttached } from './property-attached.entity';
@@ -287,12 +286,6 @@ export class Property {
     eager: true,
   })
   attributes?: PropertyAttribute[];
-
-  @OneToMany(() => PropertyOperation, (operation) => operation.property, {
-    cascade: true,
-    eager: true,
-  })
-  operations?: PropertyOperation[];
 
   @OneToMany(() => PropertyTag, (tag) => tag.property, {
     cascade: true,

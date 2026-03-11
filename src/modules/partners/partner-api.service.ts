@@ -6,28 +6,26 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import * as crypto from 'crypto';
 
 import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
 import { PropertyImage } from '../properties/entities/property-image.entity';
-import { PropertyOperation } from '../properties/entities/property-operation.entity';
-import { PropertyTag } from '../properties/entities/property-tag.entity';
-import { PropertyVideo } from '../properties/entities/property-video.entity';
 import { PropertyAttached } from '../properties/entities/property-attached.entity';
 import { Partner } from './entities/partner.entity';
 
 import { PropertiesService } from '../properties/properties.service';
+import { PropertyWriteService } from '../properties/property-write.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../../common/email/email.service';
+import { MediaService } from '../../common/media/media.service';
 
 import { PartnerCreateOrganizationDto } from './dto/partner-create-organization.dto';
 import { PartnerCreatePropertyDto } from './dto/partner-create-property.dto';
 import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
-import { PartnerAddImagesDto } from './dto/partner-add-images.dto';
-import { PartnerAddAttachedDto } from './dto/partner-add-attached.dto';
+import { PartnerPatchImageDto } from './dto/partner-patch-image.dto';
+import { PartnerPatchAttachedDto } from './dto/partner-patch-attached.dto';
 
 import { MediaUploadStatus } from '../../common/enums';
 
@@ -46,17 +44,13 @@ export class PartnerApiService {
     private readonly propertyRepo: Repository<Property>,
     @InjectRepository(PropertyImage)
     private readonly propertyImageRepo: Repository<PropertyImage>,
-    @InjectRepository(PropertyOperation)
-    private readonly propertyOperationRepo: Repository<PropertyOperation>,
-    @InjectRepository(PropertyTag)
-    private readonly propertyTagRepo: Repository<PropertyTag>,
-    @InjectRepository(PropertyVideo)
-    private readonly propertyVideoRepo: Repository<PropertyVideo>,
     @InjectRepository(PropertyAttached)
     private readonly propertyAttachedRepo: Repository<PropertyAttached>,
     private readonly propertiesService: PropertiesService,
+    private readonly propertyWriteService: PropertyWriteService,
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
+    private readonly mediaService: MediaService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -73,7 +67,7 @@ export class PartnerApiService {
       const organization = manager.create(Organization, {
         company_name: dto.company_name,
         company_logo: dto.company_logo,
-        email: dto.contact_email,
+        email: dto.email,
         address: dto.address,
         phone: dto.phone,
         alternative_phone: dto.alternative_phone,
@@ -94,7 +88,7 @@ export class PartnerApiService {
       // 2. Create Branch (mirror org data)
       const branch = manager.create(Branch, {
         branch_name: dto.company_name,
-        email: dto.contact_email,
+        email: dto.email,
         phone: dto.phone,
         alternative_phone: dto.alternative_phone,
         contact_time: dto.contact_time,
@@ -121,9 +115,8 @@ export class PartnerApiService {
         );
       }
 
-      const randomPassword = crypto.randomBytes(16).toString('hex');
       const bcrypt = await import('bcryptjs');
-      const hashedPassword = await bcrypt.hash(randomPassword, 10);
+      const hashedPassword = await bcrypt.hash(dto.admin_name, 10);
 
       const user = manager.create(User, {
         name: dto.admin_name,
@@ -164,8 +157,8 @@ export class PartnerApiService {
 
       return {
         organization_id: savedOrg.id,
-        branch_id: savedBranch.id,
         admin_user_id: savedUser.id,
+        branch_id: savedBranch.id
       };
     });
   }
@@ -184,12 +177,19 @@ export class PartnerApiService {
       partner,
     );
 
-    // 2. Get admin user of the org
+    // 2. Resolve agent user (falls back to org admin, may produce warnings)
     const orgWithAdmin = await this.organizationRepo.findOne({
       where: { id: organization.id },
       relations: ['admin_user'],
     });
-    const userId = orgWithAdmin?.admin_user?.id;
+    const adminUserId = orgWithAdmin?.admin_user?.id;
+    const { userId, agentWarnings } = await this.resolveAgentUser(
+      dto.agent_email,
+      dto.agent_name,
+      organization.id,
+      branch.id,
+      adminUserId,
+    );
 
     // 3. Check if property already exists (upsert by reference_code + org)
     const existing = await this.propertyRepo.findOne({
@@ -198,42 +198,37 @@ export class PartnerApiService {
         organization_id: organization.id,
         deleted: false,
       },
-      relations: ['images', 'operations', 'tags', 'videos', 'attached'],
+      relations: ['images', 'tags', 'videos', 'attached'],
     });
 
     if (existing) {
-      const { branch_reference_id, operations, images, videos, multimedia360, attached, tags, ...scalarFields } = dto;
+      const { branch_reference_id, videos, multimedia360, tags, ...scalarFields } = dto;
       const updateResult = await this.updatePropertyInternal(
         existing,
-        { ...scalarFields, operations, tags },
+        { ...scalarFields, tags },
         organization.id,
         branch.id,
         userId,
       );
 
-      if (images && images.length > 0) {
-        await this.addImagesToProperty(existing.id!, images);
-      }
       if (videos && videos.length > 0) {
-        await this.syncVideos(existing.id!, videos, false);
+        await this.propertyWriteService.syncVideos(existing.id!, videos, false);
       }
       if (multimedia360 && multimedia360.length > 0) {
-        await this.syncMultimedia360(existing.id!, multimedia360, false);
-      }
-      if (attached && attached.length > 0) {
-        await this.addAttachedToProperty(existing.id!, attached);
+        await this.propertyWriteService.syncMultimedia360(existing.id!, multimedia360, false);
       }
 
       const result = await this.propertiesService.findOne(existing.id!);
+      const allWarnings = [...agentWarnings, ...updateResult.warnings];
       return {
         data: result,
         created: false,
-        warnings: updateResult.warnings.length > 0 ? updateResult.warnings : undefined,
+        warnings: allWarnings.length > 0 ? allWarnings : undefined,
       };
     }
 
     // CREATE new property
-    return this.createPropertyInternal(dto, organization.id, branch.id, userId);
+    return this.createPropertyInternal(dto, organization.id, branch.id, userId, agentWarnings);
   }
 
   // ================================================================
@@ -293,19 +288,93 @@ export class PartnerApiService {
   }
 
   // ================================================================
-  // ADD IMAGES
+  // UPLOAD IMAGE (multipart file → S3, fire-and-forget)
   // ================================================================
 
-  async addImages(
+  async uploadImage(
     referenceCode: string,
-    dto: PartnerAddImagesDto,
+    file: Express.Multer.File,
+    description: string | undefined,
+    orderPosition: number | undefined,
+    isBlueprint: boolean | undefined,
     partner: Partner,
-  ): Promise<{ data: any }> {
+  ): Promise<{ image_reference_id: number; upload_status: string; informacion_adicional: string }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
-    await this.addImagesToProperty(property.id!, dto.images);
 
-    const multimedia = await this.propertiesService.getMultimedia(property.id!);
-    return { data: { images: multimedia.images } };
+    const imageRecord = this.propertyImageRepo.create({
+      url: null,
+      is_blueprint: isBlueprint ?? false,
+      description,
+      order_position: orderPosition,
+      property: { id: property.id } as Property,
+      upload_status: MediaUploadStatus.PENDING,
+      retry_count: 0,
+    });
+    const saved = await this.propertyImageRepo.save(imageRecord);
+
+    const fileBuffer = file.buffer;
+    const mimeType = file.mimetype;
+    const ext = (file.originalname.split('.').pop() || 'jpg').toLowerCase();
+    const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/images`, `${Date.now()}-${saved.id}.${ext}`);
+    const url = this.mediaService.buildPublicUrl(s3Key);
+
+    setImmediate(async () => {
+      try {
+        await this.mediaService.uploadFile(fileBuffer, s3Key, mimeType);
+        await this.propertyImageRepo.update(saved.id!, {
+          url,
+          upload_status: MediaUploadStatus.COMPLETED,
+          upload_completed_at: new Date(),
+        });
+        this.logger.log(`Image ${saved.id} uploaded for property ${referenceCode}`);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        await this.propertyImageRepo.update(saved.id!, {
+          upload_status: MediaUploadStatus.FAILED,
+          error_message: errorMsg,
+        });
+        this.logger.error(`Image ${saved.id} upload failed: ${errorMsg}`);
+      }
+    });
+
+    return {
+      image_reference_id: saved.id!,
+      upload_status: MediaUploadStatus.PENDING,
+      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar esta imagen en el portal',
+    };
+  }
+
+  // ================================================================
+  // PATCH IMAGE (update metadata only, no file)
+  // ================================================================
+
+  async patchImage(
+    referenceCode: string,
+    imageId: number,
+    dto: PartnerPatchImageDto,
+    partner: Partner,
+  ): Promise<{ image_reference_id: number; upload_status: string | undefined; error_message?: string | null; informacion_adicional: string }> {
+    const property = await this.findPropertyByRefCode(referenceCode, partner);
+
+    const image = await this.propertyImageRepo.findOne({
+      where: { id: imageId, property: { id: property.id } },
+    });
+    if (!image) {
+      throw new NotFoundException(`Imagen ${imageId} no encontrada en propiedad ${referenceCode}`);
+    }
+
+    if (dto.is_blueprint !== undefined) image.is_blueprint = dto.is_blueprint;
+    if (dto.description !== undefined) image.description = dto.description;
+    if (dto.order_position !== undefined) image.order_position = dto.order_position;
+
+    await this.propertyImageRepo.save(image);
+
+    return {
+      image_reference_id: image.id!,
+      upload_status: image.upload_status,
+      error_message: image.error_message,
+      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar esta imagen en el portal',
+    };
   }
 
   // ================================================================
@@ -316,7 +385,7 @@ export class PartnerApiService {
     referenceCode: string,
     imageId: number,
     partner: Partner,
-  ): Promise<{ message: string }> {
+  ): Promise<{ image_reference_id: number; message: string }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
     const image = await this.propertyImageRepo.findOne({
@@ -328,23 +397,94 @@ export class PartnerApiService {
     }
 
     await this.propertyImageRepo.remove(image);
-    return { message: `Imagen ${imageId} eliminada correctamente` };
+    return { image_reference_id: imageId, message: `Imagen ${imageId} eliminada correctamente` };
   }
 
   // ================================================================
-  // ADD ATTACHED
+  // UPLOAD ATTACHED (multipart file → S3, fire-and-forget)
   // ================================================================
 
-  async addAttached(
+  async uploadAttached(
     referenceCode: string,
-    dto: PartnerAddAttachedDto,
+    file: Express.Multer.File,
+    description: string | undefined,
+    order: number | undefined,
     partner: Partner,
-  ): Promise<{ data: any }> {
+  ): Promise<{ attached_reference_id: number; upload_status: string; informacion_adicional: string }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
-    await this.addAttachedToProperty(property.id!, dto.attached);
 
-    const multimedia = await this.propertiesService.getMultimedia(property.id!);
-    return { data: { attached: multimedia.attached } };
+    const attRecord = this.propertyAttachedRepo.create({
+      file_url: '',
+      description,
+      order,
+      property: { id: property.id } as Property,
+      upload_status: MediaUploadStatus.PENDING,
+      retry_count: 0,
+    });
+    const saved = await this.propertyAttachedRepo.save(attRecord);
+
+    const fileBuffer = file.buffer;
+    const mimeType = file.mimetype;
+    const ext = (file.originalname.split('.').pop() || 'pdf').toLowerCase();
+    const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/attached`, `${Date.now()}-${saved.id}.${ext}`);
+    const url = this.mediaService.buildPublicUrl(s3Key);
+
+    setImmediate(async () => {
+      try {
+        await this.mediaService.uploadFile(fileBuffer, s3Key, mimeType);
+        await this.propertyAttachedRepo.update(saved.id!, {
+          file_url: url,
+          upload_status: MediaUploadStatus.COMPLETED,
+          upload_completed_at: new Date(),
+        });
+        this.logger.log(`Attached ${saved.id} uploaded for property ${referenceCode}`);
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        await this.propertyAttachedRepo.update(saved.id!, {
+          upload_status: MediaUploadStatus.FAILED,
+          error_message: errorMsg,
+        });
+        this.logger.error(`Attached ${saved.id} upload failed: ${errorMsg}`);
+      }
+    });
+
+    return {
+      attached_reference_id: saved.id!,
+      upload_status: MediaUploadStatus.PENDING,
+      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar este adjunto en el portal',
+    };
+  }
+
+  // ================================================================
+  // PATCH ATTACHED (update metadata only)
+  // ================================================================
+
+  async patchAttached(
+    referenceCode: string,
+    attachedId: number,
+    dto: PartnerPatchAttachedDto,
+    partner: Partner,
+  ): Promise<{ attached_reference_id: number; upload_status: string | undefined; error_message?: string | null; informacion_adicional: string }> {
+    const property = await this.findPropertyByRefCode(referenceCode, partner);
+
+    const att = await this.propertyAttachedRepo.findOne({
+      where: { id: attachedId, property: { id: property.id } },
+    });
+    if (!att) {
+      throw new NotFoundException(`Adjunto ${attachedId} no encontrado en propiedad ${referenceCode}`);
+    }
+
+    if (dto.description !== undefined) att.description = dto.description;
+    if (dto.order !== undefined) att.order = dto.order;
+
+    await this.propertyAttachedRepo.save(att);
+
+    return {
+      attached_reference_id: att.id!,
+      upload_status: att.upload_status,
+      error_message: att.error_message,
+      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar este adjunto en el portal',
+    };
   }
 
   // ================================================================
@@ -355,7 +495,7 @@ export class PartnerApiService {
     referenceCode: string,
     attachedId: number,
     partner: Partner,
-  ): Promise<{ message: string }> {
+  ): Promise<{ attached_reference_id: number; message: string }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
     const att = await this.propertyAttachedRepo.findOne({
@@ -367,7 +507,7 @@ export class PartnerApiService {
     }
 
     await this.propertyAttachedRepo.remove(att);
-    return { message: `Adjunto ${attachedId} eliminado correctamente` };
+    return { attached_reference_id: attachedId, message: `Adjunto ${attachedId} eliminado correctamente` };
   }
 
   // ================================================================
@@ -414,137 +554,114 @@ export class PartnerApiService {
   }
 
   /**
-   * Creates a new property and its relations.
+   * Creates a new property via the shared PropertyWriteService core.
    */
   private async createPropertyInternal(
     dto: PartnerCreatePropertyDto,
     organizationId: number,
     branchId: number,
     userId?: number,
+    extraWarnings: string[] = [],
   ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
-    const {
-      branch_reference_id,
-      images,
-      tags,
-      operations,
-      videos,
-      multimedia360,
-      attached,
-      ...propertyScalars
-    } = dto;
-    const warnings: string[] = [];
+    const { branch_reference_id, tags, videos, multimedia360, agent_email, agent_name, ...propertyScalars } = dto;
 
-    // Fill denormalized operation fields from first operation
-    const firstOp = operations[0];
+    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+      { ...propertyScalars, deleted: false },
+      { organizationId, branchId, userId, tags, videos, multimedia360 },
+    );
 
-    const newProperty = this.propertyRepo.create({
-      ...propertyScalars,
-      operation_type: firstOp.operation_type as any,
-      price: firstOp.price,
-      currency: firstOp.currency as any,
-      organization_id: organizationId,
-      branch_id: branchId,
-      user_id: userId,
-      deleted: false,
-    } as any);
-
-    const savedProperty = await this.propertyRepo.save(newProperty) as unknown as Property;
-    const propertyId = savedProperty.id!;
-
-    // Operations
-    for (const op of operations) {
-      const propOp = this.propertyOperationRepo.create({
-        ...op,
-        property: { id: propertyId } as Property,
-      });
-      await this.propertyOperationRepo.save(propOp);
-    }
-
-    // Tags
-    if (tags && tags.length > 0) {
-      const tagWarnings = await this.syncTags(propertyId, tags);
-      warnings.push(...tagWarnings);
-    }
-
-    // Images (fire-and-forget background)
-    if (images && images.length > 0) {
-      await this.addImagesToProperty(propertyId, images);
-    }
-
-    // Videos
-    if (videos && videos.length > 0) {
-      await this.syncVideos(propertyId, videos, false);
-    }
-
-    // Multimedia 360
-    if (multimedia360 && multimedia360.length > 0) {
-      await this.syncMultimedia360(propertyId, multimedia360, false);
-    }
-
-    // Attached (fire-and-forget)
-    if (attached && attached.length > 0) {
-      await this.addAttachedToProperty(propertyId, attached);
-    }
-
-    const result = await this.propertiesService.findOne(propertyId);
+    const result = await this.propertiesService.findOne(savedProperty.id!);
+    const allWarnings = [...extraWarnings, ...warnings];
     return {
       data: result,
       created: true,
-      warnings: warnings.length > 0 ? warnings : undefined,
+      warnings: allWarnings.length > 0 ? allWarnings : undefined,
     };
   }
 
   /**
-   * Updates an existing property's scalar fields, operations, and tags.
+   * Updates an existing property via the shared PropertyWriteService core.
    */
   private async updatePropertyInternal(
     property: Property,
-    dto: Partial<PartnerUpdatePropertyDto> & { operations?: any[]; tags?: number[] },
+    dto: Partial<PartnerUpdatePropertyDto> & { tags?: number[] },
     organizationId?: number,
     branchId?: number,
     userId?: number,
   ): Promise<{ warnings: string[] }> {
-    const { operations, tags, ...scalarFields } = dto;
-    const warnings: string[] = [];
+    const { tags, ...scalarFields } = dto;
+    return this.propertyWriteService.updatePropertyCore(property, scalarFields, {
+      organizationId,
+      branchId,
+      userId,
+      tags,
+    });
+  }
 
-    const updateData: any = { ...scalarFields };
-    if (organizationId) updateData.organization_id = organizationId;
-    if (branchId) updateData.branch_id = branchId;
-    if (userId) updateData.user_id = userId;
+  /**
+   * Resolves which user to assign as the property agent.
+   *
+   * Rules:
+   * - No agent_email → use org admin.
+   * - agent_email found in org → use that user.
+   * - agent_email not found → create user (generates a random password),
+   *   link to org+branch, then use them.
+   * - Creation fails → fall back to org admin and return a warning.
+   */
+  private async resolveAgentUser(
+    agentEmail: string | undefined,
+    agentName: string | undefined,
+    organizationId: number,
+    branchId: number,
+    adminUserId: number | undefined,
+  ): Promise<{ userId: number | undefined; agentWarnings: string[] }> {
+    const agentWarnings: string[] = [];
 
-    // Update denormalized fields from first operation if operations provided
-    if (operations && operations.length > 0) {
-      const firstOp = operations[0];
-      updateData.operation_type = firstOp.operation_type;
-      updateData.price = firstOp.price;
-      updateData.currency = firstOp.currency;
+    if (!agentEmail) {
+      return { userId: adminUserId, agentWarnings };
     }
 
-    Object.assign(property, updateData);
-    await this.propertyRepo.save(property);
+    // Look for an existing user with this email inside the organization
+    const existing = await this.userRepo.findOne({
+      where: { email: agentEmail, organization: { id: organizationId } },
+    });
 
-    // Replace operations if provided
-    if (operations && operations.length > 0) {
-      await this.propertyOperationRepo.delete({ property: { id: property.id } });
-      for (const op of operations) {
-        const propOp = this.propertyOperationRepo.create({
-          ...op,
-          property: { id: property.id } as Property,
-        });
-        await this.propertyOperationRepo.save(propOp);
-      }
+    if (existing) {
+      return { userId: existing.id, agentWarnings };
     }
 
-    // Replace tags if provided
-    if (tags !== undefined) {
-      await this.propertyTagRepo.delete({ property: { id: property.id } });
-      if (tags.length > 0) {
-        const tagWarnings = await this.syncTags(property.id!, tags);
-        warnings.push(...tagWarnings);
-      }
-    }
+    // User doesn't exist yet → create them
+    try {
+      const bcrypt = await import('bcryptjs');
+      const hashedPassword = await bcrypt.hash(agentEmail, 10);
 
-    return { warnings };
+      const newUser = this.userRepo.create({
+        name: agentName || agentEmail,
+        email: agentEmail,
+        password: hashedPassword,
+        organization: { id: organizationId } as Organization,
+        is_verified: false,
+      });
+      const savedUser = await this.userRepo.save(newUser) as unknown as User;
+
+      // Link new user to the branch
+      await this.userRepo
+        .createQueryBuilder()
+        .relation(User, 'branches')
+        .of(savedUser)
+        .add(branchId);
+
+      this.logger.log(`Created agent user ${savedUser.id} (${agentEmail}) for org ${organizationId}`);
+      return { userId: savedUser.id, agentWarnings };
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      agentWarnings.push(
+        `Se intentó crear el usuario agente con email ${agentEmail} pero falló (${reason}). ` +
+        `La propiedad fue asignada al administrador de la organización.`,
+      );
+      this.logger.warn(`Failed to create agent user ${agentEmail}: ${reason}`);
+      return { userId: adminUserId, agentWarnings };
+    }
   }
 
   /**
@@ -583,152 +700,4 @@ export class PartnerApiService {
     return property;
   }
 
-  /**
-   * Validate and insert tags, returning warnings for invalid ones.
-   */
-  private async syncTags(
-    propertyId: number,
-    tagIds: number[],
-  ): Promise<string[]> {
-    const warnings: string[] = [];
-    const existingTags = await this.dataSource.query(
-      `SELECT id FROM tags WHERE id = ANY($1)`,
-      [tagIds],
-    );
-    const existingIds = new Set(existingTags.map((t: { id: number }) => t.id));
-    const validIds = tagIds.filter((id) => existingIds.has(id));
-    const invalidIds = tagIds.filter((id) => !existingIds.has(id));
-
-    if (validIds.length > 0) {
-      const newTags = validIds.map((tagId) =>
-        this.propertyTagRepo.create({
-          tag_id: tagId,
-          property: { id: propertyId } as Property,
-        }),
-      );
-      await this.propertyTagRepo.save(newTags);
-    }
-
-    if (invalidIds.length > 0) {
-      warnings.push(`Tag IDs no válidos e ignorados: ${invalidIds.join(', ')}`);
-    }
-    return warnings;
-  }
-
-  /**
-   * Add images to a property (PENDING status, fire-and-forget background processing).
-   */
-  private async addImagesToProperty(
-    propertyId: number,
-    images: Array<{ url: string; is_blueprint?: boolean; description?: string; order_position?: number }>,
-  ): Promise<void> {
-    const imagesToProcess: { imageId: number; originalUrl: string; propertyId: number }[] = [];
-
-    for (const img of images) {
-      const propertyImage = this.propertyImageRepo.create({
-        url: img.url ?? '',
-        is_blueprint: img.is_blueprint ?? false,
-        description: img.description,
-        order_position: img.order_position,
-        property: { id: propertyId } as Property,
-        upload_status: MediaUploadStatus.PENDING,
-        retry_count: 0,
-      });
-      const saved = await this.propertyImageRepo.save(propertyImage);
-
-      imagesToProcess.push({
-        imageId: saved.id!,
-        originalUrl: img.url,
-        propertyId,
-      });
-    }
-
-    if (imagesToProcess.length > 0) {
-      (this.propertiesService as any).processAndUploadImages(imagesToProcess);
-    }
-  }
-
-  /**
-   * Add attached files to a property (PENDING, fire-and-forget).
-   */
-  private async addAttachedToProperty(
-    propertyId: number,
-    attachedItems: Array<{ file_url: string; description?: string; order?: number }>,
-  ): Promise<void> {
-    for (const att of attachedItems) {
-      const entity = this.propertyAttachedRepo.create({
-        file_url: att.file_url,
-        description: att.description,
-        order: att.order,
-        property: { id: propertyId } as Property,
-        upload_status: MediaUploadStatus.PENDING,
-        retry_count: 0,
-      });
-      const saved = await this.propertyAttachedRepo.save(entity);
-
-      if (att.file_url && att.file_url.startsWith('http') && saved.id) {
-        setImmediate(() => {
-          (this.propertiesService as any)._processAndUploadAttached(
-            saved.id!,
-            propertyId,
-            { originalUrl: att.file_url },
-          );
-        });
-      }
-    }
-  }
-
-  /**
-   * Sync videos (non-360) for a property.
-   */
-  private async syncVideos(
-    propertyId: number,
-    videos: Array<{ url: string; provider?: string; title?: string; order?: number }>,
-    isUpdate: boolean,
-  ): Promise<void> {
-    if (isUpdate) {
-      await this.propertyVideoRepo.delete({
-        property: { id: propertyId },
-        is_360: false,
-      });
-    }
-
-    for (let i = 0; i < videos.length; i++) {
-      const v = videos[i];
-      const entity = this.propertyVideoRepo.create({
-        url: v.url,
-        property: { id: propertyId } as Property,
-        is_360: false,
-        order: v.order ?? i + 1,
-      });
-      await this.propertyVideoRepo.save(entity);
-    }
-  }
-
-  /**
-   * Sync multimedia 360 for a property.
-   */
-  private async syncMultimedia360(
-    propertyId: number,
-    items: Array<{ url: string; order?: number }>,
-    isUpdate: boolean,
-  ): Promise<void> {
-    if (isUpdate) {
-      await this.propertyVideoRepo.delete({
-        property: { id: propertyId },
-        is_360: true,
-      });
-    }
-
-    for (let i = 0; i < items.length; i++) {
-      const m = items[i];
-      const entity = this.propertyVideoRepo.create({
-        url: m.url,
-        property: { id: propertyId } as Property,
-        is_360: true,
-        order: m.order ?? i + 1,
-      });
-      await this.propertyVideoRepo.save(entity);
-    }
-  }
 }

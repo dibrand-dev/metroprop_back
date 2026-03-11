@@ -2,11 +2,11 @@ import { ImageUploadModule } from '../../common/image-upload/image-upload.module
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PropertiesService } from './properties.service';
+import { PropertyWriteService } from './property-write.service';
 import { PropertiesController } from './properties.controller';
 import { Property } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
 import { PropertyAttribute } from './entities/property-attribute.entity';
-import { PropertyOperation } from './entities/property-operation.entity';
 import { PropertyTag } from './entities/property-tag.entity';
 import { Tag } from '../tags/entities/tag.entity';
 
@@ -19,7 +19,6 @@ import { PropertyAttached } from './entities/property-attached.entity';
       Property,
       PropertyImage,
       PropertyAttribute,
-      PropertyOperation,
       PropertyTag,
       Tag,
       PropertyVideo,
@@ -28,7 +27,7 @@ import { PropertyAttached } from './entities/property-attached.entity';
     ImageUploadModule,
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService],
-  exports: [PropertiesService],
+  providers: [PropertiesService, PropertyWriteService],
+  exports: [PropertiesService, PropertyWriteService],
 })
 export class PropertiesModule {}

@@ -93,7 +93,7 @@ export class PropertiesController {
    */
   private validateUploadedFiles(files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] }) {
     const maxSize = 25 * 1024 * 1024; // 25MB
-    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
     const errors: string[] = [];
 
     // Validar imágenes
