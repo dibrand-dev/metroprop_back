@@ -1,4 +1,4 @@
-import { IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
+import { Allow, IsBoolean, IsInt, IsOptional, IsString, Min } from 'class-validator';
 
 /**
  * DTO para actualizar metadata de una imagen via Partner API.
@@ -17,4 +17,9 @@ export class PartnerPatchImageDto {
   @IsInt()
   @Min(0)
   order_position?: number;
+
+  /** Absorbs the empty file field that Swagger UI may send in multipart body */
+  @Allow()
+  @IsOptional()
+  file?: any;
 }

@@ -15,6 +15,7 @@ import {
   UseInterceptors,
   UploadedFile,
   BadRequestException,
+  ValidationPipe,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
@@ -201,10 +202,10 @@ export class PartnerApiController {
       type: 'object',
       required: ['file'],
       properties: {
-        file: { type: 'string', format: 'binary', description: 'Archivo de imagen (jpg, png, webp, etc.)' },
+        file: { type: 'string', format: 'binary', nullable: true, description: 'Archivo de imagen (jpg, png, webp, etc.)' },
         description: { type: 'string', description: 'Descripción de la imagen' },
         order_position: { type: 'integer', description: 'Posición de orden (0+)' },
-        is_blueprint: { type: 'boolean', description: 'Si es un plano de la propiedad' },
+        is_blueprint: { type: 'string', enum: ['true', 'false'], description: 'Si es un plano de la propiedad' },
       },
     },
   })
@@ -232,23 +233,40 @@ export class PartnerApiController {
   }
 
   @Patch('properties/:referenceCode/image/:imageReferenceCode')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
   @ApiTags('Images')
   @ApiOperation({
-    summary: 'Actualizar metadata de imagen',
-    description: 'Actualiza descripción, posición o flag de plano. No reemplaza el archivo. Usa el image_reference_id retornado al subir.',
+    summary: 'Actualizar metadata o archivo de imagen',
+    description:
+      'Actualiza descripción, posición o flag de plano. ' +
+      'Si se incluye el campo `file` (multipart/form-data), el archivo existente es reemplazado en S3 (fire-and-forget). ' +
+      'Usa el image_reference_id retornado al subir.',
   })
   @ApiParam({ name: 'referenceCode', description: 'Código de referencia de la propiedad' })
   @ApiParam({ name: 'imageReferenceCode', description: 'ID de referencia de la imagen (retornado en uploadImage)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', nullable: true, description: 'Nuevo archivo de imagen (opcional, reemplaza el existente)' },
+        description: { type: 'string', description: 'Descripción de la imagen' },
+        order_position: { type: 'integer', description: 'Posición de orden (0+)' },
+        is_blueprint: { type: 'string', enum: ['true', 'false'], description: 'Si es un plano de la propiedad' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Metadata actualizada' })
   @ApiResponse({ status: 404, description: 'Imagen o propiedad no encontrada' })
   async patchImage(
     @Param('referenceCode') referenceCode: string,
     @Param('imageReferenceCode', ParseIntPipe) imageId: number,
-    @Body() dto: PartnerPatchImageDto,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: false })) dto: PartnerPatchImageDto,
     @Req() request: Request,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     const partner = (request as any).partner;
-    const result = await this.partnerApiService.patchImage(referenceCode, imageId, dto, partner);
+    const result = await this.partnerApiService.patchImage(referenceCode, imageId, dto, partner, file);
     return { success: true, data: result };
   }
 
@@ -320,23 +338,39 @@ export class PartnerApiController {
   }
 
   @Patch('properties/:referenceCode/attached/:attachedReferenceCode')
+  @UseInterceptors(FileInterceptor('file'))
+  @ApiConsumes('multipart/form-data')
   @ApiTags('Attached')
   @ApiOperation({
-    summary: 'Actualizar metadata de adjunto',
-    description: 'Actualiza descripción u orden de un adjunto. No reemplaza el archivo. Usa el attached_reference_id retornado al subir.',
+    summary: 'Actualizar metadata o archivo de adjunto',
+    description:
+      'Actualiza descripción u orden de un adjunto. ' +
+      'Si se incluye el campo `file` (multipart/form-data), el archivo existente es reemplazado en S3 (fire-and-forget). ' +
+      'Usa el attached_reference_id retornado al subir.',
   })
   @ApiParam({ name: 'referenceCode', description: 'Código de referencia de la propiedad' })
   @ApiParam({ name: 'attachedReferenceCode', description: 'ID de referencia del adjunto (retornado en uploadAttached)' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary', nullable: true, description: 'Nuevo archivo adjunto (opcional, reemplaza el existente)' },
+        description: { type: 'string', description: 'Descripción del adjunto' },
+        order: { type: 'integer', description: 'Posición de orden (0+)' },
+      },
+    },
+  })
   @ApiResponse({ status: 200, description: 'Metadata actualizada' })
   @ApiResponse({ status: 404, description: 'Adjunto o propiedad no encontrada' })
   async patchAttached(
     @Param('referenceCode') referenceCode: string,
     @Param('attachedReferenceCode', ParseIntPipe) attachedId: number,
-    @Body() dto: PartnerPatchAttachedDto,
+    @Body(new ValidationPipe({ whitelist: true, forbidNonWhitelisted: false })) dto: PartnerPatchAttachedDto,
     @Req() request: Request,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
     const partner = (request as any).partner;
-    const result = await this.partnerApiService.patchAttached(referenceCode, attachedId, dto, partner);
+    const result = await this.partnerApiService.patchAttached(referenceCode, attachedId, dto, partner, file);
     return { success: true, data: result };
   }
 
