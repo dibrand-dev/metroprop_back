@@ -169,14 +169,6 @@ CREATE SEQUENCE public.users_id_seq
 	MAXVALUE 2147483647
 	START 1
 	CACHE 1
-	NO CYCLE;
-DROP SEQUENCE IF EXISTS public.users_id_seq;
-CREATE SEQUENCE public.users_id_seq
-	INCREMENT BY 1
-	MINVALUE 1
-	MAXVALUE 2147483647
-	START 1
-	CACHE 1
 	NO CYCLE;-- public.locations definition
 
 -- Drop table
@@ -633,3 +625,21 @@ ALTER TABLE public.users_branches ADD CONSTRAINT "FK_a2298d713539687b12f2c169ba4
 
 ALTER TABLE public.users_permissions DROP CONSTRAINT IF EXISTS "FK_4de7d0b175f702be3be55270023";
 ALTER TABLE public.users_permissions ADD CONSTRAINT "FK_4de7d0b175f702be3be55270023" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- Ensure serial id columns have their DEFAULT nextval properly set
+-- (guards against serial4 + pre-existing sequence conflicts)
+
+ALTER TABLE public.locations          ALTER COLUMN id SET DEFAULT nextval('public.locations_id_seq'::regclass);
+ALTER TABLE public.partners           ALTER COLUMN id SET DEFAULT nextval('public.partners_id_seq'::regclass);
+ALTER TABLE public.properties         ALTER COLUMN id SET DEFAULT nextval('public.properties_id_seq'::regclass);
+ALTER TABLE public.tags               ALTER COLUMN id SET DEFAULT nextval('public.tags_id_seq'::regclass);
+ALTER TABLE public.property_attached  ALTER COLUMN id SET DEFAULT nextval('public.property_attached_id_seq'::regclass);
+ALTER TABLE public.property_attributes ALTER COLUMN id SET DEFAULT nextval('public.property_attributes_id_seq'::regclass);
+ALTER TABLE public.property_images    ALTER COLUMN id SET DEFAULT nextval('public.property_images_id_seq'::regclass);
+ALTER TABLE public.property_operations ALTER COLUMN id SET DEFAULT nextval('public.property_operations_id_seq'::regclass);
+ALTER TABLE public.property_tags      ALTER COLUMN id SET DEFAULT nextval('public.property_tags_id_seq'::regclass);
+ALTER TABLE public.property_videos    ALTER COLUMN id SET DEFAULT nextval('public.property_videos_id_seq'::regclass);
+ALTER TABLE public.branches           ALTER COLUMN id SET DEFAULT nextval('public.branches_id_seq'::regclass);
+ALTER TABLE public.organizations      ALTER COLUMN id SET DEFAULT nextval('public.organizations_id_seq'::regclass);
+ALTER TABLE public.users              ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);

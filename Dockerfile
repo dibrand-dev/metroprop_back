@@ -25,6 +25,7 @@ ENV NODE_OPTIONS=--max-old-space-size=1024
 RUN npm ci --only=production
 
 COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 
