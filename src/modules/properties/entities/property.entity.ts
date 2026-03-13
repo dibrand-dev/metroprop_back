@@ -170,6 +170,21 @@ export class Property {
   @Column({ type: 'integer', nullable: true })
   floors_amount?: number;
 
+  @Column({ type: 'integer', nullable: true })
+  apartments_per_floor?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  warehouse_units?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  number_of_guests?: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  business_type?: string;
+
+  @Column({ type: 'integer', nullable: true })
+  fot?: number;
+
   @Column({ type: 'varchar', length: 100, nullable: true })
   zonification?: string;
 

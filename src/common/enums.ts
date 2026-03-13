@@ -11,41 +11,52 @@ export enum OperationType {
  * Tipos principales de propiedad.
  */
 export enum PropertyType {
-  LAND = 1,               // Terreno
-  APARTMENT = 2,          // Departamento
-  HOUSE = 3,              // Casa
-  WEEKEND_HOUSE = 4,      // Casa de fin de semana
-  OFFICE = 5,             // Oficina
-  MOORING = 6,            // Amarre
-  BUSINESS_PREMISES = 7,  // Local comercial
-  COMMERCIAL_BUILDING = 8, // Edificio comercial
-  COUNTRYSIDE = 9,        // Campo
-  GARAGE = 10,            // Garage
-  HOTEL = 11,             // Hotel
-  INDUSTRIAL_SHIP = 12,   // Nave industrial
-  CONDO = 13,             // Condominio
-  STORAGE = 14,           // Depósito
-  BUSINESS_PERMIT = 15,   // Habilitación comercial
-  STORAGE_ROOM = 16,      // Trastero
-  BODEGAS = 17,           // Bodegas
-  FINCAS = 18,            // Fincas
-  CHACRA = 19,            // Chacra
-  CAMA_NAUTICA = 20,      // Cama náutica
-  ISLA = 21,              // Isla
-  TERRAZA = 23,           // Terraza
-  GALPON = 24,            // Galpón
+  CASA = 1,                   // Casa
+  DEPARTAMENTO = 2,           // Departamento
+  TERRENO = 3,                // Terreno
+  PH = 4,                     // PH
+  GALPON_BODEGA = 5,          // Galpón / Bodega
+  BOVEDA_NICHO_PARCELA = 6,   // Bóveda / Nicho / Parcela
+  CAMA_NAUTICA = 7,           // Cama náutica
+  CAMPO = 8,                  // Campo
+  CONSULTORIO = 9,            // Consultorio
+  DEPOSITO = 10,              // Depósito
+  EDIFICIO = 11,              // Edificio
+  FONDO_DE_COMERCIO = 12,     // Fondo de comercio
+  GARAGE = 13,                // Garage
+  HOTEL = 14,                 // Hotel
+  LOCAL_COMERCIAL = 15,       // Local comercial
+  OFICINA_COMERCIAL = 16,     // Oficina comercial
+  QUINTA_VACACIONAL = 17,     // Quinta vacacional
 }
 
 /**
- * Subtipos de propiedad.
- * Estos son ejemplos, puedes ajustarlos según tus necesidades.
+ * Subtipos de propiedad, agrupados por tipo principal.
  */
 export enum PropertySubtype {
-  DUPLEX = 1,
-  TRIPLEX = 2,
-  LOFT = 3,
-  PISO_UNICO = 4,
-  PENTHOUSE = 5,
+  // ── Casa ─────────────────────────────────────────────────────────────
+  BUNGALOW = 1,
+  CABANA = 2,         // Cabaña
+  CHALET = 3,
+  CONDOMINIO = 4,
+  DUPLEX = 5,         // Casa / Departamento
+  TRIPLEX = 6,        // Casa / Departamento
+  CASA_DE_PLAYA = 7,
+  PH = 8,
+  PREFABRICADA = 9,
+
+  // ── Departamento ─────────────────────────────────────────────────────
+  APARTESTUDIO = 10,
+  LOFT = 11,
+  PENTHOUSE = 12,
+  PISO = 13,
+  SEMIPISO = 14,
+  ESTANDAR = 15,
+
+  // ── Bóveda / Nicho / Parcela ─────────────────────────────────────────
+  BOVEDA = 16,
+  NICHO = 17,
+  PARCELA = 18,
 }
 
 /**
@@ -75,9 +86,10 @@ export enum MediaUploadStatus {
  * Tipos de tags para categorización.
  */
 export enum TagType {
-  TAG_TYPE_AMENITY = 1,    // Comodidades (piscina, gym, etc.)
-  TAG_TYPE_SERVICES = 2,   // Servicios (seguridad, portero, etc.)
-  TAG_TYPE_ROOM = 3,       // Tipos de habitaciones (dormitorio en suite, etc.)
+  AMBIENTES = 1,    // Más ambientes (cocina, balcón, jardín, terraza, etc.)
+  SERVICIOS = 2,    // Servicios (ascensor, encargado, internet, etc.)
+  EXTRAS = 3,       // Extras (alarma, aire acondicionado, quincho, etc.)
+  FACILIDADES = 4,  // Facilidades (parrilla, pileta, gimnasio, etc.)
 }
 
 /**

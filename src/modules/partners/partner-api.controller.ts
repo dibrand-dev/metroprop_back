@@ -7,6 +7,7 @@ import {
   Get,
   Body,
   Param,
+  Query,
   UseGuards,
   Req,
   ParseIntPipe,
@@ -30,6 +31,7 @@ import {
 } from '@nestjs/swagger';
 import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
 import { PartnerApiService } from './partner-api.service';
+import { LocationsService } from '../locations/locations.service';
 import { PartnerCreateOrganizationDto } from './dto/partner-create-organization.dto';
 import { PartnerCreatePropertyDto } from './dto/partner-create-property.dto';
 import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
@@ -43,9 +45,60 @@ import { Request } from 'express';
 @ApiSecurity('x-api-key')
 @ApiSecurity('x-api-secret')
 export class PartnerApiController {
-  constructor(private readonly partnerApiService: PartnerApiService) {}
+  constructor(
+    private readonly partnerApiService: PartnerApiService,
+    private readonly locationsService: LocationsService,
+  ) {}
 
   // ====== ORGANIZATION ======
+
+  // ====== LOCATIONS ======
+
+  @Get('locations/countries')
+  @ApiTags('Locations')
+  @ApiOperation({
+    summary: 'Obtener lista de países',
+    description: 'Retorna todos los países disponibles para usar en location_id, state_id, country_id y sublocation_id.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de países' })
+  getCountries() {
+    return this.locationsService.getCountries();
+  }
+
+  @Get('locations/states')
+  @ApiTags('Locations')
+  @ApiOperation({
+    summary: 'Obtener provincias/estados de un país',
+    description: 'Retorna las provincias o estados de un país dado su country_id.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de provincias/estados' })
+  getCountryStates(@Query('countryId') countryId: number) {
+    return this.locationsService.getCountryStates(countryId);
+  }
+
+  @Get('locations/cities')
+  @ApiTags('Locations')
+  @ApiOperation({
+    summary: 'Obtener localidades de una provincia',
+    description: 'Retorna las localidades (location_id) de una provincia dado su state_id.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de localidades' })
+  getStateLocations(@Query('stateId') stateId: number) {
+    return this.locationsService.getStateLocations(stateId);
+  }
+
+  @Get('locations/sub-locations')
+  @ApiTags('Locations')
+  @ApiOperation({
+    summary: 'Obtener sublocalidades/barrios de una localidad',
+    description: 'Retorna sublocalidades o barrios (sublocation_id) de una localidad dado su locationId.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de sublocalidades/barrios' })
+  getLocationChildrens(@Query('locationId') locationId: number) {
+    return this.locationsService.getLocationChildrens(locationId);
+  }
+
+  // ====== ORGANIZATION (real) ======
 
   @Post('organizations')
   @HttpCode(HttpStatus.CREATED)
@@ -239,8 +292,10 @@ export class PartnerApiController {
   @ApiOperation({
     summary: 'Actualizar metadata o archivo de imagen',
     description:
-      'Actualiza descripción, posición o flag de plano. ' +
-      'Si se incluye el campo `file` (multipart/form-data), el archivo existente es reemplazado en S3 (fire-and-forget). ' +
+      'Actualiza descripción, posición o flag de plano de una imagen existente. ' +
+      'El campo `file` es opcional: solo debe enviarse si se desea reemplazar el archivo actual. ' +
+      'Si no se quiere cambiar la imagen, no hace falta incluirlo. ' +
+      'Cuando se envía, el reemplazo en S3 es fire-and-forget. ' +
       'Usa el image_reference_id retornado al subir.',
   })
   @ApiParam({ name: 'referenceCode', description: 'Código de referencia de la propiedad' })
@@ -249,7 +304,7 @@ export class PartnerApiController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary', nullable: true, description: 'Nuevo archivo de imagen (opcional, reemplaza el existente)' },
+        file: { type: 'string', format: 'binary', nullable: true, description: 'Nuevo archivo de imagen — SOLO enviar si se quiere reemplazar la imagen. Si no se desea cambiarla, omitir este campo.' },
         description: { type: 'string', description: 'Descripción de la imagen' },
         order_position: { type: 'integer', description: 'Posición de orden (0+)' },
         is_blueprint: { type: 'string', enum: ['true', 'false'], description: 'Si es un plano de la propiedad' },
@@ -344,8 +399,10 @@ export class PartnerApiController {
   @ApiOperation({
     summary: 'Actualizar metadata o archivo de adjunto',
     description:
-      'Actualiza descripción u orden de un adjunto. ' +
-      'Si se incluye el campo `file` (multipart/form-data), el archivo existente es reemplazado en S3 (fire-and-forget). ' +
+      'Actualiza descripción u orden de un adjunto existente. ' +
+      'El campo `file` es opcional: solo debe enviarse si se desea reemplazar el archivo actual. ' +
+      'Si no se quiere cambiar el adjunto, no hace falta incluirlo. ' +
+      'Cuando se envía, el reemplazo en S3 es fire-and-forget. ' +
       'Usa el attached_reference_id retornado al subir.',
   })
   @ApiParam({ name: 'referenceCode', description: 'Código de referencia de la propiedad' })
@@ -354,7 +411,7 @@ export class PartnerApiController {
     schema: {
       type: 'object',
       properties: {
-        file: { type: 'string', format: 'binary', nullable: true, description: 'Nuevo archivo adjunto (opcional, reemplaza el existente)' },
+        file: { type: 'string', format: 'binary', nullable: true, description: 'Nuevo archivo adjunto — SOLO enviar si se quiere reemplazar el archivo. Si no se desea cambiarlo, omitir este campo.' },
         description: { type: 'string', description: 'Descripción del adjunto' },
         order: { type: 'integer', description: 'Posición de orden (0+)' },
       },

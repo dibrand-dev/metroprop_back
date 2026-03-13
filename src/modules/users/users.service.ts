@@ -85,7 +85,14 @@ export class UsersService {
    * Útil para distinguir entre usuario profesional y simple.
    */
   async findByEmailWithOrganization(email: string, safe: boolean = false): Promise<User | null> {
-    const user = await this.usersRepository.findOne({ where: { email }, relations: ['organization'] });
+    const user = await this.usersRepository.findOne({
+      where: { email },
+      relations: [
+        'organization',
+        'organization.branches',
+        'organization.branches.users',
+      ],
+    });
 
     if (!user) return null;
 

@@ -255,6 +255,31 @@ export class BasePropertyFieldsDto {
   floors_amount?: number;
 
   @IsOptional()
+  @IsInt()
+  @Min(0)
+  apartments_per_floor?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  warehouse_units?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  number_of_guests?: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  business_type?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  fot?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(100)
   zonification?: string;

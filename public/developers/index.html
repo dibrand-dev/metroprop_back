@@ -213,6 +213,7 @@
       font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
       font-size: 0.8rem;
       line-height: 1.6;
+      white-space: pre-wrap;
     }
 
     .code-block .key { color: #7dd3fc; }
@@ -332,12 +333,13 @@
   </div>
 
   <div class="sidebar-section">
-    <div class="sidebar-section-title">Entidades</div>
-    <a href="#entity-org">Organization</a>
-    <a href="#entity-branch">Branch</a>
-    <a href="#entity-user">User</a>
-    <a href="#entity-property">Property</a>
+    <div class="sidebar-section-title">Locations</div>
+    <a href="#ep-loc-countries">GET Países</a>
+    <a href="#ep-loc-states">GET Provincias</a>
+    <a href="#ep-loc-cities">GET Localidades</a>
+    <a href="#ep-loc-sub">GET Sublocalidades</a>
   </div>
+
 
   <div class="sidebar-section">
     <div class="sidebar-section-title">Enums &amp; Valores</div>
@@ -440,11 +442,86 @@
     <code>/api/partner/v1/organizations</code>
   </div>
   <p>
-    Crea una organización inmobiliaria con su sucursal predeterminada y un usuario administrador.
+    Crea una <strong>organización inmobiliaria</strong> con su sucursal predeterminada y un usuario administrador.
     El admin recibe un email de bienvenida para verificar su cuenta.
   </p>
-  <p><strong>Respuesta:</strong> <code>organization_id</code>, <code>branch_id</code> y <code>admin_user_id</code> — 
-  usá <code>branch_id</code> como <code>branch_reference_id</code> al crear propiedades.</p>
+  <div class="alert alert-success">
+    <strong>&#9654; Respuesta importante:</strong> El endpoint retorna un <code>branch_id</code>.
+    Conservá este valor y usalo como <code>branch_reference_id</code> al crear propiedades,
+    para asignarlas a la sucursal deseada de esa organización.
+  </div>
+
+  <h3>Campos del request body</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Datos del usuario administrador</td></tr>
+      <tr><td><code>admin_name</code></td><td>string(255)</td><td><span class="badge badge-required">requerido</span></td><td>Nombre completo del administrador de la inmobiliaria</td></tr>
+      <tr><td><code>admin_email</code></td><td>email</td><td><span class="badge badge-required">requerido</span></td><td>Email del administrador. Se usará para el login y recibirá un email de bienvenida para verificar su cuenta</td></tr>
+      <tr><td><code>admin_phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono de contacto del administrador</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Datos de la organización / inmobiliaria</td></tr>
+      <tr><td><code>company_name</code></td><td>string(255)</td><td><span class="badge badge-required">requerido</span></td><td>Nombre de la empresa o inmobiliaria (mín. 2 caracteres)</td></tr>
+      <tr><td><code>company_logo</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>URL pública del logo de la empresa</td></tr>
+      <tr><td><code>email</code></td><td>email</td><td><span class="badge badge-optional">opcional</span></td><td>Email institucional de contacto de la organización (puede ser distinto al del administrador)</td></tr>
+      <tr><td><code>address</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>Dirección física de la sede principal (ej: <em>"Av. Corrientes 1234, Piso 5"</em>)</td></tr>
+      <tr><td><code>phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono principal de la inmobiliaria</td></tr>
+      <tr><td><code>alternative_phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono alternativo de contacto</td></tr>
+      <tr><td><code>contact_time</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Horario de atención (ej: <em>"Lunes a Viernes 9:00 a 18:00"</em>)</td></tr>
+      <tr><td><code>professional_type</code></td><td>enum</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">ProfessionalType</span> Tipo de profesional: <code>inmobiliario</code>, <code>inversor</code> u <code>otros</code></td></tr>
+      <tr><td><code>cuit</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>CUIT de la empresa. Formato requerido: <code>XX-XXXXXXXX-X</code> (ej: <code>30-71234567-9</code>). Debe ser único en el sistema.</td></tr>
+      <tr><td><code>social_reason</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Razón social o denominación legal de la empresa</td></tr>
+      <tr><td><code>fiscal_condition</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Condición fiscal ante AFIP (ej: Responsable Inscripto, Monotributista)</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Ubicación &mdash; <em>los IDs se obtienen desde la <a href="#ep-loc-countries" style="color:var(--primary);">API de Locations</a></em></td></tr>
+      <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país. Obtener con <a href="#ep-loc-countries"><code>GET /locations/countries</code></a></td></tr>
+      <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia o estado. Obtener con <a href="#ep-loc-states"><code>GET /locations/states?countryId=</code></a></td></tr>
+      <tr><td><code>location_id</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad o ciudad. Obtener con <a href="#ep-loc-cities"><code>GET /locations/cities?stateId=</code></a></td></tr>
+      <tr><td><code>sublocation_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio o sublocalidad. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
+      <tr><td><code>full_location</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>Texto libre con la ubicación completa (ej: <em>"Buenos Aires, Argentina"</em>)</td></tr>
+      <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
+      <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ejemplo completo</h3>
+  <div class="code-block"><span class="comment">// Request Body</span>
+{
+  <span class="comment">// Administrador</span>
+  <span class="key">"admin_name"</span>: <span class="string">"Juan Pérez"</span>,
+  <span class="key">"admin_email"</span>: <span class="string">"juan.perez@inmobiliariademo.com"</span>,
+  <span class="key">"admin_phone"</span>: <span class="string">"+5411-1234-5678"</span>,
+
+  <span class="comment">// Organización</span>
+  <span class="key">"company_name"</span>: <span class="string">"Inmobiliaria Demo S.A."</span>,
+  <span class="key">"company_logo"</span>: <span class="string">"https://ejemplo.com/logo-demo.png"</span>,
+  <span class="key">"address"</span>: <span class="string">"Av. Corrientes 1234, Piso 5"</span>,
+  <span class="key">"phone"</span>: <span class="string">"+5411-4567-8901"</span>,
+  <span class="key">"alternative_phone"</span>: <span class="string">"+5411-4567-8902"</span>,
+  <span class="key">"email"</span>: <span class="string">"contacto@inmobiliariademo.com"</span>,
+  <span class="key">"contact_time"</span>: <span class="string">"Lunes a Viernes 9:00 a 18:00"</span>,
+  <span class="key">"professional_type"</span>: <span class="string">"inmobiliario"</span>,
+  <span class="key">"cuit"</span>: <span class="string">"30-71234567-9"</span>,
+  <span class="key">"social_reason"</span>: <span class="string">"Inmobiliaria Demo S.A."</span>,
+  <span class="key">"fiscal_condition"</span>: <span class="string">"Responsable Inscripto"</span>,
+
+  <span class="comment">// Ubicación</span>
+  <span class="key">"country_id"</span>: <span class="number">1</span>,
+  <span class="key">"state_id"</span>: <span class="number">1</span>,
+  <span class="key">"location_id"</span>: <span class="string">"1"</span>,
+  <span class="key">"sublocation_id"</span>: <span class="number">1</span>,
+  <span class="key">"full_location"</span>: <span class="string">"Buenos Aires, Argentina"</span>,
+  <span class="key">"geo_lat"</span>: <span class="number">-34.6037</span>,
+  <span class="key">"geo_long"</span>: <span class="number">-58.3816</span>
+}</div>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"organization_id"</span>: <span class="number">42</span>,
+    <span class="key">"branch_id"</span>: <span class="number">7</span>,        <span class="comment">// &#8592; usar como branch_reference_id al crear propiedades</span>
+    <span class="key">"admin_user_id"</span>: <span class="number">15</span>
+  },
+  <span class="key">"message"</span>: <span class="string">"Organización, sucursal y usuario admin creados. Conserva el branch_id para referenciar la sucursal en las propiedades."</span>
+}</div>
 
   <h2 id="ep-create-prop">POST Crear Propiedad</h2>
   <div class="endpoint-box">
@@ -461,12 +538,216 @@
     <code>POST /uploadImage</code> y <code>POST /uploadAttached</code> (multipart/form-data).
   </div>
 
+  <h3>Campos del request body</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Identificación &amp; Referencia</td></tr>
+      <tr><td><code>branch_reference_id</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td>ID de la sucursal (retornado por <a href="#ep-create-org">POST /organizations</a> como <code>branch_id</code>)</td></tr>
+      <tr><td><code>reference_code</code></td><td>string(100)</td><td><span class="badge badge-required">requerido</span></td><td>Código de referencia único del partner. Si ya existe en esa organización, el endpoint hace upsert.</td></tr>
+      <tr><td><code>publication_title</code></td><td>string(500)</td><td><span class="badge badge-required">requerido</span></td><td>Título de publicación en español</td></tr>
+      <tr><td><code>publication_title_en</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>Título en inglés</td></tr>
+      <tr><td><code>description</code></td><td>text</td><td><span class="badge badge-optional">opcional</span></td><td>Descripción detallada de la propiedad</td></tr>
+      <tr><td><code>internal_comments</code></td><td>text</td><td><span class="badge badge-optional">opcional</span></td><td>Comentarios internos (no visibles al público)</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Precio &amp; Operación</td></tr>
+      <tr><td><code>operation_type</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td><span class="badge badge-enum">OperationType</span> <code>1</code> Venta · <code>2</code> Alquiler · <code>3</code> Alquiler temporal</td></tr>
+      <tr><td><code>price</code></td><td>numeric</td><td><span class="badge badge-required">requerido</span></td><td>Precio de la operación (debe ser positivo)</td></tr>
+      <tr><td><code>currency</code></td><td>string(3)</td><td><span class="badge badge-required">requerido</span></td><td><span class="badge badge-enum">Currency</span> Código ISO de la moneda: <code>USD</code>, <code>ARS</code>, etc.</td></tr>
+      <tr><td><code>period</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Período de alquiler (ej: <em>"mensual"</em>, <em>"diario"</em>). Aplica a alquileres.</td></tr>
+      <tr><td><code>expenses</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Expensas mensuales</td></tr>
+      <tr><td><code>currency_expenses</code></td><td>string(3)</td><td><span class="badge badge-optional">opcional</span></td><td>Moneda de las expensas (ej: <code>ARS</code>)</td></tr>
+      <tr><td><code>commission</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Comisión (ej: <em>"3% + IVA"</em>)</td></tr>
+      <tr><td><code>price_square_meter</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Precio por m²</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Tipo y Estado</td></tr>
+      <tr><td><code>property_type</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td><span class="badge badge-enum">PropertyType</span> Tipo de propiedad (ver enum)</td></tr>
+      <tr><td><code>property_subtype</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">PropertySubtype</span> Subtipo de propiedad (ver enum)</td></tr>
+      <tr><td><code>status</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td><span class="badge badge-enum">PropertyStatus</span> Estado: <code>0</code> Borrador · <code>2</code> Disponible · <code>3</code> Reservada · <code>4</code> No disponible</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Ubicación &mdash; <em>los IDs se obtienen desde la <a href="#ep-loc-countries" style="color:var(--primary);">API de Locations</a></em></td></tr>
+      <tr><td><code>street</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Calle</td></tr>
+      <tr><td><code>number</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Número/altura</td></tr>
+      <tr><td><code>floor</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Piso</td></tr>
+      <tr><td><code>apartment</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Departamento</td></tr>
+      <tr><td><code>postal_code</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Código postal</td></tr>
+      <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país. Obtener con <a href="#ep-loc-countries"><code>GET /locations/countries</code></a></td></tr>
+      <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia. Obtener con <a href="#ep-loc-states"><code>GET /locations/states?countryId=</code></a></td></tr>
+      <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad. Obtener con <a href="#ep-loc-cities"><code>GET /locations/cities?stateId=</code></a></td></tr>
+      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
+      <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
+      <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
+      <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa (true/false)</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Características</td></tr>
+      <tr><td><code>room_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de ambientes</td></tr>
+      <tr><td><code>suite_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de suites / dormitorios</td></tr>
+      <tr><td><code>bathroom_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de baños</td></tr>
+      <tr><td><code>toilet_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de toilettes</td></tr>
+      <tr><td><code>parking_lot_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de cocheras</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Superficies</td></tr>
+      <tr><td><code>surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie total</td></tr>
+      <tr><td><code>roofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie cubierta</td></tr>
+      <tr><td><code>unroofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie descubierta</td></tr>
+      <tr><td><code>semiroofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie semicubierta</td></tr>
+      <tr><td><code>total_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie total calculada</td></tr>
+      <tr><td><code>surface_measurement</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">SurfaceMeasurement</span> <code>M2</code> o <code>HA</code></td></tr>
+      <tr><td><code>surface_front</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Metros de frente</td></tr>
+      <tr><td><code>surface_length</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Metros de fondo</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Información del Inmueble</td></tr>
+      <tr><td><code>age</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Antigüedad en años. <code>-1</code> = en construcción</td></tr>
+      <tr><td><code>property_condition</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Estado del inmueble (ej: <em>"Excelente"</em>, <em>"Bueno"</em>)</td></tr>
+      <tr><td><code>situation</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Situación (ej: <em>"Disponible"</em>, <em>"Ocupado"</em>)</td></tr>
+      <tr><td><code>dispositions</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Disposition</span> Frente, Contrafrente, Interno, Lateral</td></tr>
+      <tr><td><code>orientation</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Orientation</span> Norte, Sur, Este, Oeste, etc.</td></tr>
+      <tr><td><code>brightness</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Brightness</span> <code>1</code> Muy luminoso · <code>2</code> Luminoso · <code>3</code> Poco luminoso</td></tr>
+      <tr><td><code>garage_coverage</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">GarageCoverage</span> <code>1</code> Cubierta · <code>2</code> Semicubierta · <code>3</code> Descubierta</td></tr>
+      <tr><td><code>credit_eligible</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Apta crédito hipotecario</td></tr>
+      <tr><td><code>floors_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de plantas o pisos del edificio</td></tr>
+      <tr><td><code>apartments_per_floor</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Departamentos por piso (aplica a Departamento, Edificio)</td></tr>
+      <tr><td><code>warehouse_units</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de naves (aplica a Galpón/Bodega)</td></tr>
+      <tr><td><code>number_of_guests</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de huéspedes (aplica a Hotel, Quinta vacacional)</td></tr>
+      <tr><td><code>business_type</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Tipo de rubro del negocio (aplica a Oficina, Local comercial, Fondo de comercio)</td></tr>
+      <tr><td><code>fot</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>F.O.T. &mdash; Factor de Ocupación Total (aplica a Terreno)</td></tr>
+      <tr><td><code>zonification</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Zonificación del inmueble</td></tr>
+      <tr><td><code>construction_year</code></td><td>string(10)</td><td><span class="badge badge-optional">opcional</span></td><td>Año de construcción (ej: <em>"2010"</em>)</td></tr>
+      <tr><td><code>last_renovation</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Año o descripción de última renovación</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Contacto &amp; Responsables</td></tr>
+      <tr><td><code>owner_name</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Nombre del propietario</td></tr>
+      <tr><td><code>owner_phone</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono del propietario</td></tr>
+      <tr><td><code>owner_email</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Email del propietario</td></tr>
+      <tr><td><code>producer_user</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Usuario productor interno</td></tr>
+      <tr><td><code>key_contact</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Contacto de la llave</td></tr>
+      <tr><td><code>key_agent_user</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Agente encargado de la llave</td></tr>
+      <tr><td><code>maintenance_user</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Usuario de mantenimiento</td></tr>
+      <tr><td><code>development</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Nombre del desarrollo o emprendimiento</td></tr>
+      <tr><td><code>agent_email</code></td><td>email</td><td><span class="badge badge-optional">opcional</span></td><td>Email del agente responsable (partner)</td></tr>
+      <tr><td><code>agent_name</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Nombre del agente responsable (partner)</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Multimedia</td></tr>
+      <tr><td><code>videos</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Array de videos: <code>[{ url, provider?, title?, order? }]</code></td></tr>
+      <tr><td><code>multimedia360</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Array de multimedia 360: <code>[{ url, order? }]</code></td></tr>
+      <tr><td><code>tags</code></td><td>integer[]</td><td><span class="badge badge-optional">opcional</span></td><td>IDs de tags a asociar (ej: <code>[1, 2, 5]</code>)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Ejemplo completo</h3>
+  <div class="code-block"><span class="comment">// Request Body</span>
+{
+  <span class="comment">// Identificación</span>
+  <span class="key">"branch_reference_id"</span>: <span class="number">7</span>,
+  <span class="key">"reference_code"</span>: <span class="string">"PROP-DEMO-001"</span>,
+
+  <span class="comment">// Publicación</span>
+  <span class="key">"publication_title"</span>: <span class="string">"Hermoso departamento en Palermo con amenities"</span>,
+  <span class="key">"publication_title_en"</span>: <span class="string">"Beautiful apartment in Palermo with amenities"</span>,
+  <span class="key">"description"</span>: <span class="string">"Luminoso departamento de 3 ambientes a estrenar, con cocina integrada, balcón corrido y vista al verde."</span>,
+
+  <span class="comment">// Precio &amp; Operación</span>
+  <span class="key">"operation_type"</span>: <span class="number">1</span>,
+  <span class="key">"price"</span>: <span class="number">130000</span>,
+  <span class="key">"currency"</span>: <span class="string">"USD"</span>,
+  <span class="key">"expenses"</span>: <span class="number">45000</span>,
+  <span class="key">"currency_expenses"</span>: <span class="string">"ARS"</span>,
+
+  <span class="comment">// Tipo y Estado</span>
+  <span class="key">"property_type"</span>: <span class="number">2</span>,
+  <span class="key">"property_subtype"</span>: <span class="number">13</span>,
+  <span class="key">"status"</span>: <span class="number">2</span>,
+
+  <span class="comment">// Ubicación</span>
+  <span class="key">"street"</span>: <span class="string">"Av. Santa Fe"</span>,
+  <span class="key">"number"</span>: <span class="string">"3456"</span>,
+  <span class="key">"floor"</span>: <span class="string">"8"</span>,
+  <span class="key">"apartment"</span>: <span class="string">"B"</span>,
+  <span class="key">"postal_code"</span>: <span class="string">"C1425"</span>,
+  <span class="key">"country_id"</span>: <span class="number">1</span>,
+  <span class="key">"state_id"</span>: <span class="number">1</span>,
+  <span class="key">"location_id"</span>: <span class="number">1</span>,
+  <span class="key">"sub_location_id"</span>: <span class="number">15</span>,
+  <span class="key">"geo_lat"</span>: <span class="number">-34.5921</span>,
+  <span class="key">"geo_long"</span>: <span class="number">-58.4089</span>,
+  <span class="key">"show_exact_location"</span>: <span class="number">true</span>,
+
+  <span class="comment">// Características</span>
+  <span class="key">"room_amount"</span>: <span class="number">3</span>,
+  <span class="key">"suite_amount"</span>: <span class="number">2</span>,
+  <span class="key">"bathroom_amount"</span>: <span class="number">1</span>,
+  <span class="key">"toilet_amount"</span>: <span class="number">1</span>,
+  <span class="key">"parking_lot_amount"</span>: <span class="number">1</span>,
+
+  <span class="comment">// Superficies</span>
+  <span class="key">"surface"</span>: <span class="number">85</span>,
+  <span class="key">"roofed_surface"</span>: <span class="number">75</span>,
+  <span class="key">"unroofed_surface"</span>: <span class="number">10</span>,
+  <span class="key">"surface_measurement"</span>: <span class="string">"M2"</span>,
+
+  <span class="comment">// Inmueble</span>
+  <span class="key">"age"</span>: <span class="number">0</span>,
+  <span class="key">"property_condition"</span>: <span class="string">"A estrenar"</span>,
+  <span class="key">"orientation"</span>: <span class="string">"2"</span>,
+  <span class="key">"brightness"</span>: <span class="number">1</span>,
+  <span class="key">"dispositions"</span>: <span class="string">"Frente"</span>,
+  <span class="key">"credit_eligible"</span>: <span class="number">true</span>,
+  <span class="key">"floors_amount"</span>: <span class="number">12</span>,
+  <span class="key">"apartments_per_floor"</span>: <span class="number">4</span>,
+
+  <span class="comment">// Multimedia</span>
+  <span class="key">"videos"</span>: [
+    { <span class="key">"url"</span>: <span class="string">"https://youtube.com/watch?v=DEMO"</span>, <span class="key">"provider"</span>: <span class="string">"youtube"</span>, <span class="key">"title"</span>: <span class="string">"Video tour"</span>, <span class="key">"order"</span>: <span class="number">1</span> }
+  ],
+
+  <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">3</span>]
+}</div>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="number">108</span>,
+    <span class="key">"reference_code"</span>: <span class="string">"PROP-DEMO-001"</span>,
+    <span class="key">"publication_title"</span>: <span class="string">"Hermoso departamento en Palermo con amenities"</span>,
+    <span class="key">"property_type"</span>: <span class="number">2</span>,
+    <span class="key">"status"</span>: <span class="number">2</span>,
+    <span class="key">"branch_id"</span>: <span class="number">7</span>,
+    <span class="key">"organization_id"</span>: <span class="number">42</span>
+  }
+}</div>
+
   <h2 id="ep-update-prop">PUT Actualizar Propiedad</h2>
   <div class="endpoint-box">
     <span class="badge badge-put">PUT</span>
     <code>/api/partner/v1/properties/{referenceCode}</code>
   </div>
   <p>Actualiza campos escalares, operaciones y tags. Solo enviar los campos que se desean modificar.</p>
+
+  <div class="alert alert-warning">
+    <strong>&#9888; Tags:</strong> Si se incluye el campo <code>tags</code>, debe contener <strong>todos</strong> los IDs de tags que debe tener la propiedad (reemplaza el set completo).
+    Si no hay cambios en los tags, simplemente no incluyas el campo en el request.
+  </div>
+  <div class="alert alert-warning">
+    <strong>&#9888; Videos y Multimedia 360:</strong> Lo mismo aplica para <code>videos</code> y <code>multimedia360</code>: si se incluyen, deben traer <strong>todos</strong> los elementos del array (no se hace merge, se reemplaza).
+    Si no hay cambios, no los incluyas en el request.
+  </div>
+
+  <h3>Ejemplo</h3>
+  <div class="code-block"><span class="comment">// Request Body — solo los campos que se quieren modificar</span>
+{
+  <span class="comment">// Actualizar precio y estado</span>
+  <span class="key">"price"</span>: <span class="number">125000</span>,
+  <span class="key">"currency"</span>: <span class="string">"USD"</span>,
+  <span class="key">"status"</span>: <span class="number">3</span>,
+
+  <span class="comment">// Actualizar descripción</span>
+  <span class="key">"description"</span>: <span class="string">"Departamento remodelado con cocina americana y balcón amplio. Excelente ubicación."</span>,
+
+  <span class="comment">// Tags: En caso de enviar tags, incluir TODOS los que debe tener la propiedad</span>
+  <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">3</span>, <span class="number">7</span>]
+}</div>
+  <div class="code-block"><span class="comment">// Response (200 OK)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="number">108</span>,
+    <span class="key">"reference_code"</span>: <span class="string">"PROP-DEMO-001"</span>,
+    <span class="key">"price"</span>: <span class="number">125000</span>,
+    <span class="key">"status"</span>: <span class="number">3</span>
+  }
+}</div>
 
   <h2 id="ep-get-prop">GET Obtener Propiedad</h2>
   <div class="endpoint-box">
@@ -510,12 +791,49 @@
     </table>
   </div>
 
-  <h2 id="ep-patch-image">PATCH Actualizar Metadata Imagen</h2>
+  <h3>Ejemplo</h3>
+  <div class="code-block"><span class="comment">// Request Body (multipart/form-data)</span>
+{
+  <span class="key">"file"</span>:            <span class="string">"living.jpg"</span>,          <span class="comment">// archivo de imagen (jpg, png, webp…)</span>
+  <span class="key">"description"</span>:    <span class="string">"Living comedor"</span>,
+  <span class="key">"order_position"</span>: <span class="number">1</span>,
+}</div>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"image_reference_id"</span>: <span class="number">42</span>,          <span class="comment">// ← conservar para PATCH o DELETE</span>
+    <span class="key">"upload_status"</span>: <span class="string">"pending"</span>,        <span class="comment">// cambia a "completed" o "failed" cuando S3 termina</span>
+    <span class="key">"property_id"</span>: <span class="number">108</span>,
+    <span class="key">"order_position"</span>: <span class="number">1</span>,
+    <span class="key">"description"</span>: <span class="string">"Living comedor"</span>,
+    <span class="key">"is_blueprint"</span>: <span class="number">false</span>,
+    <span class="key">"informacion_adicional"</span>: <span class="string">"Recordá utilizar este ID de referencia para eliminar o modificar esta imagen en el portal"</span>
+  }
+}</div>
+  <div class="alert alert-success">
+    <strong>&#9654; Respuesta importante:</strong> El endpoint retorna un <code>image_reference_id</code>.
+    Conservá este valor: lo vas a necesitar para <strong>actualizar</strong> (<code>PATCH</code>) o <strong>eliminar</strong> (<code>DELETE</code>) esta imagen.
+  </div>
+  <div class="alert alert-info">
+    El <code>upload_status</code> cambia a <code>completed</code> una vez que S3 termina el procesamiento.
+    Si ocurre un error, cambia a <code>failed</code> e incluye un campo <code>error_message</code>.
+  </div>
+
+  <h2 id="ep-patch-image">PATCH Actualizar Imagen</h2>
   <div class="endpoint-box">
     <span class="badge badge-put">PATCH</span>
     <code>/api/partner/v1/properties/{referenceCode}/image/{imageReferenceCode}</code>
   </div>
-  <p>Actualiza descripción, posición o flag de plano de una imagen existente. No reemplaza el archivo. Usar el <code>image_reference_id</code> retornado al subir.</p>
+  <p>
+    Actualiza los metadatos de una imagen existente: descripción, posición u orden y flag de plano.
+    Usar el <code>image_reference_id</code> retornado al subir la imagen.
+  </p>
+  <div class="alert alert-info">
+    <strong>Campo <code>file</code> (opcional):</strong> Solo debe enviarse si se desea <strong>reemplazar el archivo actual</strong>.
+    Si no se quiere cambiar la imagen, simplemente no incluyas ese campo en el request.
+    Cuando se envía, el reemplazo en S3 se realiza en background (fire-and-forget).
+  </div>
 
   <h2 id="ep-del-image">DELETE Eliminar Imagen</h2>
   <div class="endpoint-box">
@@ -544,12 +862,48 @@
     </table>
   </div>
 
-  <h2 id="ep-patch-attached">PATCH Actualizar Metadata Adjunto</h2>
+  <h3>Ejemplo</h3>
+  <div class="code-block"><span class="comment">// Request Body (multipart/form-data)</span>
+{
+  <span class="key">"file"</span>:          <span class="string">"plano-catastral.pdf"</span>,   <span class="comment">// archivo adjunto (pdf, doc, xls…)</span>
+  <span class="key">"description"</span>:  <span class="string">"Plano catastral"</span>,
+  <span class="key">"order"</span>:         <span class="number">1</span>
+}</div>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"attached_reference_id"</span>: <span class="number">15</span>,        <span class="comment">// ← conservar para PATCH o DELETE</span>
+    <span class="key">"upload_status"</span>: <span class="string">"pending"</span>,        <span class="comment">// cambia a "completed" o "failed" cuando S3 termina</span>
+    <span class="key">"property_id"</span>: <span class="number">108</span>,
+    <span class="key">"order"</span>: <span class="number">1</span>,
+    <span class="key">"description"</span>: <span class="string">"Plano catastral"</span>,
+    <span class="key">"informacion_adicional"</span>: <span class="string">"Recordá utilizar este ID de referencia para eliminar o modificar este adjunto en el portal"</span>
+  }
+}</div>
+  <div class="alert alert-success">
+    <strong>&#9654; Respuesta importante:</strong> El endpoint retorna un <code>attached_reference_id</code>.
+    Conservá este valor: lo vas a necesitar para <strong>actualizar</strong> (<code>PATCH</code>) o <strong>eliminar</strong> (<code>DELETE</code>) este adjunto.
+  </div>
+  <div class="alert alert-info">
+    El <code>upload_status</code> cambia a <code>completed</code> una vez que S3 termina el procesamiento.
+    Si ocurre un error, cambia a <code>failed</code> e incluye un campo <code>error_message</code>.
+  </div>
+
+  <h2 id="ep-patch-attached">PATCH Actualizar Adjunto</h2>
   <div class="endpoint-box">
     <span class="badge badge-put">PATCH</span>
     <code>/api/partner/v1/properties/{referenceCode}/attached/{attachedReferenceCode}</code>
   </div>
-  <p>Actualiza descripción u orden de un adjunto. No reemplaza el archivo. Usar el <code>attached_reference_id</code> retornado al subir.</p>
+  <p>
+    Actualiza los metadatos de un adjunto existente: descripción u orden.
+    Usar el <code>attached_reference_id</code> retornado al subir el adjunto.
+  </p>
+  <div class="alert alert-info">
+    <strong>Campo <code>file</code> (opcional):</strong> Solo debe enviarse si se desea <strong>reemplazar el archivo actual</strong>.
+    Si no se quiere cambiar el adjunto, simplemente no incluyas ese campo en el request.
+    Cuando se envía, el reemplazo en S3 se realiza en background (fire-and-forget).
+  </div>
 
   <h2 id="ep-del-attached">DELETE Eliminar Adjunto</h2>
   <div class="endpoint-box">
@@ -558,194 +912,121 @@
   </div>
   <p>Elimina un adjunto usando su <code>attached_reference_id</code> (ID numérico retornado al subir el adjunto).</p>
 
-  <!-- ===== ENTITIES ===== -->
+  <!-- ===== LOCATIONS ===== -->
 
-  <h2 id="entity-org">Entidad: Organization</h2>
-  <p>Representa una empresa inmobiliaria o inversor. Es la entidad raíz que agrupa branches y usuarios.</p>
-  <table class="field-table">
-    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+  <h2 id="ep-loc-countries">GET Países</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-get">GET</span>
+    <code>/api/partner/v1/locations/countries</code>
+  </div>
+  <p>
+    Retorna la lista completa de países disponibles en la plataforma.
+    Usar el <code>id</code> del resultado como <code>country_id</code> en organizaciones y propiedades.
+  </p>
+  <div class="code-block"><span class="comment">// Response 200</span>
+[
+  { <span class="key">"id"</span>: <span class="number">1</span>, <span class="key">"name"</span>: <span class="string">"Argentina"</span> },
+  { <span class="key">"id"</span>: <span class="number">2</span>, <span class="key">"name"</span>: <span class="string">"Uruguay"</span> },
+  ...
+]</div>
+
+  <h2 id="ep-loc-states">GET Provincias / Estados</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-get">GET</span>
+    <code>/api/partner/v1/locations/states?countryId={countryId}</code>
+  </div>
+  <p>
+    Retorna las provincias o estados de un país dado su <code>country_id</code>.
+    Usar el <code>id</code> del resultado como <code>state_id</code>.
+  </p>
+  <table class="field-table" style="max-width:400px">
+    <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
     <tbody>
-      <tr><td><code>id</code></td><td>integer</td><td>auto</td><td>ID único (autoincremental)</td></tr>
-      <tr><td><code>company_name</code></td><td>string(255)</td><td><span class="badge badge-required">requerido</span></td><td>Nombre de la empresa</td></tr>
-      <tr><td><code>company_logo</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>URL del logo</td></tr>
-      <tr><td><code>email</code></td><td>string</td><td><span class="badge badge-required">requerido</span></td><td>Email de contacto de la organización</td></tr>
-      <tr><td><code>address</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Dirección</td></tr>
-      <tr><td><code>phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono principal</td></tr>
-      <tr><td><code>alternative_phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono alternativo</td></tr>
-      <tr><td><code>contact_time</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Horario de contacto</td></tr>
-      <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país</td></tr>
-      <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia/estado</td></tr>
-      <tr><td><code>location_id</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad</td></tr>
-      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de sublocalidad/barrio</td></tr>
-      <tr><td><code>professional_type</code></td><td>enum</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">ProfessionalType</span> inmobiliario, inversor, otros</td></tr>
-      <tr><td><code>cuit</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>CUIT (formato XX-XXXXXXXX-X)</td></tr>
-      <tr><td><code>social_reason</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Razón social</td></tr>
-      <tr><td><code>fiscal_condition</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Condición fiscal</td></tr>
-      <tr><td><code>external_reference</code></td><td>string(255)</td><td>auto</td><td>Referencia externa del partner (auto-generado)</td></tr>
-      <tr><td><code>source_partner_id</code></td><td>integer</td><td>auto</td><td>ID del partner que creó la organización</td></tr>
-      <tr><td><code>created_at</code></td><td>timestamp</td><td>auto</td><td>Fecha de creación</td></tr>
-      <tr><td><code>updated_at</code></td><td>timestamp</td><td>auto</td><td>Fecha de última actualización</td></tr>
+      <tr><td><code>countryId</code></td><td>integer (query)</td><td>ID del país (obtenido en el endpoint anterior)</td></tr>
     </tbody>
   </table>
 
-  <h2 id="entity-branch">Entidad: Branch</h2>
-  <p>Sucursal de una organización. Al crear la organización via API, se crea una sucursal predeterminada con los mismos datos.</p>
-  <table class="field-table">
-    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+  <h2 id="ep-loc-cities">GET Localidades / Ciudades</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-get">GET</span>
+    <code>/api/partner/v1/locations/cities?stateId={stateId}</code>
+  </div>
+  <p>
+    Retorna las localidades o ciudades de una provincia dado su <code>state_id</code>.
+    Usar el <code>id</code> del resultado como <code>location_id</code>.
+  </p>
+  <table class="field-table" style="max-width:400px">
+    <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
     <tbody>
-      <tr><td><code>id</code></td><td>integer</td><td>auto</td><td>ID único — usar como <code>branch_reference_id</code> al crear propiedades</td></tr>
-      <tr><td><code>branch_name</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Nombre de la sucursal</td></tr>
-      <tr><td><code>branch_logo</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>URL del logo de la sucursal</td></tr>
-      <tr><td><code>email</code></td><td>string</td><td><span class="badge badge-required">requerido</span></td><td>Email de contacto</td></tr>
-      <tr><td><code>address</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Dirección</td></tr>
-      <tr><td><code>phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono</td></tr>
-      <tr><td><code>alternative_phone</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono alternativo</td></tr>
-      <tr><td><code>contact_time</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Horario de contacto</td></tr>
-      <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país</td></tr>
-      <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de provincia/estado</td></tr>
-      <tr><td><code>location_id</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>ID de localidad</td></tr>
-      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de sublocalidad</td></tr>
-      <tr><td><code>full_location</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Ubicación completa (texto libre)</td></tr>
-      <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud</td></tr>
-      <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud</td></tr>
-      <tr><td><code>organization_id</code></td><td>FK integer</td><td>auto</td><td>Organización a la que pertenece</td></tr>
+      <tr><td><code>stateId</code></td><td>integer (query)</td><td>ID de la provincia/estado</td></tr>
     </tbody>
   </table>
 
-  <h2 id="entity-user">Entidad: User</h2>
-  <p>Usuario administrador de la organización. Se crea automáticamente al crear la organización y recibe un email de bienvenida.</p>
-  <table class="field-table">
-    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+  <h2 id="ep-loc-sub">GET Sublocalidades / Barrios</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-get">GET</span>
+    <code>/api/partner/v1/locations/sub-locations?locationId={locationId}</code>
+  </div>
+  <p>
+    Retorna barrios o sublocalidades de una localidad dado su <code>locationId</code>.
+    Usar el <code>id</code> del resultado como <code>sub_location_id</code> / <code>sublocation_id</code>.
+  </p>
+  <table class="field-table" style="max-width:400px">
+    <thead><tr><th>Parámetro</th><th>Tipo</th><th>Descripción</th></tr></thead>
     <tbody>
-      <tr><td><code>id</code></td><td>integer</td><td>auto</td><td>ID único</td></tr>
-      <tr><td><code>name</code></td><td>string(255)</td><td><span class="badge badge-required">requerido</span></td><td>Nombre completo</td></tr>
-      <tr><td><code>email</code></td><td>string(255)</td><td><span class="badge badge-required">requerido</span></td><td>Email (único en el sistema)</td></tr>
-      <tr><td><code>phone</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono</td></tr>
-      <tr><td><code>bio</code></td><td>text</td><td><span class="badge badge-optional">opcional</span></td><td>Biografía/descripción</td></tr>
-      <tr><td><code>avatar</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>URL del avatar</td></tr>
-      <tr><td><code>is_verified</code></td><td>boolean</td><td>auto</td><td>Si verificó su email (false inicialmente)</td></tr>
-      <tr><td><code>organization_id</code></td><td>FK integer</td><td>auto</td><td>Organización a la que pertenece</td></tr>
-      <tr><td><code>created_at</code></td><td>timestamp</td><td>auto</td><td>Fecha de creación</td></tr>
+      <tr><td><code>locationId</code></td><td>integer (query)</td><td>ID de la localidad/ciudad</td></tr>
     </tbody>
   </table>
-
-  <h2 id="entity-property">Entidad: Property</h2>
-  <p>Propiedad inmobiliaria publicada. Contiene toda la información del inmueble: ubicación, características, superficies, precios, multimedia, etc.</p>
-  <table class="field-table">
-    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
-    <tbody>
-      <tr><td><code>id</code></td><td>integer</td><td>auto</td><td>ID único</td></tr>
-      <tr><td><code>reference_code</code></td><td>string(100)</td><td><span class="badge badge-required">requerido</span></td><td>Código de referencia único del partner</td></tr>
-      <tr><td><code>publication_title</code></td><td>string(500)</td><td><span class="badge badge-required">requerido</span></td><td>Título de publicación en español</td></tr>
-      <tr><td><code>publication_title_en</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>Título en inglés</td></tr>
-      <tr><td><code>description</code></td><td>text</td><td><span class="badge badge-optional">opcional</span></td><td>Descripción detallada</td></tr>
-      <tr><td><code>internal_comments</code></td><td>text</td><td><span class="badge badge-optional">opcional</span></td><td>Comentarios internos (no se muestran al público)</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Ubicación</td></tr>
-      <tr><td><code>street</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Calle</td></tr>
-      <tr><td><code>number</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Número/altura</td></tr>
-      <tr><td><code>floor</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Piso</td></tr>
-      <tr><td><code>apartment</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Departamento</td></tr>
-      <tr><td><code>postal_code</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Código postal</td></tr>
-      <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de localidad</td></tr>
-      <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de país</td></tr>
-      <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de provincia</td></tr>
-      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de sublocalidad</td></tr>
-      <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud (-90 a 90)</td></tr>
-      <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud (-180 a 180)</td></tr>
-      <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en mapa</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Tipo y Estado</td></tr>
-      <tr><td><code>property_type</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td><span class="badge badge-enum">PropertyType</span> Tipo de propiedad</td></tr>
-      <tr><td><code>property_subtype</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">PropertySubtype</span> Subtipo</td></tr>
-      <tr><td><code>status</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td><span class="badge badge-enum">PropertyStatus</span> Estado de publicación</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Características</td></tr>
-      <tr><td><code>suite_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de suites</td></tr>
-      <tr><td><code>room_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de ambientes</td></tr>
-      <tr><td><code>bathroom_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de baños</td></tr>
-      <tr><td><code>toilet_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de toilettes</td></tr>
-      <tr><td><code>parking_lot_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de cocheras</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Superficies</td></tr>
-      <tr><td><code>surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie total</td></tr>
-      <tr><td><code>roofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie cubierta</td></tr>
-      <tr><td><code>unroofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie descubierta</td></tr>
-      <tr><td><code>semiroofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie semicubierta</td></tr>
-      <tr><td><code>total_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie total calculada</td></tr>
-      <tr><td><code>surface_measurement</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">SurfaceMeasurement</span> M2 o HA</td></tr>
-      <tr><td><code>surface_front</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Metros de frente</td></tr>
-      <tr><td><code>surface_length</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Metros de fondo</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Información del Inmueble</td></tr>
-      <tr><td><code>age</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Antigüedad en años (-1 = en construcción)</td></tr>
-      <tr><td><code>property_condition</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Estado del inmueble (Excelente, Bueno, etc.)</td></tr>
-      <tr><td><code>situation</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Situación (Disponible, Ocupado, etc.)</td></tr>
-      <tr><td><code>dispositions</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Disposition</span> Frente, Contrafrente, etc.</td></tr>
-      <tr><td><code>orientation</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Orientation</span> Norte, Sur, etc.</td></tr>
-      <tr><td><code>brightness</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Brightness</span> Luminosidad</td></tr>
-      <tr><td><code>garage_coverage</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">GarageCoverage</span> Cobertura cochera</td></tr>
-      <tr><td><code>credit_eligible</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Apta crédito hipotecario</td></tr>
-      <tr><td><code>floors_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad de plantas</td></tr>
-      <tr><td><code>zonification</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Zonificación</td></tr>
-      <tr><td><code>construction_year</code></td><td>string(10)</td><td><span class="badge badge-optional">opcional</span></td><td>Año de construcción</td></tr>
-      <tr><td><code>last_renovation</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Última renovación</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Información Económica</td></tr>
-      <tr><td><code>operation_type</code></td><td>integer</td><td>auto</td><td><span class="badge badge-enum">OperationType</span> Denormalizado de la primera operación</td></tr>
-      <tr><td><code>price</code></td><td>numeric</td><td>auto</td><td>Precio denormalizado de la primera operación</td></tr>
-      <tr><td><code>currency</code></td><td>string(3)</td><td>auto</td><td><span class="badge badge-enum">Currency</span> Moneda denormalizada</td></tr>
-      <tr><td><code>expenses</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Expensas mensuales</td></tr>
-      <tr><td><code>commission</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Comisión (ej: "3% + IVA")</td></tr>
-      <tr><td><code>network_share</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Compartido en red</td></tr>
-      <tr><td><code>price_square_meter</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Precio por m²</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Contacto y Responsables</td></tr>
-      <tr><td><code>owner_name</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Nombre del propietario</td></tr>
-      <tr><td><code>owner_phone</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Teléfono del propietario</td></tr>
-      <tr><td><code>owner_email</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Email del propietario</td></tr>
-      <tr><td><code>producer_user</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Usuario productor</td></tr>
-      <tr><td><code>key_contact</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Contacto de la llave</td></tr>
-      <tr><td><code>key_agent_user</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Agente encargado</td></tr>
-      <tr><td><code>maintenance_user</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>Usuario de mantenimiento</td></tr>
-      <tr><td><code>development</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Nombre del desarrollo/emprendimiento</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Relaciones &amp; IDs</td></tr>
-      <tr><td><code>organization_id</code></td><td>integer</td><td>auto</td><td>Organización (se resuelve del branch)</td></tr>
-      <tr><td><code>branch_id</code></td><td>integer</td><td>auto</td><td>Sucursal (del <code>branch_reference_id</code>)</td></tr>
-      <tr><td><code>user_id</code></td><td>integer</td><td>auto</td><td>Admin user de la organización</td></tr>
-    </tbody>
-  </table>
+  <div class="alert alert-info">
+    <strong>Flujo recomendado para obtener IDs de ubicación:</strong><br>
+    <code>GET /countries</code> &rarr; <code>GET /states?countryId=X</code> &rarr; <code>GET /cities?stateId=Y</code> &rarr; <code>GET /sub-locations?locationId=Z</code>
+  </div>
 
   <!-- ===== ENUMS ===== -->
 
   <h2 id="enum-property-type">Enum: PropertyType</h2>
   <p>Tipos de propiedad disponibles. Enviar el valor numérico.</p>
   <div class="enum-grid">
-    <div class="enum-item"><span>Terreno (LAND)</span><span class="value">1</span></div>
-    <div class="enum-item"><span>Departamento (APARTMENT)</span><span class="value">2</span></div>
-    <div class="enum-item"><span>Casa (HOUSE)</span><span class="value">3</span></div>
-    <div class="enum-item"><span>Casa fin de semana</span><span class="value">4</span></div>
-    <div class="enum-item"><span>Oficina (OFFICE)</span><span class="value">5</span></div>
-    <div class="enum-item"><span>Amarre (MOORING)</span><span class="value">6</span></div>
-    <div class="enum-item"><span>Local comercial</span><span class="value">7</span></div>
-    <div class="enum-item"><span>Edificio comercial</span><span class="value">8</span></div>
-    <div class="enum-item"><span>Campo (COUNTRYSIDE)</span><span class="value">9</span></div>
-    <div class="enum-item"><span>Garage</span><span class="value">10</span></div>
-    <div class="enum-item"><span>Hotel</span><span class="value">11</span></div>
-    <div class="enum-item"><span>Nave industrial</span><span class="value">12</span></div>
-    <div class="enum-item"><span>Condominio</span><span class="value">13</span></div>
-    <div class="enum-item"><span>Depósito</span><span class="value">14</span></div>
-    <div class="enum-item"><span>Habilitación comercial</span><span class="value">15</span></div>
-    <div class="enum-item"><span>Trastero</span><span class="value">16</span></div>
-    <div class="enum-item"><span>Bodegas</span><span class="value">17</span></div>
-    <div class="enum-item"><span>Fincas</span><span class="value">18</span></div>
-    <div class="enum-item"><span>Chacra</span><span class="value">19</span></div>
-    <div class="enum-item"><span>Cama náutica</span><span class="value">20</span></div>
-    <div class="enum-item"><span>Isla</span><span class="value">21</span></div>
-    <div class="enum-item"><span>Terraza</span><span class="value">23</span></div>
-    <div class="enum-item"><span>Galpón</span><span class="value">24</span></div>
+    <div class="enum-item"><span>Casa</span><span class="value">1</span></div>
+    <div class="enum-item"><span>Departamento</span><span class="value">2</span></div>
+    <div class="enum-item"><span>Terreno</span><span class="value">3</span></div>
+    <div class="enum-item"><span>PH</span><span class="value">4</span></div>
+    <div class="enum-item"><span>Galpón / Bodega</span><span class="value">5</span></div>
+    <div class="enum-item"><span>Bóveda / Nicho / Parcela</span><span class="value">6</span></div>
+    <div class="enum-item"><span>Cama náutica</span><span class="value">7</span></div>
+    <div class="enum-item"><span>Campo</span><span class="value">8</span></div>
+    <div class="enum-item"><span>Consultorio</span><span class="value">9</span></div>
+    <div class="enum-item"><span>Depósito</span><span class="value">10</span></div>
+    <div class="enum-item"><span>Edificio</span><span class="value">11</span></div>
+    <div class="enum-item"><span>Fondo de comercio</span><span class="value">12</span></div>
+    <div class="enum-item"><span>Garage</span><span class="value">13</span></div>
+    <div class="enum-item"><span>Hotel</span><span class="value">14</span></div>
+    <div class="enum-item"><span>Local comercial</span><span class="value">15</span></div>
+    <div class="enum-item"><span>Oficina comercial</span><span class="value">16</span></div>
+    <div class="enum-item"><span>Quinta vacacional</span><span class="value">17</span></div>
   </div>
 
   <h2 id="enum-property-subtype">Enum: PropertySubtype</h2>
+  <p>Subtipos disponibles según tipo de propiedad. Enviar el valor numérico.</p>
   <div class="enum-grid">
-    <div class="enum-item"><span>Duplex</span><span class="value">1</span></div>
-    <div class="enum-item"><span>Triplex</span><span class="value">2</span></div>
-    <div class="enum-item"><span>Loft</span><span class="value">3</span></div>
-    <div class="enum-item"><span>Piso único</span><span class="value">4</span></div>
-    <div class="enum-item"><span>Penthouse</span><span class="value">5</span></div>
+    <div class="enum-item"><span>Bungalow <em>(Casa)</em></span><span class="value">1</span></div>
+    <div class="enum-item"><span>Cabaña <em>(Casa)</em></span><span class="value">2</span></div>
+    <div class="enum-item"><span>Chalet <em>(Casa)</em></span><span class="value">3</span></div>
+    <div class="enum-item"><span>Condominio <em>(Casa)</em></span><span class="value">4</span></div>
+    <div class="enum-item"><span>Dúplex <em>(Casa / Depto.)</em></span><span class="value">5</span></div>
+    <div class="enum-item"><span>Tríplex <em>(Casa / Depto.)</em></span><span class="value">6</span></div>
+    <div class="enum-item"><span>Casa de playa <em>(Casa)</em></span><span class="value">7</span></div>
+    <div class="enum-item"><span>PH <em>(Casa)</em></span><span class="value">8</span></div>
+    <div class="enum-item"><span>Prefabricada <em>(Casa)</em></span><span class="value">9</span></div>
+    <div class="enum-item"><span>Apartestudio <em>(Depto.)</em></span><span class="value">10</span></div>
+    <div class="enum-item"><span>Loft <em>(Depto.)</em></span><span class="value">11</span></div>
+    <div class="enum-item"><span>Penthouse <em>(Depto.)</em></span><span class="value">12</span></div>
+    <div class="enum-item"><span>Piso <em>(Depto.)</em></span><span class="value">13</span></div>
+    <div class="enum-item"><span>Semipiso <em>(Depto.)</em></span><span class="value">14</span></div>
+    <div class="enum-item"><span>Estándar <em>(Depto.)</em></span><span class="value">15</span></div>
+    <div class="enum-item"><span>Bóveda <em>(Bóveda/Nicho/Parcela)</em></span><span class="value">16</span></div>
+    <div class="enum-item"><span>Nicho <em>(Bóveda/Nicho/Parcela)</em></span><span class="value">17</span></div>
+    <div class="enum-item"><span>Parcela <em>(Bóveda/Nicho/Parcela)</em></span><span class="value">18</span></div>
   </div>
 
   <h2 id="enum-property-status">Enum: PropertyStatus</h2>
@@ -832,6 +1113,12 @@
   </div>
   <div class="code-block"><span class="comment">// Request Body</span>
 {
+  <span class="comment">// Administrador</span>
+  <span class="key">"admin_name"</span>: <span class="string">"Juan Pérez"</span>,
+  <span class="key">"admin_email"</span>: <span class="string">"juan.perez@inmobiliariademo.com"</span>,
+  <span class="key">"admin_phone"</span>: <span class="string">"+5411-1234-5678"</span>,
+
+  <span class="comment">// Organización</span>
   <span class="key">"company_name"</span>: <span class="string">"Inmobiliaria Demo S.A."</span>,
   <span class="key">"company_logo"</span>: <span class="string">"https://ejemplo.com/logo-demo.png"</span>,
   <span class="key">"address"</span>: <span class="string">"Av. Corrientes 1234, Piso 5"</span>,
@@ -839,15 +1126,14 @@
   <span class="key">"alternative_phone"</span>: <span class="string">"+5411-4567-8902"</span>,
   <span class="key">"contact_email"</span>: <span class="string">"contacto@inmobiliariademo.com"</span>,
   <span class="key">"contact_time"</span>: <span class="string">"Lunes a Viernes 9:00 a 18:00"</span>,
+  <span class="key">"professional_type"</span>: <span class="string">"inmobiliario"</span>,
+  <span class="key">"cuit"</span>: <span class="string">"30-71234567-9"</span>,
+
+  <span class="comment">// Ubicación</span>
   <span class="key">"country_id"</span>: <span class="number">1</span>,
   <span class="key">"state_id"</span>: <span class="number">1</span>,
   <span class="key">"location_id"</span>: <span class="number">1</span>,
-  <span class="key">"sublocation_id"</span>: <span class="number">1</span>,
-  <span class="key">"professional_type"</span>: <span class="string">"inmobiliario"</span>,
-  <span class="key">"cuit"</span>: <span class="string">"30-71234567-9"</span>,
-  <span class="key">"admin_name"</span>: <span class="string">"Juan Pérez"</span>,
-  <span class="key">"admin_email"</span>: <span class="string">"juan.perez@inmobiliariademo.com"</span>,
-  <span class="key">"admin_phone"</span>: <span class="string">"+5411-1234-5678"</span>
+  <span class="key">"sublocation_id"</span>: <span class="number">1</span>
 }</div>
   <div class="code-block"><span class="comment">// Response (201 Created)</span>
 {
@@ -866,50 +1152,51 @@
   </div>
   <div class="code-block"><span class="comment">// Request Body — todos los campos posibles</span>
 {
+  <span class="comment">// Identificación</span>
   <span class="key">"branch_reference_id"</span>: <span class="number">1</span>,
   <span class="key">"reference_code"</span>: <span class="string">"PROP-DEMO-001"</span>,
+
+  <span class="comment">// Publicación</span>
   <span class="key">"publication_title"</span>: <span class="string">"Hermoso departamento 3 ambientes con balcón"</span>,
+  <span class="key">"description"</span>: <span class="string">"Amplio departamento en Palermo..."</span>,
+
+  <span class="comment">// Precio &amp; Operación</span>
+  <span class="key">"operation_type"</span>: <span class="number">1</span>,
+  <span class="key">"price"</span>: <span class="number">239000</span>,
+  <span class="key">"currency"</span>: <span class="string">"USD"</span>,
+  <span class="key">"expenses"</span>: <span class="number">45000</span>,
+
+  <span class="comment">// Tipo y Estado</span>
   <span class="key">"property_type"</span>: <span class="number">2</span>,
   <span class="key">"property_subtype"</span>: <span class="number">1</span>,
   <span class="key">"status"</span>: <span class="number">2</span>,
-  <span class="key">"description"</span>: <span class="string">"Amplio departamento en Palermo..."</span>,
+
+  <span class="comment">// Ubicación</span>
   <span class="key">"street"</span>: <span class="string">"Av. Santa Fe"</span>,
   <span class="key">"number"</span>: <span class="string">"3450"</span>,
   <span class="key">"floor"</span>: <span class="string">"12"</span>,
   <span class="key">"apartment"</span>: <span class="string">"A"</span>,
   <span class="key">"geo_lat"</span>: <span class="number">-34.5882</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.4094</span>,
+
+  <span class="comment">// Características</span>
   <span class="key">"room_amount"</span>: <span class="number">3</span>,
   <span class="key">"bathroom_amount"</span>: <span class="number">2</span>,
   <span class="key">"parking_lot_amount"</span>: <span class="number">1</span>,
+
+  <span class="comment">// Superficies</span>
   <span class="key">"surface"</span>: <span class="number">85.5</span>,
   <span class="key">"roofed_surface"</span>: <span class="number">75.0</span>,
+
+  <span class="comment">// Inmueble</span>
   <span class="key">"age"</span>: <span class="number">5</span>,
-  <span class="key">"expenses"</span>: <span class="number">45000</span>,
   <span class="key">"credit_eligible"</span>: <span class="number">true</span>,
-  <span class="key">"operations"</span>: [
-    {
-      <span class="key">"operation_type"</span>: <span class="string">"venta"</span>,
-      <span class="key">"currency"</span>: <span class="string">"USD"</span>,
-      <span class="key">"price"</span>: <span class="number">239000</span>
-    },
-    {
-      <span class="key">"operation_type"</span>: <span class="string">"alquiler"</span>,
-      <span class="key">"currency"</span>: <span class="string">"ARS"</span>,
-      <span class="key">"price"</span>: <span class="number">350000</span>,
-      <span class="key">"period"</span>: <span class="string">"mensual"</span>
-    }
-  ],
-  <span class="key">"images"</span>: [
-    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/foto1.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Living"</span>, <span class="key">"order_position"</span>: <span class="number">1</span> },
-    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/plano.jpg"</span>, <span class="key">"is_blueprint"</span>: <span class="number">true</span>, <span class="key">"order_position"</span>: <span class="number">2</span> }
-  ],
+
+  <span class="comment">// Multimedia</span>
   <span class="key">"videos"</span>: [
     { <span class="key">"url"</span>: <span class="string">"https://youtube.com/watch?v=..."</span>, <span class="key">"provider"</span>: <span class="string">"youtube"</span> }
   ],
-  <span class="key">"attached"</span>: [
-    { <span class="key">"file_url"</span>: <span class="string">"https://ejemplo.com/ficha.pdf"</span>, <span class="key">"description"</span>: <span class="string">"Ficha técnica"</span> }
-  ],
+
   <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">5</span>, <span class="number">12</span>]
 }</div>
 
