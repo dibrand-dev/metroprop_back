@@ -1,498 +1,635 @@
-create table locations
-(
-    id             serial
-        constraint pk_locations
-            primary key,
-    name           varchar not null,
-    iso_code       varchar,
-    sap_code       integer,
-    full_location  varchar,
-    zip_code       varchar,
-    short_location varchar,
-    parent_id      integer,
-    type           varchar,
-    migrated       boolean default false,
-    status         varchar
+
+DROP TYPE IF EXISTS public."organizations_professional_type_enum";
+CREATE TYPE public."organizations_professional_type_enum" AS ENUM (
+	'inmobiliario',
+	'inversor',
+	'otros');
+
+-- DROP TYPE public."properties_propertytype_enum";
+
+DROP TYPE IF EXISTS public."properties_propertytype_enum";
+CREATE TYPE public."properties_propertytype_enum" AS ENUM (
+	'apartment',
+	'house',
+	'land',
+	'commercial');
+
+-- DROP TYPE public."properties_status_enum";
+
+DROP TYPE IF EXISTS public."properties_status_enum";
+CREATE TYPE public."properties_status_enum" AS ENUM (
+	'available',
+	'sold',
+	'rented');
+
+-- DROP TYPE public."property_attached_upload_status_enum";
+
+DROP TYPE IF EXISTS public."property_attached_upload_status_enum";
+CREATE TYPE public."property_attached_upload_status_enum" AS ENUM (
+	'pending',
+	'uploading',
+	'completed',
+	'failed',
+	'retrying');
+
+-- DROP TYPE public."property_images_upload_status_enum";
+
+DROP TYPE IF EXISTS public."property_images_upload_status_enum";
+CREATE TYPE public."property_images_upload_status_enum" AS ENUM (
+	'pending',
+	'uploading',
+	'completed',
+	'failed',
+	'retrying');
+
+DROP SEQUENCE IF EXISTS public.branches_id_seq;
+CREATE SEQUENCE public.branches_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.locations_id_seq;
+CREATE SEQUENCE public.locations_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.organizations_id_seq;
+CREATE SEQUENCE public.organizations_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.partners_id_seq;
+CREATE SEQUENCE public.partners_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.properties_id_seq;
+CREATE SEQUENCE public.properties_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.properties_id_seq1;
+CREATE SEQUENCE public.properties_id_seq1
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_attached_id_seq;
+CREATE SEQUENCE public.property_attached_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_attributes_id_seq;
+CREATE SEQUENCE public.property_attributes_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_images_id_seq;
+CREATE SEQUENCE public.property_images_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_images_seq;
+CREATE SEQUENCE public.property_images_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_operations_id_seq;
+CREATE SEQUENCE public.property_operations_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_tags_id_seq;
+CREATE SEQUENCE public.property_tags_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.property_videos_id_seq;
+CREATE SEQUENCE public.property_videos_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.tags_id_seq;
+CREATE SEQUENCE public.tags_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.users_branches_id_sequence;
+CREATE SEQUENCE public.users_branches_id_sequence
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 9223372036854775807
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.users_id_seq;
+CREATE SEQUENCE public.users_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.users_id_seq;
+CREATE SEQUENCE public.users_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;-- public.locations definition
+
+-- Drop table
+
+-- DROP TABLE public.locations;
+
+CREATE TABLE IF NOT EXISTS public.locations (
+	id serial4 NOT NULL,
+	"name" varchar NOT NULL,
+	iso_code varchar NULL,
+	sap_code int4 NULL,
+	full_location varchar NULL,
+	zip_code varchar NULL,
+	short_location varchar NULL,
+	parent_id int4 NULL,
+	"type" varchar NOT NULL,
+	migrated bool DEFAULT false NOT NULL,
+	status varchar NULL,
+	CONSTRAINT pk_locations PRIMARY KEY (id)
 );
 
 
-create type organizations_professional_type_enum as enum ('inmobiliario', 'inversor', 'otros');
+-- public.partners definition
 
-create table organizations
-(
-    id                serial
-        constraint pk_organizations
-            primary key,
-    company_logo      varchar,
-    company_name      varchar(255)            not null,
-    address           varchar,
-    phone             varchar,
-    alternative_phone varchar,
-    contact_time      varchar,
-    email             varchar                 not null,
-    location_id       varchar,
-    country_id        integer,
-    state_id          integer,
-    sub_location_id   integer,
-    full_location     varchar,
-    geo_lat           varchar,
-    geo_long          varchar,
-    professional_type organizations_professional_type_enum,
-    admin_user        integer,
-    social_reason     varchar,
-    fiscal_condition  varchar,
-    cuit              varchar,
-    created_at        timestamp default now() not null,
-    updated_at        timestamp default now() not null,
-    deleted           boolean   default false not null,
-    deleted_at        timestamp,
-    logo_status       varchar,
-    external_reference VARCHAR(255) NULL,
-    source_partner_id INTEGER NULL
+-- Drop table
+
+-- DROP TABLE public.partners;
+
+CREATE TABLE IF NOT EXISTS public.partners (
+	id serial4 NOT NULL,
+	"name" varchar(100) NOT NULL,
+	description text NULL,
+	app_key varchar(255) NOT NULL,
+	app_secret varchar(255) NOT NULL,
+	status int2 DEFAULT 0 NOT NULL,
+	deleted bool DEFAULT false NOT NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT pk_partners PRIMARY KEY (id)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uk_partners_app_key ON public.partners USING btree (app_key);
 
-create unique index idx_organizations_cuit_unique
-    on organizations (cuit)
-    where (deleted = false);
 
-create index idx_organizations_location_id
-    on organizations (location_id);
+-- public.properties definition
 
-create index idx_organizations_country_id
-    on organizations (country_id);
+-- Drop table
 
-create index idx_organizations_state_id
-    on organizations (state_id);
+-- DROP TABLE public.properties;
 
-create index idx_organizations_sub_location_id
-    on organizations (sub_location_id);
-
-CREATE UNIQUE INDEX IF NOT EXISTS uk_organizations_partner_external_ref
-ON organizations (source_partner_id, external_reference)
-WHERE source_partner_id IS NOT NULL AND external_reference IS NOT NULL;
-
--- 5. Índice para búsqueda rápida por partner
-CREATE INDEX IF NOT EXISTS idx_organizations_source_partner
-ON organizations (source_partner_id)
-WHERE source_partner_id IS NOT NULL;
-
-create table branches
-(
-    id                serial
-        constraint pk_branches
-            primary key,
-    branch_logo       varchar,
-    branch_name       varchar(255),
-    address           varchar,
-    phone             varchar,
-    alternative_phone varchar,
-    contact_time      varchar,
-    email             varchar                 not null,
-    location_id       varchar,
-    country_id        integer,
-    state_id          integer,
-    sub_location_id   integer,
-    full_location     varchar,
-    geo_lat           numeric(10, 8),
-    geo_long          numeric(11, 8),
-    organization_id   integer
-        constraint "FK_9ecf73d5ca57108dc33c87f7d88"
-            references organizations
-            on delete cascade,
-    created_at        timestamp default now() not null,
-    updated_at        timestamp default now() not null,
-    deleted           boolean   default false not null,
-    deleted_at        timestamp,
-    logo_stats        varchar
+CREATE TABLE IF NOT EXISTS public.properties (
+	id serial4 NOT NULL,
+	reference_code varchar(100) NOT NULL,
+	publication_title varchar(500) NOT NULL,
+	publication_title_en varchar(500) NULL,
+	description text NULL,
+	internal_comments text NULL,
+	street varchar(255) NULL,
+	"number" varchar(50) NULL,
+	floor varchar(20) NULL,
+	apartment varchar(20) NULL,
+	location_id int4 NULL,
+	geo_lat numeric(10, 8) NULL,
+	geo_long numeric(11, 8) NULL,
+	property_type int4 NOT NULL,
+	status int4 DEFAULT 2 NOT NULL,
+	suite_amount int4 NULL,
+	room_amount int4 NULL,
+	bathroom_amount int4 NULL,
+	toilet_amount int4 NULL,
+	parking_lot_amount int4 NULL,
+	surface numeric(10, 2) NULL,
+	roofed_surface numeric(10, 2) NULL,
+	unroofed_surface numeric(10, 2) NULL,
+	semiroofed_surface numeric(10, 2) NULL,
+	total_surface numeric(10, 2) NULL,
+	surface_measurement varchar(10) DEFAULT 'M2'::character varying NULL,
+	age int4 NULL,
+	property_condition varchar(100) NULL,
+	situation varchar(100) NULL,
+	dispositions varchar(100) NULL,
+	orientation varchar(50) NULL,
+	floors_amount int4 NULL,
+	zonification varchar(100) NULL,
+	expenses int4 NULL,
+	commission varchar(50) NULL,
+	network_share varchar(50) NULL,
+	price numeric(15, 2) NOT NULL,
+	currency varchar(3) DEFAULT 'USD'::character varying NOT NULL,
+	producer_user varchar(255) NULL,
+	branch_id int4 NULL,
+	key_contact varchar(255) NULL,
+	key_agent_user varchar(255) NULL,
+	key_location varchar(100) NULL,
+	key_reference_code varchar(255) NULL,
+	maintenance_user varchar(255) NULL,
+	development varchar(255) NULL,
+	network_information text NULL,
+	transaction_requirements text NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	deleted bool DEFAULT false NOT NULL,
+	deleted_at timestamp NULL,
+	owner_name varchar(255) NULL,
+	owner_phone varchar(50) NULL,
+	owner_email varchar(100) NULL,
+	postal_code varchar(20) NULL,
+	construction_year varchar(10) NULL,
+	last_renovation varchar(20) NULL,
+	organization_id int4 NULL,
+	user_id int4 NULL,
+	price_square_meter numeric(15, 2) NULL,
+	antiquity int4 NULL,
+	operation_type int4 NOT NULL,
+	"period" int4 NULL,
+	show_exact_location bool DEFAULT false NULL,
+	country_id int4 NULL,
+	state_id int4 NULL,
+	sub_location_id int4 NULL,
+	roofed_surface_measurement varchar(10) DEFAULT 'M2'::character varying NULL,
+	brightness int4 NULL,
+	garage_coverage int4 NULL,
+	surface_front int4 NULL,
+	surface_length int4 NULL,
+	credit_eligible bool DEFAULT false NULL,
+	currency_expenses varchar(3) NULL,
+	selected_plan int4 DEFAULT 1 NULL,
+	apartments_per_floor int4 NULL,
+	warehouse_units int4 NULL,
+	number_of_guests int4 NULL,
+	business_type varchar(255) NULL,
+	fot int4 NULL,
+	CONSTRAINT pk_properties PRIMARY KEY (id),
+	CONSTRAINT uk_properties_reference_code UNIQUE (reference_code)
 );
+CREATE INDEX IF NOT EXISTS idx_properties_country_id ON public.properties USING btree (country_id);
+CREATE INDEX IF NOT EXISTS idx_properties_location_id ON public.properties USING btree (location_id);
+CREATE INDEX IF NOT EXISTS idx_properties_property_type ON public.properties USING btree (property_type);
+CREATE INDEX IF NOT EXISTS idx_properties_reference_code ON public.properties USING btree (reference_code);
+CREATE INDEX IF NOT EXISTS idx_properties_state_id ON public.properties USING btree (state_id);
+CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties USING btree (status);
+CREATE INDEX IF NOT EXISTS idx_properties_sub_location_id ON public.properties USING btree (sub_location_id);
 
-create index idx_branches_organization
-    on branches (organization_id);
 
-create index idx_branches_location_id
-    on branches (location_id);
+-- public.tags definition
 
-create index idx_branches_country_id
-    on branches (country_id);
+-- Drop table
 
-create index idx_branches_state_id
-    on branches (state_id);
+-- DROP TABLE public.tags;
 
-create index idx_branches_sub_location_id
-    on branches (sub_location_id);
-
-create table users
-(
-    id              serial
-        constraint pk_users
-            primary key,
-    name            varchar(255)            not null,
-    email           varchar(255)            not null,
-    password        varchar(255)            not null,
-    role_id         integer,
-    organization_id integer
-        constraint "FK_21a659804ed7bf61eb91688dea7"
-            references organizations
-            on delete cascade,
-    phone           varchar(50),
-    bio             text,
-    avatar          varchar(255),
-    is_verified     boolean   default false not null,
-    created_at      timestamp default now() not null,
-    updated_at      timestamp default now() not null,
-    deleted         boolean   default false not null,
-    deleted_at      timestamp,
-    google_id       varchar(255)
-        constraint "UQ_0bd5012aeb82628e07f6a1be53b"
-            unique,
-    avatar_status   integer,
-    email_verification_token     varchar(255),
-    password_reset_token         varchar(255),
-    password_reset_token_expires timestamp
-);
-
-alter table organizations
-    add constraint "FK_84687878ce7a62025e1774b31ad"
-        foreign key (admin_user) references users
-            on delete set null;
-
-create unique index uk_users_email
-    on users (email)
-    where (email IS NOT NULL);
-
-create table users_branches
-(
-    user_id   integer                                                 not null
-        constraint "FK_a2298d713539687b12f2c169ba4"
-            references users
-            on update cascade on delete cascade,
-    branch_id integer                                                 not null
-        constraint "FK_6e191d2fe767c69e4d76e46a30e"
-            references branches,
-    id        integer default nextval('users_branches_seq'::regclass) not null
-        constraint users_branches_pk
-            primary key,
-    constraint "PK_9da378646b233e4b5001d24cba7"
-        primary key ()
+CREATE TABLE IF NOT EXISTS public.tags (
+	id serial4 NOT NULL,
+	"name" varchar(255) NOT NULL,
+	"type" int4 NOT NULL,
+	description text NULL,
+	is_active bool DEFAULT true NOT NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT pk_tags PRIMARY KEY (id)
 );
 
 
-create index "IDX_a2298d713539687b12f2c169ba"
-    on users_branches (user_id);
+-- public.property_attached definition
 
-create index "IDX_6e191d2fe767c69e4d76e46a30"
-    on users_branches (branch_id);
+-- Drop table
 
+-- DROP TABLE public.property_attached;
 
-create table tags
-(
-    id          serial
-        constraint pk_tags
-            primary key,
-    name        varchar(255)            not null
-        constraint uk_tags_name
-            unique,
-    slug        varchar(255),
-    type        integer                 not null,
-    description text,
-    is_active   boolean   default true,
-    created_at  timestamp default now() not null,
-    updated_at  timestamp default now() not null
+CREATE TABLE IF NOT EXISTS public.property_attached (
+	id serial4 NOT NULL,
+	file_url varchar(255) NOT NULL,
+	"order" int4 NULL,
+	"propertyId" int4 NULL,
+	upload_status public."property_attached_upload_status_enum" DEFAULT 'pending'::property_attached_upload_status_enum NULL,
+	retry_count int2 DEFAULT '0'::smallint NOT NULL,
+	error_message varchar(1000) NULL,
+	upload_completed_at timestamp NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	description varchar(500) NULL,
+	CONSTRAINT "PK_9f6b5212a8601e5db7ebb546738" PRIMARY KEY (id),
+	CONSTRAINT "FK_927ac6d4cb3935c6587ebe1ac68" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_property_attached_property_id ON public.property_attached USING btree ("propertyId");
 
-create index idx_tags_type
-    on tags (type);
 
-create index idx_tags_is_active
-    on tags (is_active);
+-- public.property_attributes definition
 
-create index idx_tags_slug
-    on tags (slug);
+-- Drop table
 
-create table properties
-(
-    id                       serial
-        constraint pk_properties
-            primary key,
-    reference_code           varchar(100)            not null
-        constraint uk_properties_reference_code
-            unique,
-    publication_title        varchar(500)            not null,
-    publication_title_en     varchar(500),
-    description              text,
-    internal_comments        text,
-    street                   varchar(255),
-    number                   varchar(50),
-    floor                    varchar(20),
-    apartment                varchar(20),
-    location_id              integer,
-    country_id               integer,
-    state_id                 integer,
-    sub_location_id          integer,
-    geo_lat                  numeric(10, 8),
-    geo_long                 numeric(11, 8),
-    show_exact_location      boolean default false,
-    property_type            integer                 not null,
-    property_subtype         integer,
-    status                   integer                 not null,
-    suite_amount             integer,
-    room_amount              integer,
-    bathroom_amount          integer,
-    toilet_amount            integer,
-    parking_lot_amount       integer,
-    surface                  numeric(10, 2),
-    roofed_surface           numeric(10, 2),
-    unroofed_surface         numeric(10, 2),
-    semiroofed_surface       numeric(10, 2),
-    total_surface            numeric(10, 2),
-    surface_measurement      varchar(10),
-    roofed_surface_measurement varchar(10),
-    age                      integer,
-    property_condition       varchar(100),
-    situation                varchar(100),
-    dispositions             varchar(100),
-    orientation              varchar(50),
-    brightness               integer,
-    garage_coverage          integer,
-    surface_front            integer,
-    surface_length           integer,
-    credit_eligible          boolean default false,
-    floors_amount            integer,
-    apartments_per_floor     integer,
-    warehouse_units          integer,
-    number_of_guests         integer,
-    business_type         varchar(255),
-    fot                      integer,
-    zonification             varchar(100),
-    expenses                 integer,
-    currency_expenses  varchar(3) ,
-    commission               varchar(50),
-    network_share            varchar(50),
-    operation_type           varchar(50)             not null,
-    price                    numeric(15, 2)          not null,
-    price_square_meter      numeric(15, 2),
-    currency                 varchar(3)              not null,
-    period                   varchar(50),
-    selected_plan            integer,
-    producer_user            varchar(255),
-    branch_id                integer,
-    key_contact              varchar(255),
-    key_agent_user           varchar(255),
-    key_location             varchar(100),
-    key_reference_code       varchar(255),
-    maintenance_user         varchar(255),
-    development              varchar(255),
-    network_information      text,
-    transaction_requirements text,
-    created_at               timestamp default now() not null,
-    updated_at               timestamp default now() not null,
-    deleted                  boolean   default false not null,
-    deleted_at               timestamp,
-    owner_name               varchar(255),
-    owner_phone              varchar(50),
-    owner_email              varchar(100),
-    postal_code              varchar(20),
-    construction_year        varchar(10),
-    last_renovation          varchar(20),
-    organization_id          integer,
-    user_id                  integer
+-- DROP TABLE public.property_attributes;
+
+CREATE TABLE IF NOT EXISTS public.property_attributes (
+	code varchar(100) NOT NULL,
+	value varchar(255) NOT NULL,
+	"propertyId" int4 NOT NULL,
+	id serial4 NOT NULL,
+	CONSTRAINT "PK_11a59ed2f7f6d6aa01475860dda" PRIMARY KEY (id),
+	CONSTRAINT "FK_043c5d830803966b4eea0ee21cf" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_property_attributes_property_id ON public.property_attributes USING btree ("propertyId");
 
 
-create index idx_properties_status
-    on properties (status);
+-- public.property_images definition
 
-create index idx_properties_property_type
-    on properties (property_type);
+-- Drop table
 
-create index idx_properties_location_id
-    on properties (location_id);
+-- DROP TABLE public.property_images;
 
-create index idx_properties_country_id
-    on properties (country_id);
-
-create index idx_properties_state_id
-    on properties (state_id);
-
-create index idx_properties_sub_location_id
-    on properties (sub_location_id);
-
-create index idx_properties_reference_code
-    on properties (reference_code);
-
-create index idx_properties_branch
-    on properties (branch_id);
-
-create table property_operations
-(
-    id             integer default nextval('property_operations_id_seq'::regclass) not null
-        constraint pk_property_operations
-            primary key,
-    property_id    integer                                                         not null
-        constraint fk_property_operations_property_id
-            references properties
-            on delete cascade,
-    operation_type varchar(50)                                                     not null,
-    currency       varchar(3)                                                      not null,
-    price          numeric(15, 2)                                                  not null,
-    period         varchar(50),
-    constraint "PK_10ff0aed71fe685ff33bc910ccf"
-        primary key (),
-    constraint "PK_10ff0aed71fe685ff33bc910ccf"
-        primary key (),
-    constraint "FK_35ede2af03b824b35423f66445b"
-        foreign key () references properties
-            on delete cascade,
-    constraint "FK_35ede2af03b824b35423f66445b"
-        foreign key () references properties
-            on delete cascade,
-    constraint "FK_35ede2af03b824b35423f66445b"
-        foreign key () references properties
-            on delete cascade
+CREATE TABLE IF NOT EXISTS public.property_images (
+	url varchar(500) NULL,
+	is_blueprint bool DEFAULT false NOT NULL,
+	description text NULL,
+	order_position int4 NULL,
+	"propertyId" int4 NOT NULL,
+	id serial4 NOT NULL,
+	upload_status public."property_images_upload_status_enum" DEFAULT 'pending'::property_images_upload_status_enum NULL,
+	retry_count int2 DEFAULT '0'::smallint NOT NULL,
+	error_message varchar(1000) NULL,
+	upload_completed_at timestamp NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "PK_317c3774ee70c26d70c4f80e200" PRIMARY KEY (id),
+	CONSTRAINT "FK_7a07b6b7f9418bf1d5160106694" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_property_images_property_id ON public.property_images USING btree ("propertyId");
 
-create index idx_property_operations_property_id
-    on property_operations (property_id);
 
-create table property_images
-(
-    url            varchar(500)           not null,
-    is_blueprint   boolean  default false not null,
-    description    text,
-    order_position integer,
-    "propertyId"   integer                not null
-        constraint "FK_7a07b6b7f9418bf1d5160106694"
-            references properties
-            on delete cascade,
-    status         varchar(1000),
-    id             serial
-        constraint "PK_317c3774ee70c26d70c4f80e200"
-            primary key,
-    try            smallint default 0
+-- public.property_operations definition
+
+-- Drop table
+
+-- DROP TABLE public.property_operations;
+
+CREATE TABLE IF NOT EXISTS public.property_operations (
+	operation_type varchar(50) NOT NULL,
+	currency varchar(3) NOT NULL,
+	price numeric(15, 2) NOT NULL,
+	"period" varchar(50) NULL,
+	"propertyId" int4 NOT NULL,
+	id serial4 NOT NULL,
+	CONSTRAINT "PK_10ff0aed71fe685ff33bc910ccf" PRIMARY KEY (id),
+	CONSTRAINT "FK_35ede2af03b824b35423f66445b" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_property_operations_property_id ON public.property_operations USING btree ("propertyId");
 
-create index idx_property_images_property_id
-    on property_images ("propertyId");
 
-create table property_videos
-(
-    id          serial
-        constraint pk_property_videos
-            primary key,
-    property_id integer      not null
-        constraint fk_property_videos_property_id
-            references properties
-            on delete cascade,
-    url         varchar(255) not null,
-    is_360      boolean default false,
-    "order"     integer
+-- public.property_tags definition
+
+-- Drop table
+
+-- DROP TABLE public.property_tags;
+
+CREATE TABLE IF NOT EXISTS public.property_tags (
+	tag_id int4 NOT NULL,
+	"propertyId" int4 NOT NULL,
+	id serial4 NOT NULL,
+	CONSTRAINT "PK_a8c6b2044c6aaafd04d58de5c9f" PRIMARY KEY (id),
+	CONSTRAINT "FK_dd00b8c11d8f56d9ac0a6f2d276" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE,
+	CONSTRAINT "FK_de9999220090d8e40bcf19c6e7d" FOREIGN KEY (tag_id) REFERENCES public.tags(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_property_tags_property_id ON public.property_tags USING btree ("propertyId");
+CREATE INDEX IF NOT EXISTS idx_property_tags_tag_id ON public.property_tags USING btree (tag_id);
 
-create index idx_property_videos_property_id
-    on property_videos (property_id);
 
-create table property_attached
-(
-    id          serial
-        constraint pk_property_attached
-            primary key,
-    property_id integer      not null
-        constraint fk_property_attached_property_id
-            references properties
-            on delete cascade,
-    file_url    varchar(255) not null,
-    "order"     integer
+-- public.property_videos definition
+
+-- Drop table
+
+-- DROP TABLE public.property_videos;
+
+CREATE TABLE IF NOT EXISTS public.property_videos (
+	id serial4 NOT NULL,
+	url varchar(255) NOT NULL,
+	is_360 bool DEFAULT false NOT NULL,
+	"order" int4 NULL,
+	"propertyId" int4 NULL,
+	CONSTRAINT pk_property_videos PRIMARY KEY (id),
+	CONSTRAINT "FK_3706b74ed9ba1bf38ded5bcedb7" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_property_videos_property_id ON public.property_videos USING btree ("propertyId");
 
-create index idx_property_attached_property_id
-    on property_attached (property_id);
 
-create table property_tags
-(
-    id          integer default nextval('property_tags_id_seq'::regclass) not null
-        constraint pk_property_tags
-            primary key,
-    property_id integer                                                   not null
-        constraint fk_property_tags_property_id
-            references properties
-            on delete cascade,
-    tag_id      integer                                                   not null,
-    constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
-        primary key (),
-    constraint "PK_a8c6b2044c6aaafd04d58de5c9f"
-        primary key (),
-    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
-        foreign key () references properties
-            on delete cascade,
-    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
-        foreign key () references properties
-            on delete cascade,
-    constraint "FK_dd00b8c11d8f56d9ac0a6f2d276"
-        foreign key () references properties
-            on delete cascade
+-- public.branches definition
+
+-- Drop table
+
+-- DROP TABLE public.branches;
+
+CREATE TABLE IF NOT EXISTS public.branches (
+	id serial4 NOT NULL,
+	branch_logo varchar NULL,
+	branch_name varchar(255) NULL,
+	address varchar NULL,
+	phone varchar NULL,
+	alternative_phone varchar NULL,
+	contact_time varchar NULL,
+	email varchar NOT NULL,
+	location_id varchar NULL,
+	full_location varchar NULL,
+	geo_lat numeric(10, 8) NULL,
+	geo_long numeric(11, 8) NULL,
+	organization_id int4 NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	deleted bool DEFAULT false NOT NULL,
+	deleted_at timestamp NULL,
+	country_id int4 NULL,
+	state_id int4 NULL,
+	sub_location_id int4 NULL,
+	CONSTRAINT pk_branches PRIMARY KEY (id)
 );
+CREATE INDEX IF NOT EXISTS idx_branches_country_id ON public.branches USING btree (country_id);
+CREATE INDEX IF NOT EXISTS idx_branches_location_id ON public.branches USING btree (location_id);
+CREATE INDEX IF NOT EXISTS idx_branches_organization ON public.branches USING btree (organization_id);
+CREATE INDEX IF NOT EXISTS idx_branches_state_id ON public.branches USING btree (state_id);
+CREATE INDEX IF NOT EXISTS idx_branches_sub_location_id ON public.branches USING btree (sub_location_id);
 
-create index idx_property_tags_property_id
-    on property_tags (property_id);
 
-create index idx_property_tags_tag_id
-    on property_tags (tag_id);
+-- public.organizations definition
 
-create table property_attributes
-(
-    id          integer default nextval('property_attributes_id_seq'::regclass) not null
-        constraint pk_property_attributes
-            primary key,
-    property_id integer                                                         not null
-        constraint fk_property_attributes_property_id
-            references properties
-            on delete cascade,
-    code        varchar(100)                                                    not null,
-    value       varchar(255)                                                    not null,
-    constraint "PK_11a59ed2f7f6d6aa01475860dda"
-        primary key (),
-    constraint "PK_11a59ed2f7f6d6aa01475860dda"
-        primary key (),
-    constraint "FK_043c5d830803966b4eea0ee21cf"
-        foreign key () references properties
-            on delete cascade,
-    constraint "FK_043c5d830803966b4eea0ee21cf"
-        foreign key () references properties
-            on delete cascade,
-    constraint "FK_043c5d830803966b4eea0ee21cf"
-        foreign key () references properties
-            on delete cascade
+-- Drop table
+
+-- DROP TABLE public.organizations;
+
+CREATE TABLE IF NOT EXISTS public.organizations (
+	id serial4 NOT NULL,
+	company_logo varchar NULL,
+	company_name varchar(255) NOT NULL,
+	address varchar NULL,
+	phone varchar NULL,
+	alternative_phone varchar NULL,
+	contact_time varchar NULL,
+	email varchar NOT NULL,
+	location_id varchar NULL,
+	full_location varchar NULL,
+	geo_lat varchar NULL,
+	geo_long varchar NULL,
+	admin_user int4 NULL,
+	social_reason varchar NULL,
+	fiscal_condition varchar NULL,
+	cuit varchar NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	deleted bool DEFAULT false NOT NULL,
+	deleted_at timestamp NULL,
+	logo_status varchar(1000) NULL,
+	source_partner_id int4 NULL,
+	external_reference varchar(255) NULL,
+	country_id int4 NULL,
+	state_id int4 NULL,
+	sub_location_id int4 NULL,
+	professional_type public."organizations_professional_type_enum" NULL,
+	CONSTRAINT pk_organizations PRIMARY KEY (id)
 );
+CREATE INDEX IF NOT EXISTS idx_organizations_country_id ON public.organizations USING btree (country_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_cuit_unique ON public.organizations USING btree (cuit) WHERE (deleted = false);
+CREATE INDEX IF NOT EXISTS idx_organizations_location_id ON public.organizations USING btree (location_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_state_id ON public.organizations USING btree (state_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_sub_location_id ON public.organizations USING btree (sub_location_id);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_organizations_partner_external_ref ON public.organizations USING btree (source_partner_id, external_reference) WHERE ((source_partner_id IS NOT NULL) AND (external_reference IS NOT NULL));
 
-create index idx_property_attributes_property_id
-    on property_attributes (property_id);
 
-create table partners
-(
-    id          serial
-        constraint pk_partners
-            primary key,
-    name        varchar(100)            not null,
-    description text,
-    app_key     varchar(255)            not null
-        constraint uk_partners_app_key
-            unique,
-    app_secret  varchar(255)            not null,
-    status      smallint  default 0,
-    deleted     boolean   default false,
-    created_at  timestamp default now() not null,
-    updated_at  timestamp default now() not null
+-- public.users definition
+
+-- Drop table
+
+-- DROP TABLE public.users;
+
+CREATE TABLE IF NOT EXISTS public.users (
+	id serial4 NOT NULL,
+	"name" varchar(255) NOT NULL,
+	email varchar(255) NOT NULL,
+	"password" varchar(255) NOT NULL,
+	role_id int4 DEFAULT 2 NOT NULL,
+	organization_id int4 NULL,
+	phone varchar(50) NULL,
+	bio text NULL,
+	avatar varchar(255) NULL,
+	is_verified bool DEFAULT false NOT NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	deleted bool DEFAULT false NOT NULL,
+	deleted_at timestamp NULL,
+	google_id varchar(255) NULL,
+	avatar_status varchar(1000) NULL,
+	email_verification_token varchar(255) NULL,
+	password_reset_token varchar(255) NULL,
+	password_reset_token_expires timestamp NULL,
+	CONSTRAINT "UQ_0bd5012aeb82628e07f6a1be53b" UNIQUE (google_id),
+	CONSTRAINT pk_users PRIMARY KEY (id)
 );
+CREATE UNIQUE INDEX IF NOT EXISTS uk_users_email ON public.users USING btree (email) WHERE (email IS NOT NULL);
 
-create index idx_partners_app_key
-    on partners (app_key);
 
-create index idx_partners_status
-    on partners (status);
+-- public.users_branches definition
 
-create index idx_partners_deleted
-    on partners (deleted);
+-- Drop table
 
-create index idx_partners_created_at
-    on partners (created_at);
+-- DROP TABLE public.users_branches;
 
+CREATE TABLE IF NOT EXISTS public.users_branches (
+	user_id int4 NOT NULL,
+	branch_id int4 NOT NULL,
+	CONSTRAINT "PK_9da378646b233e4b5001d24cba7" PRIMARY KEY (user_id, branch_id)
+);
+CREATE INDEX IF NOT EXISTS "IDX_6e191d2fe767c69e4d76e46a30" ON public.users_branches USING btree (branch_id);
+CREATE INDEX IF NOT EXISTS "IDX_a2298d713539687b12f2c169ba" ON public.users_branches USING btree (user_id);
+
+
+-- public.users_permissions definition
+
+-- Drop table
+
+-- DROP TABLE public.users_permissions;
+
+CREATE TABLE IF NOT EXISTS public.users_permissions (
+	user_id int4 NOT NULL,
+	permission_id int4 NOT NULL,
+	CONSTRAINT pk_users_permissions PRIMARY KEY (user_id, permission_id)
+);
+CREATE INDEX IF NOT EXISTS "IDX_4de7d0b175f702be3be5527002" ON public.users_permissions USING btree (user_id);
+CREATE INDEX IF NOT EXISTS "IDX_b09b9a210c60f41ec7b453758e" ON public.users_permissions USING btree (permission_id);
+
+
+-- public.branches foreign keys
+
+ALTER TABLE public.branches DROP CONSTRAINT IF EXISTS "FK_9ecf73d5ca57108dc33c87f7d88";
+ALTER TABLE public.branches ADD CONSTRAINT "FK_9ecf73d5ca57108dc33c87f7d88" FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+-- public.organizations foreign keys
+
+ALTER TABLE public.organizations DROP CONSTRAINT IF EXISTS "FK_235e394844873543e644aeaa008";
+ALTER TABLE public.organizations ADD CONSTRAINT "FK_235e394844873543e644aeaa008" FOREIGN KEY (source_partner_id) REFERENCES public.partners(id) ON DELETE SET NULL;
+ALTER TABLE public.organizations DROP CONSTRAINT IF EXISTS "FK_84687878ce7a62025e1774b31ad";
+ALTER TABLE public.organizations ADD CONSTRAINT "FK_84687878ce7a62025e1774b31ad" FOREIGN KEY (admin_user) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+-- public.users foreign keys
+
+ALTER TABLE public.users DROP CONSTRAINT IF EXISTS "FK_21a659804ed7bf61eb91688dea7";
+ALTER TABLE public.users ADD CONSTRAINT "FK_21a659804ed7bf61eb91688dea7" FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+-- public.users_branches foreign keys
+
+ALTER TABLE public.users_branches DROP CONSTRAINT IF EXISTS "FK_6e191d2fe767c69e4d76e46a30e";
+ALTER TABLE public.users_branches ADD CONSTRAINT "FK_6e191d2fe767c69e4d76e46a30e" FOREIGN KEY (branch_id) REFERENCES public.branches(id);
+ALTER TABLE public.users_branches DROP CONSTRAINT IF EXISTS "FK_a2298d713539687b12f2c169ba4";
+ALTER TABLE public.users_branches ADD CONSTRAINT "FK_a2298d713539687b12f2c169ba4" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- public.users_permissions foreign keys
+
+ALTER TABLE public.users_permissions DROP CONSTRAINT IF EXISTS "FK_4de7d0b175f702be3be55270023";
+ALTER TABLE public.users_permissions ADD CONSTRAINT "FK_4de7d0b175f702be3be55270023" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
