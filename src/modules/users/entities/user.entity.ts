@@ -5,16 +5,14 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
-  OneToOne,
   JoinColumn,
   ManyToOne,
   ManyToMany,
   JoinTable,
 } from 'typeorm';
-import { Role } from '../../roles/entities/role.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
-import { Permission } from '../../permissions/entities/permission.entity';
 import { Branch } from '../../branches/entities/branch.entity';
+import { UserRole } from '../../../common/enums';
 
 @Entity('users')
 @Index('uk_users_email', ['email'], { unique: true, where: 'email IS NOT NULL' })
@@ -71,13 +69,12 @@ export class User {
   deleted_at?: Date;
 
   // Relaciones
-  @ManyToOne(() => Role, (role) => role.users, { 
-    onDelete: 'RESTRICT',
-    nullable: true,
-    eager: false 
+  @Column({
+    type: 'integer',
+    nullable: false,
+    default: UserRole.USER_ROL_SELLER,
   })
-  @JoinColumn({ name: 'role_id' })
-  role?: Role;
+  role_id!: UserRole;
 
   @ManyToOne(() => Organization, (org) => org.users, { 
     onDelete: 'CASCADE', 
@@ -86,22 +83,6 @@ export class User {
   })
   @JoinColumn({ name: 'organization_id' })
   organization?: Organization;
-
-  @ManyToMany(() => Permission, (permission) => permission.users, {
-    eager: false
-  })
-  @JoinTable({
-    name: 'users_permissions',
-    joinColumn: { 
-      name: 'user_id', 
-      referencedColumnName: 'id' 
-    },
-    inverseJoinColumn: { 
-      name: 'permission_id', 
-      referencedColumnName: 'id' 
-    }
-  })
-  permissions?: Permission[];
 
   @ManyToMany(() => Branch, (branch) => branch.users, {
     eager: false

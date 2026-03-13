@@ -208,3 +208,13 @@ export enum PublicationPlan {
   PUBLICATION_FREE = 1,     // Plan gratuito
   PUBLICATION_PREMIUM = 2,  // Plan premium
 }
+
+/**
+ * Roles de usuario.
+ */
+export enum UserRole {
+  USER_ROL_ADMIN = 1,
+  USER_ROL_SELLER = 2,
+  USER_ROL_COLLABORATOR = 3,
+  USER_ROL_SUPER_ADMIN = 4,
+}

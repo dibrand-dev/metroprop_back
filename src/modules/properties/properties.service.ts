@@ -19,6 +19,7 @@ import axios from 'axios';
 import { sanitizeFilename, getFileExtension, createUniqueFilename } from '../../common/helpers/file-helpers';
 
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
+import { SearchPropertiesDto } from './dto/search-properties.dto';
 import {
   PropertyStatus,
   MediaUploadStatus,
@@ -42,6 +43,159 @@ export class PropertiesService {
     private readonly dataSource: DataSource,
     private readonly propertyWriteService: PropertyWriteService,
   ) {}
+
+  private buildAdvancedSearchQuery(
+    filters: SearchPropertiesDto,
+    options?: {
+      organizationId?: number;
+      includeStatusFilter?: boolean;
+    },
+  ) {
+    const qb = this.propertyRepository
+      .createQueryBuilder('p')
+      .where('p.deleted = :deleted', { deleted: false });
+
+    const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
+
+    if (scopedOrganizationId != null) {
+      qb.andWhere('p.organization_id = :organization_id', {
+        organization_id: scopedOrganizationId,
+      });
+    }
+
+    if (filters.branch_id != null) {
+      qb.andWhere('p.branch_id = :branch_id', {
+        branch_id: filters.branch_id,
+      });
+    }
+
+    if (filters.user_id != null) {
+      qb.andWhere('p.user_id = :user_id', {
+        user_id: filters.user_id,
+      });
+    }
+
+    if (options?.includeStatusFilter !== false && filters.status != null) {
+      qb.andWhere('p.status = :status', { status: filters.status });
+    }
+
+    if (filters.country_id != null) {
+      qb.andWhere('p.country_id = :country_id', {
+        country_id: filters.country_id,
+      });
+    }
+
+    if (filters.state_id != null) {
+      qb.andWhere('p.state_id = :state_id', { state_id: filters.state_id });
+    }
+
+    if (filters.location_id != null) {
+      qb.andWhere('p.location_id = :location_id', {
+        location_id: filters.location_id,
+      });
+    }
+
+    if (filters.sub_location_id != null) {
+      qb.andWhere('p.sub_location_id = :sub_location_id', {
+        sub_location_id: filters.sub_location_id,
+      });
+    }
+
+    if (filters.property_type?.length) {
+      qb.andWhere('p.property_type IN (:...property_type)', {
+        property_type: filters.property_type,
+      });
+    }
+
+    if (filters.operation_type?.length) {
+      qb.andWhere('p.operation_type IN (:...operation_type)', {
+        operation_type: filters.operation_type,
+      });
+    }
+
+    if (filters.currency) {
+      qb.andWhere('p.currency = :currency', { currency: filters.currency });
+    }
+
+    if (filters.price_min != null) {
+      qb.andWhere('p.price >= :price_min', { price_min: filters.price_min });
+    }
+
+    if (filters.price_max != null) {
+      qb.andWhere('p.price <= :price_max', { price_max: filters.price_max });
+    }
+
+    if (filters.roofed_surface_min != null) {
+      qb.andWhere('p.roofed_surface >= :roofed_surface_min', {
+        roofed_surface_min: filters.roofed_surface_min,
+      });
+    }
+
+    if (filters.roofed_surface_max != null) {
+      qb.andWhere('p.roofed_surface <= :roofed_surface_max', {
+        roofed_surface_max: filters.roofed_surface_max,
+      });
+    }
+
+    if (filters.total_surface_min != null) {
+      qb.andWhere('p.total_surface >= :total_surface_min', {
+        total_surface_min: filters.total_surface_min,
+      });
+    }
+
+    if (filters.total_surface_max != null) {
+      qb.andWhere('p.total_surface <= :total_surface_max', {
+        total_surface_max: filters.total_surface_max,
+      });
+    }
+
+    if (filters.bathroom_amount?.length) {
+      qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
+        bathroom_amount: filters.bathroom_amount,
+      });
+    }
+
+    if (filters.room_amount?.length) {
+      qb.andWhere('p.room_amount IN (:...room_amount)', {
+        room_amount: filters.room_amount,
+      });
+    }
+
+    if (filters.suite_amount?.length) {
+      qb.andWhere('p.suite_amount IN (:...suite_amount)', {
+        suite_amount: filters.suite_amount,
+      });
+    }
+
+    if (filters.parking_lot_amount?.length) {
+      qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
+        parking_lot_amount: filters.parking_lot_amount,
+      });
+    }
+
+    if (filters.age_min != null) {
+      qb.andWhere('p.antiquity >= :age_min', { age_min: filters.age_min });
+    }
+
+    if (filters.age_max != null) {
+      qb.andWhere('p.antiquity <= :age_max', { age_max: filters.age_max });
+    }
+
+    if (filters.disposition?.length) {
+      qb.andWhere('p.dispositions IN (:...disposition)', {
+        disposition: filters.disposition,
+      });
+    }
+
+    if (filters.q) {
+      qb.andWhere(
+        '(p.publication_title ILIKE :q OR p.street ILIKE :q OR p.reference_code ILIKE :q)',
+        { q: `%${filters.q}%` },
+      );
+    }
+
+    return qb;
+  }
 
   /**
    * Crea una propiedad en estado borrador.
@@ -654,6 +808,46 @@ export class PropertiesService {
         'Retry failed for attached file'
       );
     }
+  }
+
+  /**
+   * Búsqueda avanzada de propiedades con múltiples filtros.
+   * Usa QueryBuilder con parámetros parametrizados para máxima performance.
+   */
+  async searchProperties(
+    filters: SearchPropertiesDto,
+  ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
+    const limit = filters.limit ?? 20;
+    const page = filters.page ?? 1;
+    const offset = (page - 1) * limit;
+
+    const qb = this.buildAdvancedSearchQuery(filters);
+
+    qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return { data, total, page, limit };
+  }
+
+  async searchPanelProperties(
+    filters: SearchPropertiesDto,
+    organizationId: number,
+  ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
+    const limit = filters.limit ?? 20;
+    const page = filters.page ?? 1;
+    const offset = (page - 1) * limit;
+
+    const qb = this.buildAdvancedSearchQuery(filters, {
+      organizationId,
+      includeStatusFilter: true,
+    });
+
+    qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return { data, total, page, limit };
   }
 
   /**

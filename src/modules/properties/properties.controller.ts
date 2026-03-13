@@ -10,15 +10,13 @@ import {
   HttpCode,
   HttpStatus,
   ParseIntPipe,
-  ParseFilePipe,
-  MaxFileSizeValidator,
-  FileTypeValidator,
   BadRequestException,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
+import { SearchPropertiesDto } from './dto/search-properties.dto';
 
 import { UploadedFiles, UseInterceptors } from '@nestjs/common';
 
@@ -198,6 +196,33 @@ export class PropertiesController {
       return { error: 'Parámetro de búsqueda requerido' };
     }
     return this.propertiesService.search(query);
+  }
+
+  /**
+   * GET /properties/filter
+   * Búsqueda avanzada con múltiples filtros
+   *
+   * Ejemplos:
+   *   /properties/filter?page=1&limit=20&operation_type=1,2&bathroom_amount=1,2,3&price_min=50000
+   */
+  @Get('filter')
+  filter(@Query() searchDto: SearchPropertiesDto) {
+    return this.propertiesService.searchProperties(searchDto);
+  }
+
+  /**
+   * GET /properties/mis-propiedades
+   * Listado privado por organization_id
+   */
+  @Get('mis-propiedades')
+  myProperties(@Query() searchDto: SearchPropertiesDto) {
+    if (!searchDto.organization_id) {
+      throw new BadRequestException(
+        'organization_id es obligatorio en mis-propiedades',
+      );
+    }
+
+    return this.propertiesService.searchPanelProperties(searchDto, searchDto.organization_id);
   }
 
   /**

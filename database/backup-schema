@@ -15,50 +15,6 @@ create table locations
     status         varchar
 );
 
-create table roles
-(
-    id          serial
-        constraint pk_roles
-            primary key,
-    name        varchar(100)            not null
-        constraint uk_roles_name
-            unique,
-    description text,
-    created_at  timestamp default now() not null,
-    updated_at  timestamp default now() not null,
-    deleted     boolean   default false not null,
-    deleted_at  timestamp
-);
-
-
-create index idx_roles_deleted
-    on roles (deleted);
-
-create index idx_roles_created_at
-    on roles (created_at);
-
-create table permissions
-(
-    id          serial
-        constraint pk_permissions
-            primary key,
-    name        varchar(100)            not null
-        constraint uk_permissions_name
-            unique,
-    action      varchar(255)            not null,
-    resource    varchar(255)            not null,
-    description text,
-    created_at  timestamp default now() not null,
-    updated_at  timestamp default now() not null,
-    deleted     boolean   default false not null,
-    deleted_at  timestamp
-);
-
-create index idx_permissions_deleted
-    on permissions (deleted);
-
-create index idx_permissions_resource
-    on permissions (resource);
 
 create type organizations_professional_type_enum as enum ('inmobiliario', 'inversor', 'otros');
 
@@ -173,10 +129,7 @@ create table users
     name            varchar(255)            not null,
     email           varchar(255)            not null,
     password        varchar(255)            not null,
-    role_id         integer
-        constraint "FK_a2cecd1a3531c0b041e29ba46e1"
-            references roles
-            on delete restrict,
+    role_id         integer,
     organization_id integer
         constraint "FK_21a659804ed7bf61eb91688dea7"
             references organizations
@@ -230,30 +183,6 @@ create index "IDX_a2298d713539687b12f2c169ba"
 create index "IDX_6e191d2fe767c69e4d76e46a30"
     on users_branches (branch_id);
 
-create table users_permissions
-(
-    user_id       integer not null
-        constraint fk_users_permissions_user_id
-            references users
-            on delete cascade
-        constraint "FK_4de7d0b175f702be3be55270023"
-            references users
-            on update cascade on delete cascade,
-    permission_id integer not null
-        constraint fk_users_permissions_permission_id
-            references permissions
-            on delete cascade
-        constraint "FK_b09b9a210c60f41ec7b453758e9"
-            references permissions,
-    constraint pk_users_permissions
-        primary key (user_id, permission_id)
-);
-
-create index idx_users_permissions_user_id
-    on users_permissions (user_id);
-
-create index idx_users_permissions_permission_id
-    on users_permissions (permission_id);
 
 create table tags
 (

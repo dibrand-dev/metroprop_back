@@ -8,10 +8,12 @@ import {
   Min, 
   IsArray,
   IsString,
+  IsEnum,
   Matches,
   ValidateIf
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { UserRole } from '../../../common/enums';
 
 export class CreateUserDto {
   @IsNotEmpty({ message: 'Nombre es requerido' })
@@ -58,8 +60,11 @@ export class CreateUserDto {
   branchIds?: number[];
 
   @IsOptional()
-  @IsInt()
-  @Min(1)
-  roleId?: number;
+  @Type(() => Number)
+  @IsEnum(UserRole, {
+    message:
+      'role_id debe ser uno de: 1 (ADMIN), 2 (SELLER), 3 (COLLABORATOR), 4 (SUPER_ADMIN)',
+  })
+  role_id?: UserRole;
 }
 

@@ -35,7 +35,7 @@ export class AuthService {
     const access_token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
-      role: user.role,
+      role_id: user.role_id,
     });
 
     // Excluir campos sensibles antes de devolver

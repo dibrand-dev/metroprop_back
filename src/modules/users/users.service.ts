@@ -2,14 +2,14 @@ import { MediaService } from '../../common/media/media.service';
 import { USER_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Int32, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Organization } from '../organizations/entities/organization.entity';
-import { Branch } from '../branches/entities/branch.entity';
+import { UserRole } from '../../common/enums';
 
 @Injectable()
 export class UsersService {
@@ -33,6 +33,7 @@ export class UsersService {
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
+      role_id: createUserDto.role_id ?? UserRole.USER_ROL_SELLER,
       organization: createUserDto.organizationId
         ? ({ id: createUserDto.organizationId } as Organization)
         : undefined,
@@ -56,7 +57,7 @@ export class UsersService {
         'id',
         'name',
         'email',
-        'role',
+        'role_id',
         'is_verified',
         'created_at',
         'updated_at',
@@ -67,7 +68,10 @@ export class UsersService {
   }
 
   async findById(id: number): Promise<User> {
-    const user = await this.usersRepository.findOne({ where: { id } });
+    const user = await this.usersRepository.findOne({
+      where: { id },
+      relations: ['organization'],
+    });
 
     if (!user) {
       throw new NotFoundException('User not found');
