@@ -227,24 +227,6 @@ export const TAGS_BY_PROPERTY_TYPE: Record<PropertyType, number[]> = {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CAMPOS DE "DETALLES DE LA PROPIEDAD" POR TIPO
-//
-// Campos con mapeo directo a la entidad:
-//   brightness          → Luminoso              (enum Brightness)
-//   orientation         → Orientación           (enum Orientation)
-//   dispositions        → Disposición           (enum Disposition)
-//   garage_coverage     → Cobertura cochera     (enum GarageCoverage)
-//   floors_amount       → Cantidad de plantas / Cantidad de pisos en edificio
-//   surface_front       → Frente del terreno (m2)
-//   surface_length      → Largo del terreno (m2)
-//   semiroofed_surface  → Superficie semicubierta (m2) (numeric)
-//   zonification        → Zonificación / posible mapeo para F.O.T.
-//
-// Todos los campos están mapeados en la entidad:
-//   'apartments_per_floor'  → Departamentos por piso  (edificio/departamento)
-//   'warehouse_units'       → Cantidad de naves       (galpón/bodega)
-//   'number_of_guests'      → Cantidad de huéspedes   (hotel/quinta vacacional)
-//   'type_of_business'      → Tipo de rubro           (oficina/local/fondo de comercio)
-//   'fot'                   → F.O.T. - Factor de Ocupación Total (terreno)
 // ─────────────────────────────────────────────────────────────────────────────
 export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
   // ── Casa ─────────────────────────────────────────────────────────────────
@@ -311,7 +293,7 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
   [PropertyType.CONSULTORIO]: [
     'floors_amount',
     'garage_coverage',
-    'type_of_business',      // Tipo de rubro
+    'business_type',      // Tipo de rubro
   ],
   // ── Depósito ─────────────────────────────────────────────────────────────
   [PropertyType.DEPOSITO]: [
@@ -334,7 +316,7 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
   [PropertyType.FONDO_DE_COMERCIO]: [
     'surface_front',
     'surface_length',
-    'type_of_business',      // Tipo de rubro
+    'business_type',      // Tipo de rubro
   ],
   // ── Garage ───────────────────────────────────────────────────────────────
   [PropertyType.GARAGE]: [
@@ -351,14 +333,14 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
     'floors_amount',
     'surface_front',
     'surface_length',
-    'type_of_business',      // Tipo de rubro
+    'business_type',      // Tipo de rubro
   ],
   // ── Oficina comercial ────────────────────────────────────────────────────
   [PropertyType.OFICINA_COMERCIAL]: [
     'floors_amount',
     'surface_front',
     'surface_length',
-    'type_of_business',      // Tipo de rubro
+    'business_type',      // Tipo de rubro
   ],
   // ── Quinta vacacional ────────────────────────────────────────────────────
   [PropertyType.QUINTA_VACACIONAL]: [
