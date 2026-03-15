@@ -147,6 +147,14 @@ CREATE SEQUENCE public.property_videos_id_seq
 	CACHE 1
 	NO CYCLE;
 DROP SEQUENCE IF EXISTS public.tags_id_seq;
+DROP SEQUENCE IF EXISTS public.tags_mapping_id_seq;
+CREATE SEQUENCE public.tags_mapping_id_seq
+INCREMENT BY 1
+MINVALUE 1
+MAXVALUE 2147483647
+START 1
+CACHE 1
+NO CYCLE;
 CREATE SEQUENCE public.tags_id_seq
 	INCREMENT BY 1
 	MINVALUE 1
@@ -318,6 +326,15 @@ CREATE INDEX IF NOT EXISTS idx_properties_sub_location_id ON public.properties U
 
 -- DROP TABLE public.tags;
 
+CREATE TABLE IF NOT EXISTS public.tags_mapping (
+	id serial4 NOT NULL,
+	partner varchar(100) NULL,
+	metroprop_tag_id varchar(100) NULL,
+	partner_tag_id varchar(100) NULL,
+	partner_tag_name varchar(100) NULL,
+	CONSTRAINT pk_tags_mapping PRIMARY KEY (id)
+);
+
 CREATE TABLE IF NOT EXISTS public.tags (
 	id serial4 NOT NULL,
 	"name" varchar(255) NOT NULL,
@@ -478,6 +495,7 @@ CREATE TABLE IF NOT EXISTS public.branches (
 	country_id int4 NULL,
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
+	external_reference varchar(255) NULL,
 	CONSTRAINT pk_branches PRIMARY KEY (id)
 );
 CREATE INDEX IF NOT EXISTS idx_branches_country_id ON public.branches USING btree (country_id);
@@ -521,6 +539,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
 	professional_type public."organizations_professional_type_enum" NULL,
+	tokko_key varchar NULL,
 	CONSTRAINT pk_organizations PRIMARY KEY (id)
 );
 CREATE INDEX IF NOT EXISTS idx_organizations_country_id ON public.organizations USING btree (country_id);
@@ -557,6 +576,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 	email_verification_token varchar(255) NULL,
 	password_reset_token varchar(255) NULL,
 	password_reset_token_expires timestamp NULL,
+	external_reference varchar(255) NULL,
 	CONSTRAINT "UQ_0bd5012aeb82628e07f6a1be53b" UNIQUE (google_id),
 	CONSTRAINT pk_users PRIMARY KEY (id)
 );
@@ -643,3 +663,4 @@ ALTER TABLE public.property_videos    ALTER COLUMN id SET DEFAULT nextval('publi
 ALTER TABLE public.branches           ALTER COLUMN id SET DEFAULT nextval('public.branches_id_seq'::regclass);
 ALTER TABLE public.organizations      ALTER COLUMN id SET DEFAULT nextval('public.organizations_id_seq'::regclass);
 ALTER TABLE public.users              ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
+ALTER TABLE public.tags_mapping ALTER COLUMN id SET DEFAULT nextval('public.tags_mapping_id_seq'::regclass);

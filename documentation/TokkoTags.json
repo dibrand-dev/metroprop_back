@@ -1,0 +1,4652 @@
+[
+    {
+      "id": 1,
+      "name": "Agua Corriente",
+      "type": 1
+    },
+    {
+      "id": 2,
+      "name": "Cloaca",
+      "type": 1
+    },
+    {
+      "id": 3,
+      "name": "Gas Natural",
+      "type": 1
+    },
+    {
+      "id": 4,
+      "name": "Internet",
+      "type": 1
+    },
+    {
+      "id": 5,
+      "name": "Electricidad",
+      "type": 1
+    },
+    {
+      "id": 6,
+      "name": "Pavimento",
+      "type": 1
+    },
+    {
+      "id": 7,
+      "name": "Teléfono",
+      "type": 1
+    },
+    {
+      "id": 8,
+      "name": "Cable",
+      "type": 1
+    },
+    {
+      "id": 9,
+      "name": "Altillo",
+      "type": 2
+    },
+    {
+      "id": 10,
+      "name": "Balcón",
+      "type": 2
+    },
+    {
+      "id": 11,
+      "name": "Baulera",
+      "type": 2
+    },
+    {
+      "id": 12,
+      "name": "Cocina",
+      "type": 2
+    },
+    {
+      "id": 14,
+      "name": "Comedor diario",
+      "type": 2
+    },
+    {
+      "id": 15,
+      "name": "Dependencia",
+      "type": 2
+    },
+    {
+      "id": 17,
+      "name": "Oficina",
+      "type": 2
+    },
+    {
+      "id": 18,
+      "name": "Hall",
+      "type": 2
+    },
+    {
+      "id": 19,
+      "name": "Jardín",
+      "type": 2
+    },
+    {
+      "id": 20,
+      "name": "Lavadero",
+      "type": 2
+    },
+    {
+      "id": 22,
+      "name": "Living comedor",
+      "type": 2
+    },
+    {
+      "id": 23,
+      "name": "Patio",
+      "type": 2
+    },
+    {
+      "id": 24,
+      "name": "Sótano",
+      "type": 2
+    },
+    {
+      "id": 25,
+      "name": "Terraza",
+      "type": 2
+    },
+    {
+      "id": 26,
+      "name": "Toilette",
+      "type": 2
+    },
+    {
+      "id": 27,
+      "name": "Vestidor",
+      "type": 2
+    },
+    {
+      "id": 28,
+      "name": "Aire Acondicionado individual",
+      "type": 3
+    },
+    {
+      "id": 29,
+      "name": "Alarma",
+      "type": 3
+    },
+    {
+      "id": 30,
+      "name": "Amoblado",
+      "type": 3
+    },
+    {
+      "id": 31,
+      "name": "Calefacción",
+      "type": 3
+    },
+    {
+      "id": 32,
+      "name": "Centro de deportes",
+      "type": 3
+    },
+    {
+      "id": 33,
+      "name": "Gimnasio",
+      "type": 3
+    },
+    {
+      "id": 34,
+      "name": "Hidromasaje",
+      "type": 3
+    },
+    {
+      "id": 35,
+      "name": "Parrilla",
+      "type": 3
+    },
+    {
+      "id": 36,
+      "name": "Quincho",
+      "type": 3
+    },
+    {
+      "id": 38,
+      "name": "Sala de juegos",
+      "type": 3
+    },
+    {
+      "id": 39,
+      "name": "Sauna",
+      "type": 3
+    },
+    {
+      "id": 40,
+      "name": "Solarium",
+      "type": 3
+    },
+    {
+      "id": 41,
+      "name": "SUM",
+      "type": 3
+    },
+    {
+      "id": 42,
+      "name": "Seguridad",
+      "type": 3
+    },
+    {
+      "id": 43,
+      "name": "Al lago",
+      "type": 3
+    },
+    {
+      "id": 44,
+      "name": "Al rio",
+      "type": 3
+    },
+    {
+      "id": 45,
+      "name": "Al bosque",
+      "type": 3
+    },
+    {
+      "id": 46,
+      "name": "Apto mascotas",
+      "type": 3
+    },
+    {
+      "id": 47,
+      "name": "Apto profesional",
+      "type": 3
+    },
+    {
+      "id": 48,
+      "name": "Lote Interno",
+      "type": 3
+    },
+    {
+      "id": 49,
+      "name": "Ruta",
+      "type": 3
+    },
+    {
+      "id": 50,
+      "name": "Perimetral",
+      "type": 3
+    },
+    {
+      "id": 51,
+      "name": "Pileta",
+      "type": 3
+    },
+    {
+      "id": 52,
+      "name": "Riego automático",
+      "type": 3
+    },
+    {
+      "id": 53,
+      "name": "Vista al golf",
+      "type": 3
+    },
+    {
+      "id": 81,
+      "name": "Acceso a la playa",
+      "type": 3
+    },
+    {
+      "id": 86,
+      "name": "Carpintería de aluminio",
+      "type": 3
+    },
+    {
+      "id": 87,
+      "name": "Cocina Americana",
+      "type": 2
+    },
+    {
+      "id": 101,
+      "name": "Calefacción central",
+      "type": 3
+    },
+    {
+      "id": 106,
+      "name": "Pileta Comunitaria",
+      "type": 3
+    },
+    {
+      "id": 114,
+      "name": "Terraza Cubierta",
+      "type": 2
+    },
+    {
+      "id": 123,
+      "name": "Doble Acristalamiento",
+      "type": 3
+    },
+    {
+      "id": 132,
+      "name": "Detector de Incendios",
+      "type": 3
+    },
+    {
+      "id": 136,
+      "name": "Suelo Radiante",
+      "type": 3
+    },
+    {
+      "id": 147,
+      "name": "Caldera",
+      "type": 3
+    },
+    {
+      "id": 149,
+      "name": "Generador",
+      "type": 3
+    },
+    {
+      "id": 151,
+      "name": "Apartamento de Invitados",
+      "type": 2
+    },
+    {
+      "id": 163,
+      "name": "Escritorio",
+      "type": 2
+    },
+    {
+      "id": 164,
+      "name": "Pileta Cubierta",
+      "type": 2
+    },
+    {
+      "id": 168,
+      "name": "Biblioteca",
+      "type": 2
+    },
+    {
+      "id": 180,
+      "name": "Estilo Moderno",
+      "type": 3
+    },
+    {
+      "id": 181,
+      "name": "Vista a la montaña",
+      "type": 3
+    },
+    {
+      "id": 188,
+      "name": "Una Planta",
+      "type": 3
+    },
+    {
+      "id": 190,
+      "name": "Cancha de Paddle",
+      "type": 3
+    },
+    {
+      "id": 192,
+      "name": "Despensa",
+      "type": 2
+    },
+    {
+      "id": 203,
+      "name": "Preinstalación de aire acondicionado",
+      "type": 3
+    },
+    {
+      "id": 204,
+      "name": "Preinstalación de Calefacción",
+      "type": 3
+    },
+    {
+      "id": 209,
+      "name": "Seguridad Privada",
+      "type": 3
+    },
+    {
+      "id": 220,
+      "name": "Estilo Rústico",
+      "type": 3
+    },
+    {
+      "id": 232,
+      "name": "Placa Solar de Agua",
+      "type": 3
+    },
+    {
+      "id": 259,
+      "name": "Video Cámaras",
+      "type": 3
+    },
+    {
+      "id": 263,
+      "name": "Depósito de Agua",
+      "type": 3
+    },
+    {
+      "id": 267,
+      "name": "Bodega",
+      "type": 3
+    },
+    {
+      "id": 270,
+      "name": "Carpintería",
+      "type": 3
+    },
+    {
+      "id": 471,
+      "name": "Entrada automática",
+      "type": 3
+    },
+    {
+      "id": 475,
+      "name": "Apartamento Independiente",
+      "type": 2
+    },
+    {
+      "id": 494,
+      "name": "Con proyecto de construccion",
+      "type": 3
+    },
+    {
+      "id": 495,
+      "name": "Parquet",
+      "type": 3
+    },
+    {
+      "id": 931,
+      "name": "Potencial alto para alquilar",
+      "type": 9
+    },
+    {
+      "id": 946,
+      "name": "Ubicación tranquila",
+      "type": 3
+    },
+    {
+      "id": 948,
+      "name": "Guarda de seguridad",
+      "type": 3
+    },
+    {
+      "id": 959,
+      "name": "Corta distancia a pie centro",
+      "type": 3
+    },
+    {
+      "id": 965,
+      "name": "Atico",
+      "type": 3
+    },
+    {
+      "id": 997,
+      "name": "Ubicación residencial",
+      "type": 3
+    },
+    {
+      "id": 1002,
+      "name": "Circuito Cerrado TV",
+      "type": 3
+    },
+    {
+      "id": 1005,
+      "name": "Helipuerto",
+      "type": 3
+    },
+    {
+      "id": 1008,
+      "name": "Sistema instalado de música",
+      "type": 3
+    },
+    {
+      "id": 1014,
+      "name": "Frigorífico",
+      "type": 3
+    },
+    {
+      "id": 1021,
+      "name": "Armarios Empotrados",
+      "type": 3
+    },
+    {
+      "id": 1030,
+      "name": "Cochera subterránea",
+      "type": 3
+    },
+    {
+      "id": 1040,
+      "name": "Caja Fuerte",
+      "type": 3
+    },
+    {
+      "id": 1044,
+      "name": "Construcción reciente",
+      "type": 9
+    },
+    {
+      "id": 1064,
+      "name": "Mosquitera",
+      "type": 3
+    },
+    {
+      "id": 1065,
+      "name": "Persianas",
+      "type": 3
+    },
+    {
+      "id": 1082,
+      "name": "Termo de gas",
+      "type": 3
+    },
+    {
+      "id": 1084,
+      "name": "Rejas de seguridad",
+      "type": 3
+    },
+    {
+      "id": 1087,
+      "name": "Agua sin conectar",
+      "type": 3
+    },
+    {
+      "id": 1088,
+      "name": "Electricidad sin conectar",
+      "type": 3
+    },
+    {
+      "id": 1092,
+      "name": "Toldos",
+      "type": 3
+    },
+    {
+      "id": 1093,
+      "name": "Necesita algunas reformas",
+      "type": 3
+    },
+    {
+      "id": 1108,
+      "name": "Puerta blindada",
+      "type": 3
+    },
+    {
+      "id": 1117,
+      "name": "Gas Butano",
+      "type": 3
+    },
+    {
+      "id": 1145,
+      "name": "Pozo negro",
+      "type": 1
+    },
+    {
+      "id": 1176,
+      "name": "Fuente natural",
+      "type": 3
+    },
+    {
+      "id": 1224,
+      "name": "Termo eléctrico",
+      "type": 3
+    },
+    {
+      "id": 1230,
+      "name": "Toma de gas ciudad",
+      "type": 3
+    },
+    {
+      "id": 1233,
+      "name": "Posibilidad instalar ascensor",
+      "type": 3
+    },
+    {
+      "id": 1248,
+      "name": "En construcción",
+      "type": 3
+    },
+    {
+      "id": 1255,
+      "name": "Ventanas de aluminio",
+      "type": 3
+    },
+    {
+      "id": 1257,
+      "name": "Ventanas doble acristalamiento",
+      "type": 3
+    },
+    {
+      "id": 1259,
+      "name": "Ventanas de madera",
+      "type": 3
+    },
+    {
+      "id": 1268,
+      "name": "Descalcificadora",
+      "type": 3
+    },
+    {
+      "id": 1291,
+      "name": "Zona de parrillas",
+      "type": 3
+    },
+    {
+      "id": 1296,
+      "name": "Amarras",
+      "type": 3
+    },
+    {
+      "id": 1297,
+      "name": "Ascensor de servicio",
+      "type": 3
+    },
+    {
+      "id": 1299,
+      "name": "Puente grúa",
+      "type": 3
+    },
+    {
+      "id": 1300,
+      "name": "Restaurante",
+      "type": 3
+    },
+    {
+      "id": 1301,
+      "name": "Vivienda Portero",
+      "type": 3
+    },
+    {
+      "id": 1314,
+      "name": "Puerta de garaje automática",
+      "type": 3
+    },
+    {
+      "id": 1319,
+      "name": "Pisos de concreto",
+      "type": 3
+    },
+    {
+      "id": 1322,
+      "name": "Portones eléctricos",
+      "type": 3
+    },
+    {
+      "id": 1326,
+      "name": "Calle de grava",
+      "type": 3
+    },
+    {
+      "id": 1327,
+      "name": "Techos altos",
+      "type": 3
+    },
+    {
+      "id": 1328,
+      "name": "Entreplanta",
+      "type": 3
+    },
+    {
+      "id": 1329,
+      "name": "Extractor de humo",
+      "type": 3
+    },
+    {
+      "id": 1330,
+      "name": "Aislamiento acústico",
+      "type": 3
+    },
+    {
+      "id": 1341,
+      "name": "Plancha Industrial",
+      "type": 3
+    },
+    {
+      "id": 1348,
+      "name": "Cortinas",
+      "type": 3
+    },
+    {
+      "id": 1360,
+      "name": "Horno de pizza",
+      "type": 3
+    },
+    {
+      "id": 1369,
+      "name": "Horno de pan",
+      "type": 3
+    },
+    {
+      "id": 1374,
+      "name": "Edificio de Perímetro Libre",
+      "type": 3
+    },
+    {
+      "id": 1390,
+      "name": "Luminoso",
+      "type": 3
+    },
+    {
+      "id": 1418,
+      "name": "Acceso doble",
+      "type": 3
+    },
+    {
+      "id": 1443,
+      "name": "Agua Potable",
+      "type": 1
+    },
+    {
+      "id": 1449,
+      "name": "Parcela en esquina",
+      "type": 3
+    },
+    {
+      "id": 1451,
+      "name": "Terreno apto para cultivo",
+      "type": 3
+    },
+    {
+      "id": 1456,
+      "name": "Laguna interior",
+      "type": 3
+    },
+    {
+      "id": 1458,
+      "name": "Terreno subdivisible",
+      "type": 9
+    },
+    {
+      "id": 1460,
+      "name": "Zona apta para turismo",
+      "type": 3
+    },
+    {
+      "id": 1461,
+      "name": "Frente a carretera",
+      "type": 3
+    },
+    {
+      "id": 1475,
+      "name": "Comedor para personal",
+      "type": 3
+    },
+    {
+      "id": 1477,
+      "name": "Gas Envasado",
+      "type": 1
+    },
+    {
+      "id": 1478,
+      "name": "Gas Industrial",
+      "type": 1
+    },
+    {
+      "id": 1484,
+      "name": "Portón Levadizo",
+      "type": 3
+    },
+    {
+      "id": 1485,
+      "name": "Techo de Cabriada",
+      "type": 3
+    },
+    {
+      "id": 1486,
+      "name": "Techo de Chapa",
+      "type": 3
+    },
+    {
+      "id": 1487,
+      "name": "Techo de Fibrocemento",
+      "type": 3
+    },
+    {
+      "id": 1488,
+      "name": "Techo de Hormigón",
+      "type": 3
+    },
+    {
+      "id": 1489,
+      "name": "Techo Parabólico",
+      "type": 3
+    },
+    {
+      "id": 1490,
+      "name": "Vestuarios Femeninos",
+      "type": 2
+    },
+    {
+      "id": 1491,
+      "name": "Vestuarios Masculinos",
+      "type": 2
+    },
+    {
+      "id": 1493,
+      "name": "Fuerza motriz",
+      "type": 3
+    },
+    {
+      "id": 1494,
+      "name": "Montacargas",
+      "type": 3
+    },
+    {
+      "id": 1495,
+      "name": "Playa de maniobras",
+      "type": 3
+    },
+    {
+      "id": 1499,
+      "name": "Energia trifasica",
+      "type": 1
+    },
+    {
+      "id": 1500,
+      "name": "Techo a dos aguas",
+      "type": 3
+    },
+    {
+      "id": 1501,
+      "name": "Amarra",
+      "type": 3
+    },
+    {
+      "id": 1503,
+      "name": "Chimenea",
+      "type": 3
+    },
+    {
+      "id": 1504,
+      "name": "Baño de servicio",
+      "type": 2
+    },
+    {
+      "id": 1505,
+      "name": "Laundry",
+      "type": 3
+    },
+    {
+      "id": 1506,
+      "name": "Agua Caliente Central",
+      "type": 3
+    },
+    {
+      "id": 1507,
+      "name": "Wifi",
+      "type": 1
+    },
+    {
+      "id": 1508,
+      "name": "Área recreativa",
+      "type": 3
+    },
+    {
+      "id": 1509,
+      "name": "Juegos para niños",
+      "type": 3
+    },
+    {
+      "id": 1510,
+      "name": "Área de relax",
+      "type": 3
+    },
+    {
+      "id": 1511,
+      "name": "Espacio para lectura",
+      "type": 3
+    },
+    {
+      "id": 1512,
+      "name": "Calefacción individual",
+      "type": 3
+    },
+    {
+      "id": 1513,
+      "name": "Calefacción por aire",
+      "type": 3
+    },
+    {
+      "id": 1514,
+      "name": "Calefacción por radiadores",
+      "type": 3
+    },
+    {
+      "id": 1515,
+      "name": "Vista al polo",
+      "type": 3
+    },
+    {
+      "id": 1516,
+      "name": "Galería",
+      "type": 2
+    },
+    {
+      "id": 1517,
+      "name": "Deck",
+      "type": 3
+    },
+    {
+      "id": 1519,
+      "name": "Seguridad nocturna",
+      "type": 3
+    },
+    {
+      "id": 1520,
+      "name": "Club House",
+      "type": 3
+    },
+    {
+      "id": 1521,
+      "name": "Polo",
+      "type": 3
+    },
+    {
+      "id": 1522,
+      "name": "Equitación",
+      "type": 3
+    },
+    {
+      "id": 1523,
+      "name": "Palier",
+      "type": 2
+    },
+    {
+      "id": 1524,
+      "name": "Seguridad 24hs",
+      "type": 3
+    },
+    {
+      "id": 1525,
+      "name": "Seguridad de día",
+      "type": 3
+    },
+    {
+      "id": 1526,
+      "name": "Seguridad portería",
+      "type": 3
+    },
+    {
+      "id": 1527,
+      "name": "Cochera opcional",
+      "type": 3
+    },
+    {
+      "id": 1529,
+      "name": "Venta Directa",
+      "type": 9
+    },
+    {
+      "id": 1530,
+      "name": "Calefón",
+      "type": 3
+    },
+    {
+      "id": 1531,
+      "name": "Calefacción por gas",
+      "type": 3
+    },
+    {
+      "id": 1533,
+      "name": "aire acondicionado central",
+      "type": 3
+    },
+    {
+      "id": 1534,
+      "name": "Pileta climatizada",
+      "type": 3
+    },
+    {
+      "id": 1536,
+      "name": "Estacionamiento tarifado",
+      "type": 3
+    },
+    {
+      "id": 1537,
+      "name": "Caldera central",
+      "type": 3
+    },
+    {
+      "id": 1538,
+      "name": "Caldera individual",
+      "type": 3
+    },
+    {
+      "id": 1539,
+      "name": "Calefacción individual por debajo del suelo",
+      "type": 3
+    },
+    {
+      "id": 1540,
+      "name": "Losa radiante general",
+      "type": 1
+    },
+    {
+      "id": 1541,
+      "name": "Picos de gas",
+      "type": 3
+    },
+    {
+      "id": 1542,
+      "name": "Estufas TB",
+      "type": 3
+    },
+    {
+      "id": 1544,
+      "name": "Cochera fija",
+      "type": 3
+    },
+    {
+      "id": 1547,
+      "name": "Ascensor",
+      "type": 3
+    },
+    {
+      "id": 1548,
+      "name": "Ropa blanca",
+      "type": 3
+    },
+    {
+      "id": 1549,
+      "name": "Palier privado",
+      "type": 3
+    },
+    {
+      "id": 1550,
+      "name": "Entrada de servicio",
+      "type": 3
+    },
+    {
+      "id": 1551,
+      "name": "Semi piso",
+      "type": 3
+    },
+    {
+      "id": 1552,
+      "name": "Ducha escocesa",
+      "type": 3
+    },
+    {
+      "id": 1553,
+      "name": "Cochera de cortesía",
+      "type": 3
+    },
+    {
+      "id": 1555,
+      "name": "Balcón terraza",
+      "type": 2
+    },
+    {
+      "id": 1556,
+      "name": "Cerramientos de PVC",
+      "type": 3
+    },
+    {
+      "id": 1557,
+      "name": "Microcine",
+      "type": 3
+    },
+    {
+      "id": 1558,
+      "name": "Sala de juegos",
+      "type": 2
+    },
+    {
+      "id": 1559,
+      "name": "Agua caliente individual",
+      "type": 3
+    },
+    {
+      "id": 1560,
+      "name": "Costa de Río",
+      "type": 3
+    },
+    {
+      "id": 1561,
+      "name": "Costa de Lago",
+      "type": 3
+    },
+    {
+      "id": 1562,
+      "name": "Bosques",
+      "type": 3
+    },
+    {
+      "id": 1563,
+      "name": "Campo Cordillera",
+      "type": 3
+    },
+    {
+      "id": 1564,
+      "name": "Campo Meseta",
+      "type": 3
+    },
+    {
+      "id": 1565,
+      "name": "Campo Costa Atlántica",
+      "type": 3
+    },
+    {
+      "id": 1566,
+      "name": "Campo productivo",
+      "type": 3
+    },
+    {
+      "id": 1567,
+      "name": "Campo vacacional",
+      "type": 3
+    },
+    {
+      "id": 1568,
+      "name": "Cordillera",
+      "type": 3
+    },
+    {
+      "id": 1569,
+      "name": "Costa Altlántica",
+      "type": 3
+    },
+    {
+      "id": 1570,
+      "name": "Meseta",
+      "type": 3
+    },
+    {
+      "id": 1571,
+      "name": "Arroyo interior",
+      "type": 3
+    },
+    {
+      "id": 1572,
+      "name": "Apto ganadería",
+      "type": 3
+    },
+    {
+      "id": 1573,
+      "name": "Alumbrado público",
+      "type": 1
+    },
+    {
+      "id": 1574,
+      "name": "Biodigestor",
+      "type": 1
+    },
+    {
+      "id": 1575,
+      "name": "TV por Satélite",
+      "type": 1
+    },
+    {
+      "id": 1576,
+      "name": "Celular",
+      "type": 1
+    },
+    {
+      "id": 1577,
+      "name": "Vista al valle",
+      "type": 3
+    },
+    {
+      "id": 1579,
+      "name": "Arroyo lindero",
+      "type": 3
+    },
+    {
+      "id": 1580,
+      "name": "Arboleda autóctona",
+      "type": 3
+    },
+    {
+      "id": 1582,
+      "name": "Accesibilidad C/ Movilidad Reducida",
+      "type": 3
+    },
+    {
+      "id": 1583,
+      "name": "Termotanque Individual",
+      "type": 3
+    },
+    {
+      "id": 1584,
+      "name": "Planos conforme a Obra",
+      "type": 9
+    },
+    {
+      "id": 1585,
+      "name": "Vista al río",
+      "type": 3
+    },
+    {
+      "id": 1586,
+      "name": "Red de desagües pluviales",
+      "type": 1
+    },
+    {
+      "id": 1587,
+      "name": "Instalación eléctrica subterránea.",
+      "type": 1
+    },
+    {
+      "id": 1588,
+      "name": "Control de acceso",
+      "type": 3
+    },
+    {
+      "id": 1589,
+      "name": "Edificio de mantenimiento",
+      "type": 3
+    },
+    {
+      "id": 1590,
+      "name": "Edificio de oficinas administrativas",
+      "type": 3
+    },
+    {
+      "id": 1591,
+      "name": "Área de servicio",
+      "type": 3
+    },
+    {
+      "id": 1592,
+      "name": "Bicisenda",
+      "type": 3
+    },
+    {
+      "id": 1593,
+      "name": "Bascula",
+      "type": 3
+    },
+    {
+      "id": 1594,
+      "name": "Zonas Verdes",
+      "type": 3
+    },
+    {
+      "id": 1595,
+      "name": "Boulevard principal",
+      "type": 3
+    },
+    {
+      "id": 1596,
+      "name": "Barrera forestal",
+      "type": 3
+    },
+    {
+      "id": 1598,
+      "name": "Cordón cuneta",
+      "type": 3
+    },
+    {
+      "id": 1599,
+      "name": "Escritura inmediata",
+      "type": 9
+    },
+    {
+      "id": 1600,
+      "name": "Grúa",
+      "type": 3
+    },
+    {
+      "id": 1601,
+      "name": "Cancha de Rugby",
+      "type": 3
+    },
+    {
+      "id": 1602,
+      "name": "SPA",
+      "type": 3
+    },
+    {
+      "id": 1603,
+      "name": "Apto comercial",
+      "type": 3
+    },
+    {
+      "id": 1604,
+      "name": "Campo de golf",
+      "type": 3
+    },
+    {
+      "id": 1605,
+      "name": "Cancha de Hockey",
+      "type": 3
+    },
+    {
+      "id": 1606,
+      "name": "Cancha de Básquet",
+      "type": 3
+    },
+    {
+      "id": 1607,
+      "name": "Bomba",
+      "type": 3
+    },
+    {
+      "id": 1608,
+      "name": "Centro de Cabalgata",
+      "type": 3
+    },
+    {
+      "id": 1609,
+      "name": "Colegio",
+      "type": 3
+    },
+    {
+      "id": 1610,
+      "name": "Cancha de Golf",
+      "type": 3
+    },
+    {
+      "id": 1611,
+      "name": "Cancha de Fútbol",
+      "type": 3
+    },
+    {
+      "id": 1612,
+      "name": "Servicio de mucama",
+      "type": 3
+    },
+    {
+      "id": 1613,
+      "name": "Cancha de Tenis",
+      "type": 3
+    },
+    {
+      "id": 1614,
+      "name": "Portón Corredizo",
+      "type": 3
+    },
+    {
+      "id": 1615,
+      "name": "Techo de losa",
+      "type": 3
+    },
+    {
+      "id": 1616,
+      "name": "Techo de Galvanizado",
+      "type": 3
+    },
+    {
+      "id": 1617,
+      "name": "Techo Astori",
+      "type": 3
+    },
+    {
+      "id": 1618,
+      "name": "Techo de bovedilla",
+      "type": 3
+    },
+    {
+      "id": 1619,
+      "name": "Techo premoldeado",
+      "type": 3
+    },
+    {
+      "id": 1620,
+      "name": "Techo tinglado",
+      "type": 3
+    },
+    {
+      "id": 1621,
+      "name": "Techo a 3 aguas",
+      "type": 3
+    },
+    {
+      "id": 1622,
+      "name": "Techo de zinc",
+      "type": 3
+    },
+    {
+      "id": 1623,
+      "name": "Techo de Pizarra",
+      "type": 3
+    },
+    {
+      "id": 1624,
+      "name": "Techo de teja",
+      "type": 3
+    },
+    {
+      "id": 1625,
+      "name": "Vista al mar",
+      "type": 3
+    },
+    {
+      "id": 1626,
+      "name": "Baulera individual",
+      "type": 3
+    },
+    {
+      "id": 1627,
+      "name": "Baulera general",
+      "type": 3
+    },
+    {
+      "id": 1628,
+      "name": "Encargado",
+      "type": 1
+    },
+    {
+      "id": 1629,
+      "name": "Cadete",
+      "type": 1
+    },
+    {
+      "id": 1630,
+      "name": "Garagistas",
+      "type": 1
+    },
+    {
+      "id": 1631,
+      "name": "Servicio de playa",
+      "type": 1
+    },
+    {
+      "id": 1632,
+      "name": "Servicio de Mantenimiento",
+      "type": 1
+    },
+    {
+      "id": 1633,
+      "name": "TV Cable en el edificio",
+      "type": 1
+    },
+    {
+      "id": 1635,
+      "name": "Recepción 24 Horas",
+      "type": 3
+    },
+    {
+      "id": 1636,
+      "name": "Parrilla individual en departamento",
+      "type": 3
+    },
+    {
+      "id": 1637,
+      "name": "Patio de juegos",
+      "type": 3
+    },
+    {
+      "id": 1654,
+      "name": "Lavarropas",
+      "type": 3
+    },
+    {
+      "id": 1655,
+      "name": "Estufa a leña",
+      "type": 3
+    },
+    {
+      "id": 1656,
+      "name": "Condominio",
+      "type": 3
+    },
+    {
+      "id": 1657,
+      "name": "Parrilla techada",
+      "type": 3
+    },
+    {
+      "id": 1658,
+      "name": "Dependencia con baño",
+      "type": 2
+    },
+    {
+      "id": 1659,
+      "name": "Cerramiento perimetral",
+      "type": 3
+    },
+    {
+      "id": 1660,
+      "name": "Microondas",
+      "type": 3
+    },
+    {
+      "id": 1661,
+      "name": "Freezer",
+      "type": 3
+    },
+    {
+      "id": 1662,
+      "name": "Heladera",
+      "type": 3
+    },
+    {
+      "id": 1663,
+      "name": "Lavavajillas",
+      "type": 3
+    },
+    {
+      "id": 1664,
+      "name": "Estacionamiento gratuito",
+      "type": 3
+    },
+    {
+      "id": 1665,
+      "name": "Secadora",
+      "type": 3
+    },
+    {
+      "id": 1666,
+      "name": "Galpón",
+      "type": 2
+    },
+    {
+      "id": 1667,
+      "name": "Perimeter alarm",
+      "type": 3
+    },
+    {
+      "id": 1668,
+      "name": "Jardinero",
+      "type": 3
+    },
+    {
+      "id": 1669,
+      "name": "Piletero",
+      "type": 1
+    },
+    {
+      "id": 1670,
+      "name": "Passenger boat",
+      "type": 1
+    },
+    {
+      "id": 1671,
+      "name": "Cancha de Volley",
+      "type": 3
+    },
+    {
+      "id": 1673,
+      "name": "Cancha de Bochas",
+      "type": 3
+    },
+    {
+      "id": 1674,
+      "name": "Cancha de Polo",
+      "type": 3
+    },
+    {
+      "id": 1675,
+      "name": "Se emite factura",
+      "type": 9
+    },
+    {
+      "id": 1677,
+      "name": "Cancha de Paddle",
+      "type": 3
+    },
+    {
+      "id": 1678,
+      "name": "Espacio para estacionar",
+      "type": 3
+    },
+    {
+      "id": 1679,
+      "name": "Rindex de Soja/hrea",
+      "type": 3
+    },
+    {
+      "id": 1680,
+      "name": "Piso",
+      "type": 3
+    },
+    {
+      "id": 1681,
+      "name": "Refrigeración Fancoil",
+      "type": 3
+    },
+    {
+      "id": 1682,
+      "name": "Refrigeración split",
+      "type": 3
+    },
+    {
+      "id": 1683,
+      "name": "Refrigeración Volumen Variable",
+      "type": 3
+    },
+    {
+      "id": 1684,
+      "name": "Refrigeración central F/C",
+      "type": 3
+    },
+    {
+      "id": 1685,
+      "name": "Refrigeración VRV",
+      "type": 3
+    },
+    {
+      "id": 1686,
+      "name": "Refrigeración central propia",
+      "type": 3
+    },
+    {
+      "id": 1687,
+      "name": "Refrigeración sectorizada",
+      "type": 3
+    },
+    {
+      "id": 1688,
+      "name": "Refrigeración individual",
+      "type": 3
+    },
+    {
+      "id": 1689,
+      "name": "Refrigeración individual F/C",
+      "type": 3
+    },
+    {
+      "id": 1690,
+      "name": "Refrigeracion No Posee",
+      "type": 3
+    },
+    {
+      "id": 1691,
+      "name": "Aire acondicionado individual",
+      "type": 3
+    },
+    {
+      "id": 1692,
+      "name": "Calefacción por losa radiante",
+      "type": 3
+    },
+    {
+      "id": 1693,
+      "name": "Calefacción por Fancoil",
+      "type": 3
+    },
+    {
+      "id": 1694,
+      "name": "Calefaccion No Posee",
+      "type": 3
+    },
+    {
+      "id": 1695,
+      "name": "calefacción por aire",
+      "type": 3
+    },
+    {
+      "id": 1696,
+      "name": "Calefacción VRV",
+      "type": 3
+    },
+    {
+      "id": 1697,
+      "name": "Calefacción tiro balanceado",
+      "type": 3
+    },
+    {
+      "id": 1698,
+      "name": "Calefacción F/C",
+      "type": 3
+    },
+    {
+      "id": 1699,
+      "name": "Calefacción sectorizada",
+      "type": 3
+    },
+    {
+      "id": 1700,
+      "name": "Segmentable",
+      "type": 3
+    },
+    {
+      "id": 1701,
+      "name": "Centro de negocios",
+      "type": 3
+    },
+    {
+      "id": 1702,
+      "name": "Escaleras de emergencia",
+      "type": 3
+    },
+    {
+      "id": 1704,
+      "name": "Detector de metales",
+      "type": 3
+    },
+    {
+      "id": 1705,
+      "name": "Tarjetas magnéticas",
+      "type": 3
+    },
+    {
+      "id": 1706,
+      "name": "Seguridad digital",
+      "type": 3
+    },
+    {
+      "id": 1707,
+      "name": "Local",
+      "type": 3
+    },
+    {
+      "id": 1710,
+      "name": "Techos altos",
+      "type": 3
+    },
+    {
+      "id": 1713,
+      "name": "Sistema de cableado",
+      "type": 3
+    },
+    {
+      "id": 1714,
+      "name": "Grupo electrógeno",
+      "type": 3
+    },
+    {
+      "id": 1725,
+      "name": "Tratamiento de efluentes",
+      "type": 3
+    },
+    {
+      "id": 1730,
+      "name": "Casco",
+      "type": 3
+    },
+    {
+      "id": 1731,
+      "name": "Casa de huéspedes",
+      "type": 3
+    },
+    {
+      "id": 1732,
+      "name": "Casa del personal",
+      "type": 3
+    },
+    {
+      "id": 1733,
+      "name": "Galpón de herramientas",
+      "type": 3
+    },
+    {
+      "id": 1734,
+      "name": "Sobre ripio",
+      "type": 3
+    },
+    {
+      "id": 1735,
+      "name": "En asfalto",
+      "type": 3
+    },
+    {
+      "id": 1736,
+      "name": "Engorde",
+      "type": 3
+    },
+    {
+      "id": 1737,
+      "name": "Tambo",
+      "type": 3
+    },
+    {
+      "id": 1738,
+      "name": "Tanque Australiano",
+      "type": 3
+    },
+    {
+      "id": 1739,
+      "name": "Apicutura",
+      "type": 3
+    },
+    {
+      "id": 1740,
+      "name": "Aves de corral",
+      "type": 3
+    },
+    {
+      "id": 1741,
+      "name": "Corrales",
+      "type": 3
+    },
+    {
+      "id": 1742,
+      "name": "Horticultura",
+      "type": 3
+    },
+    {
+      "id": 1743,
+      "name": "Fruticultura",
+      "type": 3
+    },
+    {
+      "id": 1744,
+      "name": "Planta silos",
+      "type": 3
+    },
+    {
+      "id": 1745,
+      "name": "Puesto",
+      "type": 3
+    },
+    {
+      "id": 1746,
+      "name": "Manga",
+      "type": 3
+    },
+    {
+      "id": 1747,
+      "name": "Pista de aterrizaje",
+      "type": 3
+    },
+    {
+      "id": 1748,
+      "name": "Teléfono rural",
+      "type": 3
+    },
+    {
+      "id": 1749,
+      "name": "Señal celular",
+      "type": 3
+    },
+    {
+      "id": 1755,
+      "name": "Molino",
+      "type": 3
+    },
+    {
+      "id": 1756,
+      "name": "Potreros",
+      "type": 3
+    },
+    {
+      "id": 1757,
+      "name": "Aguadas",
+      "type": 3
+    },
+    {
+      "id": 1760,
+      "name": "Bar",
+      "type": 3
+    },
+    {
+      "id": 1762,
+      "name": "Pileta descubierta",
+      "type": 3
+    },
+    {
+      "id": 1763,
+      "name": "Central telefónica",
+      "type": 3
+    },
+    {
+      "id": 1764,
+      "name": "Lavandería",
+      "type": 3
+    },
+    {
+      "id": 1765,
+      "name": "Cocina propia",
+      "type": 3
+    },
+    {
+      "id": 1766,
+      "name": "Planta de tratamiento de efluentes",
+      "type": 3
+    },
+    {
+      "id": 1767,
+      "name": "Salón para niños",
+      "type": 3
+    },
+    {
+      "id": 1769,
+      "name": "Categoría",
+      "type": 3
+    },
+    {
+      "id": 1771,
+      "name": "Cerco",
+      "type": 3
+    },
+    {
+      "id": 1772,
+      "name": "Nivelación",
+      "type": 3
+    },
+    {
+      "id": 1784,
+      "name": "Obras Sanitarias",
+      "type": 3
+    },
+    {
+      "id": 1785,
+      "name": "Family",
+      "type": 3
+    },
+    {
+      "id": 1788,
+      "name": "Amenities",
+      "type": 3
+    },
+    {
+      "id": 1790,
+      "name": "Línea blanca",
+      "type": 3
+    },
+    {
+      "id": 1792,
+      "name": "Entrada vehicular",
+      "type": 3
+    },
+    {
+      "id": 1793,
+      "name": "Sala de reuniones",
+      "type": 2
+    },
+    {
+      "id": 1795,
+      "name": "Al estero",
+      "type": 3
+    },
+    {
+      "id": 1796,
+      "name": "Apto gastronómico",
+      "type": 3
+    },
+    {
+      "id": 1798,
+      "name": "Exclusividad OLD",
+      "type": 3
+    },
+    {
+      "id": 1799,
+      "name": "Barrio privado",
+      "type": 3
+    },
+    {
+      "id": 1800,
+      "name": "Cowork",
+      "type": 3
+    },
+    {
+      "id": 1801,
+      "name": "Cisterna",
+      "type": 3
+    },
+    {
+      "id": 1802,
+      "name": "Roof garden",
+      "type": 3
+    },
+    {
+      "id": 1803,
+      "name": "for auction",
+      "type": 0
+    },
+    {
+      "id": 1804,
+      "name": "Security totem",
+      "type": 3
+    },
+    {
+      "id": 1805,
+      "name": "Sol de la tarde",
+      "type": 3
+    },
+    {
+      "id": 1806,
+      "name": "Anexo",
+      "type": 3
+    },
+    {
+      "id": 1807,
+      "name": "Pozo artesiano",
+      "type": 3
+    },
+    {
+      "id": 1808,
+      "name": "Automatizado",
+      "type": 3
+    },
+    {
+      "id": 1809,
+      "name": "Listo para domótica",
+      "type": 3
+    },
+    {
+      "id": 1810,
+      "name": "Baño auxiliar",
+      "type": 2
+    },
+    {
+      "id": 1811,
+      "name": "Parrilla de balcón",
+      "type": 3
+    },
+    {
+      "id": 1812,
+      "name": "Granero",
+      "type": 3
+    },
+    {
+      "id": 1813,
+      "name": "Muebles de baño",
+      "type": 3
+    },
+    {
+      "id": 1814,
+      "name": "Bañera",
+      "type": 3
+    },
+    {
+      "id": 1815,
+      "name": "Muebles de dormitorio",
+      "type": 3
+    },
+    {
+      "id": 1816,
+      "name": "Bicicletero",
+      "type": 3
+    },
+    {
+      "id": 1817,
+      "name": "Garaje para lancha",
+      "type": 3
+    },
+    {
+      "id": 1818,
+      "name": "Alfombra",
+      "type": 3
+    },
+    {
+      "id": 1819,
+      "name": "Ventilador de techo",
+      "type": 3
+    },
+    {
+      "id": 1820,
+      "name": "Piso cerámico",
+      "type": 3
+    },
+    {
+      "id": 1821,
+      "name": "Vista a la ciudad",
+      "type": 3
+    },
+    {
+      "id": 1822,
+      "name": "Interiores de placard",
+      "type": 3
+    },
+    {
+      "id": 1823,
+      "name": "Tendedero",
+      "type": 3
+    },
+    {
+      "id": 1824,
+      "name": "Piso frío",
+      "type": 3
+    },
+    {
+      "id": 1825,
+      "name": "Terraza compartida",
+      "type": 3
+    },
+    {
+      "id": 1826,
+      "name": "Anafe",
+      "type": 3
+    },
+    {
+      "id": 1827,
+      "name": "Muebles a medida",
+      "type": 3
+    },
+    {
+      "id": 1828,
+      "name": "Decorado",
+      "type": 3
+    },
+    {
+      "id": 1829,
+      "name": "Persianas eléctricas",
+      "type": 3
+    },
+    {
+      "id": 1830,
+      "name": "Cerca eléctrica",
+      "type": 3
+    },
+    {
+      "id": 1831,
+      "name": "Portón eléctrico",
+      "type": 3
+    },
+    {
+      "id": 1832,
+      "name": "Ducha eléctrica",
+      "type": 3
+    },
+    {
+      "id": 1833,
+      "name": "Cerradura electrónica",
+      "type": 3
+    },
+    {
+      "id": 1834,
+      "name": "Permuta",
+      "type": 9
+    },
+    {
+      "id": 1835,
+      "name": "Frente al club",
+      "type": 3
+    },
+    {
+      "id": 1836,
+      "name": "Frente al parque",
+      "type": 3
+    },
+    {
+      "id": 1837,
+      "name": "Sala familiar",
+      "type": 3
+    },
+    {
+      "id": 1838,
+      "name": "Cercado",
+      "type": 3
+    },
+    {
+      "id": 1839,
+      "name": "Financiado",
+      "type": 9
+    },
+    {
+      "id": 1840,
+      "name": "Cocina equipada",
+      "type": 2
+    },
+    {
+      "id": 1841,
+      "name": "Balcón al frente",
+      "type": 3
+    },
+    {
+      "id": 1842,
+      "name": "Salón gourmet",
+      "type": 3
+    },
+    {
+      "id": 1843,
+      "name": "Área recreativa planta baja",
+      "type": 3
+    },
+    {
+      "id": 1844,
+      "name": "Baranda",
+      "type": 3
+    },
+    {
+      "id": 1845,
+      "name": "Piso de madera",
+      "type": 3
+    },
+    {
+      "id": 1846,
+      "name": "Red de alta tensión",
+      "type": 3
+    },
+    {
+      "id": 1847,
+      "name": "Cocina independiente",
+      "type": 2
+    },
+    {
+      "id": 1848,
+      "name": "Medidor de agua individual",
+      "type": 3
+    },
+    {
+      "id": 1849,
+      "name": "Portero eléctrico",
+      "type": 3
+    },
+    {
+      "id": 1850,
+      "name": "Encargado",
+      "type": 3
+    },
+    {
+      "id": 1851,
+      "name": "Pileta infantil",
+      "type": 3
+    },
+    {
+      "id": 1852,
+      "name": "Bajo mesada y alacena",
+      "type": 3
+    },
+    {
+      "id": 1853,
+      "name": "A la laguna",
+      "type": 3
+    },
+    {
+      "id": 1854,
+      "name": "Piso flotante",
+      "type": 3
+    },
+    {
+      "id": 1855,
+      "name": "Artefactos de iluminación",
+      "type": 3
+    },
+    {
+      "id": 1856,
+      "name": "Muebles de living",
+      "type": 3
+    },
+    {
+      "id": 1857,
+      "name": "Piso de mármol",
+      "type": 3
+    },
+    {
+      "id": 1858,
+      "name": "Marina",
+      "type": 3
+    },
+    {
+      "id": 1859,
+      "name": "Dormitorio principal",
+      "type": 2
+    },
+    {
+      "id": 1860,
+      "name": "Sol de la mañana",
+      "type": 3
+    },
+    {
+      "id": 1861,
+      "name": "Vista a la sierra",
+      "type": 3
+    },
+    {
+      "id": 1862,
+      "name": "Luz natural",
+      "type": 3
+    },
+    {
+      "id": 1863,
+      "name": "Cerca del subte",
+      "type": 3
+    },
+    {
+      "id": 1864,
+      "name": "Junto a la pared",
+      "type": 3
+    },
+    {
+      "id": 1865,
+      "name": "Ofuro",
+      "type": 3
+    },
+    {
+      "id": 1866,
+      "name": "Horno",
+      "type": 3
+    },
+    {
+      "id": 1867,
+      "name": "Vista panorámica",
+      "type": 3
+    },
+    {
+      "id": 1868,
+      "name": "SUM",
+      "type": 3
+    },
+    {
+      "id": 1869,
+      "name": "Pastura",
+      "type": 3
+    },
+    {
+      "id": 1870,
+      "name": "Piso de porcelanato",
+      "type": 3
+    },
+    {
+      "id": 1871,
+      "name": "Baulera privada en subsuelo",
+      "type": 3
+    },
+    {
+      "id": 1872,
+      "name": "Pileta privada",
+      "type": 3
+    },
+    {
+      "id": 1873,
+      "name": "Sauna privado",
+      "type": 3
+    },
+    {
+      "id": 1874,
+      "name": "Calle tranquila",
+      "type": 3
+    },
+    {
+      "id": 1875,
+      "name": "Piso técnico",
+      "type": 3
+    },
+    {
+      "id": 1876,
+      "name": "Rampas",
+      "type": 3
+    },
+    {
+      "id": 1877,
+      "name": "Contrafrente",
+      "type": 3
+    },
+    {
+      "id": 1878,
+      "name": "Biombo",
+      "type": 3
+    },
+    {
+      "id": 1879,
+      "name": "Garita de seguridad",
+      "type": 3
+    },
+    {
+      "id": 1880,
+      "name": "Red de seguridad",
+      "type": 3
+    },
+    {
+      "id": 1881,
+      "name": "Semiamueblado",
+      "type": 3
+    },
+    {
+      "id": 1882,
+      "name": "Muebles de lavadero",
+      "type": 3
+    },
+    {
+      "id": 1883,
+      "name": "Mampara",
+      "type": 3
+    },
+    {
+      "id": 1884,
+      "name": "Balcón lateral",
+      "type": 3
+    },
+    {
+      "id": 1885,
+      "name": "Calefacción solar",
+      "type": 3
+    },
+    {
+      "id": 1886,
+      "name": "Cancha deportiva",
+      "type": 3
+    },
+    {
+      "id": 1887,
+      "name": "Cancha de Squash",
+      "type": 3
+    },
+    {
+      "id": 1888,
+      "name": "Establo",
+      "type": 3
+    },
+    {
+      "id": 1889,
+      "name": "Contrapiso",
+      "type": 3
+    },
+    {
+      "id": 1890,
+      "name": "Baldosa podotáctil",
+      "type": 3
+    },
+    {
+      "id": 1891,
+      "name": "Transformador",
+      "type": 3
+    },
+    {
+      "id": 1892,
+      "name": "Entrada para camiones",
+      "type": 3
+    },
+    {
+      "id": 1893,
+      "name": "Vista despejada",
+      "type": 3
+    },
+    {
+      "id": 1894,
+      "name": "Piso vinílico",
+      "type": 3
+    },
+    {
+      "id": 1895,
+      "name": "Estacionamiento de visitas",
+      "type": 3
+    },
+    {
+      "id": 1896,
+      "name": "Entrada de visitas",
+      "type": 3
+    },
+    {
+      "id": 1897,
+      "name": "Estructura de pared",
+      "type": 3
+    },
+    {
+      "id": 1898,
+      "name": "Placard",
+      "type": 3
+    },
+    {
+      "id": 1899,
+      "name": "Cascada",
+      "type": 3
+    },
+    {
+      "id": 1900,
+      "name": "Floating floor",
+      "type": 3
+    },
+    {
+      "id": 1901,
+      "name": "Monoambiente",
+      "type": 1
+    },
+    {
+      "id": 1902,
+      "name": "Ático con baño",
+      "type": 1
+    },
+    {
+      "id": 1903,
+      "name": "Ático con chimenea",
+      "type": 1
+    },
+    {
+      "id": 1904,
+      "name": "Baño grande",
+      "type": 1
+    },
+    {
+      "id": 1905,
+      "name": "Baño boudoir",
+      "type": 1
+    },
+    {
+      "id": 1906,
+      "name": "Baño con ducha de vidrio",
+      "type": 1
+    },
+    {
+      "id": 1907,
+      "name": "Baño con doble ducha",
+      "type": 1
+    },
+    {
+      "id": 1908,
+      "name": "Baño con jacuzzi",
+      "type": 1
+    },
+    {
+      "id": 1909,
+      "name": "Baño con sauna",
+      "type": 1
+    },
+    {
+      "id": 1910,
+      "name": "Sala de guardería",
+      "type": 1
+    },
+    {
+      "id": 1911,
+      "name": "Sala de juguetes",
+      "type": 1
+    },
+    {
+      "id": 1912,
+      "name": "Sala de naipes",
+      "type": 1
+    },
+    {
+      "id": 1913,
+      "name": "Casa de muñecas",
+      "type": 1
+    },
+    {
+      "id": 1914,
+      "name": "Casa del árbol",
+      "type": 1
+    },
+    {
+      "id": 1915,
+      "name": "Casa trasera",
+      "type": 1
+    },
+    {
+      "id": 1916,
+      "name": "Cabaña",
+      "type": 1
+    },
+    {
+      "id": 1917,
+      "name": "Cocina grande",
+      "type": 1
+    },
+    {
+      "id": 1918,
+      "name": "Cocina compartida",
+      "type": 1
+    },
+    {
+      "id": 1919,
+      "name": "Cocina con isla",
+      "type": 1
+    },
+    {
+      "id": 1920,
+      "name": "Cocina con lavadero integrado",
+      "type": 1
+    },
+    {
+      "id": 1921,
+      "name": "Cocina con pasa-platos",
+      "type": 1
+    },
+    {
+      "id": 1922,
+      "name": "Cocina con cafetería",
+      "type": 1
+    },
+    {
+      "id": 1923,
+      "name": "Cocina concepto abierto",
+      "type": 1
+    },
+    {
+      "id": 1924,
+      "name": "Cocina integrada",
+      "type": 1
+    },
+    {
+      "id": 1925,
+      "name": "Cocina equipada",
+      "type": 1
+    },
+    {
+      "id": 1926,
+      "name": "Cocina gourmet",
+      "type": 1
+    },
+    {
+      "id": 1927,
+      "name": "Cocina independiente",
+      "type": 1
+    },
+    {
+      "id": 1928,
+      "name": "Cocina industrial",
+      "type": 1
+    },
+    {
+      "id": 1929,
+      "name": "Cocina a medida",
+      "type": 1
+    },
+    {
+      "id": 1930,
+      "name": "Dormitorio de huéspedes",
+      "type": 1
+    },
+    {
+      "id": 1931,
+      "name": "Pequeño anexo",
+      "type": 1
+    },
+    {
+      "id": 1932,
+      "name": "Anexo con parrilla",
+      "type": 1
+    },
+    {
+      "id": 1933,
+      "name": "Área de café",
+      "type": 1
+    },
+    {
+      "id": 1934,
+      "name": "Espacio cultural",
+      "type": 1
+    },
+    {
+      "id": 1935,
+      "name": "Área social",
+      "type": 1
+    },
+    {
+      "id": 1936,
+      "name": "Área de descanso",
+      "type": 1
+    },
+    {
+      "id": 1937,
+      "name": "Área juvenil",
+      "type": 1
+    },
+    {
+      "id": 1938,
+      "name": "Área infantil",
+      "type": 1
+    },
+    {
+      "id": 1939,
+      "name": "Área adolescente",
+      "type": 1
+    },
+    {
+      "id": 1940,
+      "name": "Área de arte y manualidades",
+      "type": 1
+    },
+    {
+      "id": 1941,
+      "name": "Área de pub",
+      "type": 1
+    },
+    {
+      "id": 1942,
+      "name": "Espacio zen",
+      "type": 1
+    },
+    {
+      "id": 1943,
+      "name": "Estudio de música",
+      "type": 1
+    },
+    {
+      "id": 1944,
+      "name": "Estudio de pilates",
+      "type": 1
+    },
+    {
+      "id": 1945,
+      "name": "Centro de juegos",
+      "type": 1
+    },
+    {
+      "id": 1946,
+      "name": "Entre piso con oficina",
+      "type": 1
+    },
+    {
+      "id": 1947,
+      "name": "Centro de oficinas",
+      "type": 1
+    },
+    {
+      "id": 1948,
+      "name": "Taller",
+      "type": 1
+    },
+    {
+      "id": 1949,
+      "name": "Observatorio",
+      "type": 1
+    },
+    {
+      "id": 1950,
+      "name": "Sala de belleza",
+      "type": 1
+    },
+    {
+      "id": 1951,
+      "name": "Salón de masaje",
+      "type": 1
+    },
+    {
+      "id": 1952,
+      "name": "Sala de póker",
+      "type": 1
+    },
+    {
+      "id": 1953,
+      "name": "Sala de pool",
+      "type": 1
+    },
+    {
+      "id": 1954,
+      "name": "Sala de video",
+      "type": 1
+    },
+    {
+      "id": 1955,
+      "name": "Salón de eventos",
+      "type": 1
+    },
+    {
+      "id": 1956,
+      "name": "Sala de recepción",
+      "type": 1
+    },
+    {
+      "id": 1957,
+      "name": "Salón(es) de convenciones",
+      "type": 1
+    },
+    {
+      "id": 1958,
+      "name": "SUM con parrilla",
+      "type": 1
+    },
+    {
+      "id": 1959,
+      "name": "SUM privado",
+      "type": 1
+    },
+    {
+      "id": 1960,
+      "name": "Sala de juegos con parrilla",
+      "type": 1
+    },
+    {
+      "id": 1961,
+      "name": "Lounge deportivo",
+      "type": 1
+    },
+    {
+      "id": 1962,
+      "name": "Taberna",
+      "type": 1
+    },
+    {
+      "id": 1964,
+      "name": "Aire acondicionado",
+      "type": 2
+    },
+    {
+      "id": 1965,
+      "name": "Climatizado",
+      "type": 2
+    },
+    {
+      "id": 1966,
+      "name": "Suministro de agua compartido",
+      "type": 2
+    },
+    {
+      "id": 1967,
+      "name": "Administración de Airbnb",
+      "type": 3
+    },
+    {
+      "id": 1968,
+      "name": "Bicicletas compartidas",
+      "type": 2
+    },
+    {
+      "id": 1969,
+      "name": "Sistema de bicicletas compartidas",
+      "type": 2
+    },
+    {
+      "id": 1970,
+      "name": "Biometría",
+      "type": 2
+    },
+    {
+      "id": 1971,
+      "name": "Captación de energía solar",
+      "type": 2
+    },
+    {
+      "id": 1972,
+      "name": "Cargador para vehículo eléctrico",
+      "type": 2
+    },
+    {
+      "id": 1973,
+      "name": "Garaje automatizado",
+      "type": 2
+    },
+    {
+      "id": 1974,
+      "name": "Sector de lavado de autos",
+      "type": 2
+    },
+    {
+      "id": 1975,
+      "name": "Ascensor por huella digital",
+      "type": 2
+    },
+    {
+      "id": 1976,
+      "name": "Ascensor panorámico",
+      "type": 2
+    },
+    {
+      "id": 1977,
+      "name": "Ascensor vehicular",
+      "type": 2
+    },
+    {
+      "id": 1978,
+      "name": "Ascensor privado",
+      "type": 2
+    },
+    {
+      "id": 1979,
+      "name": "Ascensor adaptado",
+      "type": 2
+    },
+    {
+      "id": 1980,
+      "name": "Conserjería de 7 a 23 hs",
+      "type": 2
+    },
+    {
+      "id": 1981,
+      "name": "Conserjería remota",
+      "type": 2
+    },
+    {
+      "id": 1982,
+      "name": "Conserjería virtual",
+      "type": 2
+    },
+    {
+      "id": 1983,
+      "name": "Portero eléctrico",
+      "type": 2
+    },
+    {
+      "id": 1984,
+      "name": "Seguridad monitorizada",
+      "type": 2
+    },
+    {
+      "id": 1985,
+      "name": "Seguridad vehicular",
+      "type": 2
+    },
+    {
+      "id": 1986,
+      "name": "Sistema de cámaras",
+      "type": 2
+    },
+    {
+      "id": 1987,
+      "name": "Sistema de Seguridad",
+      "type": 2
+    },
+    {
+      "id": 1988,
+      "name": "Sistema de prevención de incendios",
+      "type": 2
+    },
+    {
+      "id": 1989,
+      "name": "Sistema de monitoreo",
+      "type": 2
+    },
+    {
+      "id": 1990,
+      "name": "Sistema de calefacción",
+      "type": 2
+    },
+    {
+      "id": 1991,
+      "name": "Sistema de calefacción solar",
+      "type": 2
+    },
+    {
+      "id": 1992,
+      "name": "Sistema de generación de energía fotovoltaica",
+      "type": 2
+    },
+    {
+      "id": 1993,
+      "name": "Sistema de riego",
+      "type": 2
+    },
+    {
+      "id": 1994,
+      "name": "Sistema de riego de jardín",
+      "type": 2
+    },
+    {
+      "id": 1995,
+      "name": "Sistema de captación de aguas",
+      "type": 2
+    },
+    {
+      "id": 1996,
+      "name": "Sistema de recolección de aguas",
+      "type": 2
+    },
+    {
+      "id": 1997,
+      "name": "Sistema de sonido",
+      "type": 2
+    },
+    {
+      "id": 1998,
+      "name": "Sonido ambiental en áreas comunes",
+      "type": 2
+    },
+    {
+      "id": 1999,
+      "name": "Servicios pay-per-use",
+      "type": 2
+    },
+    {
+      "id": 2000,
+      "name": "Room service",
+      "type": 2
+    },
+    {
+      "id": 2001,
+      "name": "Monopatines eléctricos compartidos",
+      "type": 2
+    },
+    {
+      "id": 2002,
+      "name": "Café internet",
+      "type": 2
+    },
+    {
+      "id": 2003,
+      "name": "Minimercado",
+      "type": 2
+    },
+    {
+      "id": 2004,
+      "name": "Máquinas expendedoras",
+      "type": 2
+    },
+    {
+      "id": 2006,
+      "name": "Terminación en mármol",
+      "type": 3
+    },
+    {
+      "id": 2007,
+      "name": "Cocina de porcelana con mesada de granito",
+      "type": 3
+    },
+    {
+      "id": 2008,
+      "name": "Bacha de mármol",
+      "type": 3
+    },
+    {
+      "id": 2009,
+      "name": "Bacha de vidrio",
+      "type": 3
+    },
+    {
+      "id": 2010,
+      "name": "Techo de madera",
+      "type": 3
+    },
+    {
+      "id": 2011,
+      "name": "Techo de durlock",
+      "type": 3
+    },
+    {
+      "id": 2012,
+      "name": "Techo de yeso",
+      "type": 3
+    },
+    {
+      "id": 2013,
+      "name": "Techo de PVC",
+      "type": 3
+    },
+    {
+      "id": 2014,
+      "name": "Cielorraso suspendido",
+      "type": 3
+    },
+    {
+      "id": 2015,
+      "name": "Piso de granito",
+      "type": 3
+    },
+    {
+      "id": 2016,
+      "name": "Piso de mármol",
+      "type": 3
+    },
+    {
+      "id": 2017,
+      "name": "Suelo de parquet",
+      "type": 3
+    },
+    {
+      "id": 2018,
+      "name": "Piso vinílico",
+      "type": 3
+    },
+    {
+      "id": 2019,
+      "name": "Piso de madera flotante",
+      "type": 3
+    },
+    {
+      "id": 2020,
+      "name": "Piso de cemento alisado",
+      "type": 3
+    },
+    {
+      "id": 2021,
+      "name": "Piso cerámico",
+      "type": 3
+    },
+    {
+      "id": 2022,
+      "name": "Piso de pizarra",
+      "type": 3
+    },
+    {
+      "id": 2023,
+      "name": "Artefactos de alta gama",
+      "type": 3
+    },
+    {
+      "id": 2024,
+      "name": "Muebles de diseño",
+      "type": 3
+    },
+    {
+      "id": 2025,
+      "name": "Cortinas automatizadas",
+      "type": 3
+    },
+    {
+      "id": 2026,
+      "name": "Cortinas blackout",
+      "type": 3
+    },
+    {
+      "id": 2027,
+      "name": "Persianas integradas",
+      "type": 3
+    },
+    {
+      "id": 2028,
+      "name": "Vidrio termoacústico",
+      "type": 3
+    },
+    {
+      "id": 2029,
+      "name": "Ventanas con reducción de ruido",
+      "type": 3
+    },
+    {
+      "id": 2030,
+      "name": "Vista permanente",
+      "type": 3
+    },
+    {
+      "id": 2031,
+      "name": "Orientación norte",
+      "type": 3
+    },
+    {
+      "id": 2032,
+      "name": "Esquina",
+      "type": 3
+    },
+    {
+      "id": 2033,
+      "name": "Triplex",
+      "type": 3
+    },
+    {
+      "id": 2034,
+      "name": "Plano flexible",
+      "type": 3
+    },
+    {
+      "id": 2035,
+      "name": "Puerta blindada",
+      "type": 3
+    },
+    {
+      "id": 2036,
+      "name": "Puerta pivote",
+      "type": 3
+    },
+    {
+      "id": 2037,
+      "name": "Puerta maciza",
+      "type": 3
+    },
+    {
+      "id": 2038,
+      "name": "Puertas resistentes a impactos",
+      "type": 3
+    },
+    {
+      "id": 2039,
+      "name": "Zócalo de madera",
+      "type": 3
+    },
+    {
+      "id": 2040,
+      "name": "Zócalo de porcelanato",
+      "type": 3
+    },
+    {
+      "id": 2041,
+      "name": "Zócalo laqueado",
+      "type": 3
+    },
+    {
+      "id": 2044,
+      "name": "Acceso pavimentado",
+      "type": 3
+    },
+    {
+      "id": 2045,
+      "name": "Acceso por teclado",
+      "type": 3
+    },
+    {
+      "id": 2046,
+      "name": "Tag de acceso",
+      "type": 3
+    },
+    {
+      "id": 2047,
+      "name": "Acceso peatonal",
+      "type": 3
+    },
+    {
+      "id": 2048,
+      "name": "Acceso exclusivo para mascotas",
+      "type": 3
+    },
+    {
+      "id": 2049,
+      "name": "Acceso exclusivo a la playa",
+      "type": 3
+    },
+    {
+      "id": 2050,
+      "name": "Vertedero",
+      "type": 3
+    },
+    {
+      "id": 2051,
+      "name": "Ambientes equipados y decorados",
+      "type": 1
+    },
+    {
+      "id": 2052,
+      "name": "Garage con amortiguadores de impacto",
+      "type": 3
+    },
+    {
+      "id": 2053,
+      "name": "Antesala",
+      "type": 1
+    },
+    {
+      "id": 2054,
+      "name": "Antena compartida",
+      "type": 2
+    },
+    {
+      "id": 2055,
+      "name": "A prueba de polvo",
+      "type": 3
+    },
+    {
+      "id": 2056,
+      "name": "Calefón central sin tanque",
+      "type": 3
+    },
+    {
+      "id": 2057,
+      "name": "Calefón sin tanque",
+      "type": 3
+    },
+    {
+      "id": 2058,
+      "name": "Calefacción eléctrica y a gas",
+      "type": 2
+    },
+    {
+      "id": 2059,
+      "name": "Boxes para caballos",
+      "type": 3
+    },
+    {
+      "id": 2060,
+      "name": "Baños para hombres y mujeres",
+      "type": 1
+    },
+    {
+      "id": 2061,
+      "name": "Blackout de ventana",
+      "type": 3
+    },
+    {
+      "id": 2062,
+      "name": "Pista de bowling",
+      "type": 2
+    },
+    {
+      "id": 2063,
+      "name": "Locker de playa",
+      "type": 3
+    },
+    {
+      "id": 2064,
+      "name": "Baño de hombres",
+      "type": 1
+    },
+    {
+      "id": 2065,
+      "name": "Baño de mujeres",
+      "type": 1
+    },
+    {
+      "id": 2066,
+      "name": "Baño compartido",
+      "type": 1
+    },
+    {
+      "id": 2067,
+      "name": "Vereda",
+      "type": 3
+    },
+    {
+      "id": 2068,
+      "name": "Vereda de adoquines",
+      "type": 3
+    },
+    {
+      "id": 2069,
+      "name": "Cámara frigorífica",
+      "type": 3
+    },
+    {
+      "id": 2070,
+      "name": "Cancha de césped sintético",
+      "type": 2
+    },
+    {
+      "id": 2071,
+      "name": "Cancha de fútbol infantil",
+      "type": 2
+    },
+    {
+      "id": 2072,
+      "name": "Cancha de fútbol de arena",
+      "type": 2
+    },
+    {
+      "id": 2073,
+      "name": "Cancha de Bochas",
+      "type": 2
+    },
+    {
+      "id": 2074,
+      "name": "Canil",
+      "type": 3
+    },
+    {
+      "id": 2075,
+      "name": "Alfombra",
+      "type": 3
+    },
+    {
+      "id": 2076,
+      "name": "Molinetes de identificación",
+      "type": 3
+    },
+    {
+      "id": 2077,
+      "name": "Cerca de vidrio",
+      "type": 3
+    },
+    {
+      "id": 2078,
+      "name": "Área cercada",
+      "type": 1
+    },
+    {
+      "id": 2079,
+      "name": "Fuente",
+      "type": 3
+    },
+    {
+      "id": 2080,
+      "name": "Guardería",
+      "type": 3
+    },
+    {
+      "id": 2081,
+      "name": "Parrilla a carbón",
+      "type": 3
+    },
+    {
+      "id": 2082,
+      "name": "Parrilla integrada a cocina",
+      "type": 1
+    },
+    {
+      "id": 2083,
+      "name": "Áreas de parrilla compartidas",
+      "type": 1
+    },
+    {
+      "id": 2084,
+      "name": "Ducha de playa",
+      "type": 3
+    },
+    {
+      "id": 2085,
+      "name": "Bicisenda del condominio",
+      "type": 3
+    },
+    {
+      "id": 2086,
+      "name": "Sendero peatonal",
+      "type": 3
+    },
+    {
+      "id": 2087,
+      "name": "Área de entrenamiento funcional",
+      "type": 1
+    },
+    {
+      "id": 2088,
+      "name": "Tragaluz",
+      "type": 3
+    },
+    {
+      "id": 2089,
+      "name": "Vestidor de hombres",
+      "type": 1
+    },
+    {
+      "id": 2090,
+      "name": "Vestidores de hombres y mujeres",
+      "type": 1
+    },
+    {
+      "id": 2091,
+      "name": "Vestidor de mujeres",
+      "type": 1
+    },
+    {
+      "id": 2092,
+      "name": "Techo de vidrio retráctil",
+      "type": 3
+    },
+    {
+      "id": 2093,
+      "name": "Recolección selectiva de residuos",
+      "type": 3
+    },
+    {
+      "id": 2094,
+      "name": "Barrio cerrado",
+      "type": 3
+    },
+    {
+      "id": 2095,
+      "name": "Despensa con muebles",
+      "type": 3
+    },
+    {
+      "id": 2096,
+      "name": "Pasillo con placard",
+      "type": 1
+    },
+    {
+      "id": 2097,
+      "name": "Pasillo lateral",
+      "type": 3
+    },
+    {
+      "id": 2098,
+      "name": "Baranda de acero inoxidable",
+      "type": 3
+    },
+    {
+      "id": 2099,
+      "name": "Espacio de coworking",
+      "type": 3
+    },
+    {
+      "id": 2100,
+      "name": "Cocina con cerámicos",
+      "type": 1
+    },
+    {
+      "id": 2101,
+      "name": "Suite Jack y Jill",
+      "type": 1
+    },
+    {
+      "id": 2102,
+      "name": "Baulera privada en cochera",
+      "type": 3
+    },
+    {
+      "id": 2103,
+      "name": "Ducha bidet",
+      "type": 3
+    },
+    {
+      "id": 2104,
+      "name": "Cámara de acceso para vehículos",
+      "type": 3
+    },
+    {
+      "id": 2105,
+      "name": "Cámara de acceso social",
+      "type": 3
+    },
+    {
+      "id": 2106,
+      "name": "Electrodomésticos",
+      "type": 3
+    },
+    {
+      "id": 2107,
+      "name": "Ascensor con recuperación de energía",
+      "type": 2
+    },
+    {
+      "id": 2108,
+      "name": "Entrada a nivel",
+      "type": 3
+    },
+    {
+      "id": 2109,
+      "name": "Entrada lateral",
+      "type": 3
+    },
+    {
+      "id": 2110,
+      "name": "Entrada lateral independiente",
+      "type": 3
+    },
+    {
+      "id": 2111,
+      "name": "Entrada de visitas",
+      "type": 3
+    },
+    {
+      "id": 2112,
+      "name": "Entrada para bañistas",
+      "type": 3
+    },
+    {
+      "id": 2113,
+      "name": "Entrada principal",
+      "type": 3
+    },
+    {
+      "id": 2114,
+      "name": "Entrada principal y de servicio",
+      "type": 2
+    },
+    {
+      "id": 2115,
+      "name": "Equipo de calefacción",
+      "type": 2
+    },
+    {
+      "id": 2116,
+      "name": "Escaleras de granito",
+      "type": 3
+    },
+    {
+      "id": 2117,
+      "name": "Escaleras de madera",
+      "type": 3
+    },
+    {
+      "id": 2118,
+      "name": "Escaleras de mármol",
+      "type": 3
+    },
+    {
+      "id": 2119,
+      "name": "Escalera",
+      "type": 3
+    },
+    {
+      "id": 2120,
+      "name": "Sector náutico",
+      "type": 1
+    },
+    {
+      "id": 2121,
+      "name": "Sector de mate",
+      "type": 1
+    },
+    {
+      "id": 2122,
+      "name": "Área de entregas",
+      "type": 1
+    },
+    {
+      "id": 2123,
+      "name": "Área funcional",
+      "type": 1
+    },
+    {
+      "id": 2124,
+      "name": "Área de mujeres",
+      "type": 1
+    },
+    {
+      "id": 2125,
+      "name": "Área de hamacas",
+      "type": 1
+    },
+    {
+      "id": 2126,
+      "name": "Área para adultos mayores",
+      "type": 1
+    },
+    {
+      "id": 2127,
+      "name": "Espacio web",
+      "type": 3
+    },
+    {
+      "id": 2128,
+      "name": "Espejo de agua",
+      "type": 2
+    },
+    {
+      "id": 2129,
+      "name": "Marcos automatizados",
+      "type": 3
+    },
+    {
+      "id": 2130,
+      "name": "Marcos de madera",
+      "type": 3
+    },
+    {
+      "id": 2131,
+      "name": "Marcos de PVC",
+      "type": 3
+    },
+    {
+      "id": 2132,
+      "name": "Valet parking",
+      "type": 2
+    },
+    {
+      "id": 2133,
+      "name": "Estacionamiento de vehículos",
+      "type": 2
+    },
+    {
+      "id": 2134,
+      "name": "Estacionamiento rotativo",
+      "type": 2
+    },
+    {
+      "id": 2135,
+      "name": "Estación de servicio",
+      "type": 2
+    },
+    {
+      "id": 2136,
+      "name": "Living con pérgola",
+      "type": 1
+    },
+    {
+      "id": 2137,
+      "name": "Estructura de club completa",
+      "type": 3
+    },
+    {
+      "id": 2138,
+      "name": "Invernadero",
+      "type": 3
+    },
+    {
+      "id": 2139,
+      "name": "Cerradura biométrica",
+      "type": 3
+    },
+    {
+      "id": 2140,
+      "name": "Cerradura digital",
+      "type": 3
+    },
+    {
+      "id": 2141,
+      "name": "Cocina",
+      "type": 3
+    },
+    {
+      "id": 2142,
+      "name": "Horno a leña",
+      "type": 3
+    },
+    {
+      "id": 2143,
+      "name": "Cambiador",
+      "type": 3
+    },
+    {
+      "id": 2144,
+      "name": "Galería pluvial",
+      "type": 1
+    },
+    {
+      "id": 2145,
+      "name": "Galería de arte",
+      "type": 1
+    },
+    {
+      "id": 2146,
+      "name": "Gallinero",
+      "type": 3
+    },
+    {
+      "id": 2147,
+      "name": "Garaje pintado con epoxi",
+      "type": 3
+    },
+    {
+      "id": 2148,
+      "name": "Jardín con parrilla",
+      "type": 3
+    },
+    {
+      "id": 2149,
+      "name": "Gas por cañería",
+      "type": 2
+    },
+    {
+      "id": 2150,
+      "name": "Gas central",
+      "type": 2
+    },
+    {
+      "id": 2151,
+      "name": "Gazebo",
+      "type": 3
+    },
+    {
+      "id": 2152,
+      "name": "Biblioteca de historietas",
+      "type": 3
+    },
+    {
+      "id": 2153,
+      "name": "Nivelado",
+      "type": 3
+    },
+    {
+      "id": 2154,
+      "name": "Baranda",
+      "type": 3
+    },
+    {
+      "id": 2155,
+      "name": "Garita blindada",
+      "type": 3
+    },
+    {
+      "id": 2156,
+      "name": "Garita con seguridad",
+      "type": 2
+    },
+    {
+      "id": 2157,
+      "name": "Hall de triple altura",
+      "type": 1
+    },
+    {
+      "id": 2158,
+      "name": "Hall de entrada decorado",
+      "type": 1
+    },
+    {
+      "id": 2159,
+      "name": "Locker de guardado",
+      "type": 3
+    },
+    {
+      "id": 2160,
+      "name": "Iluminación automatizada",
+      "type": 2
+    },
+    {
+      "id": 2161,
+      "name": "Iluminación LED",
+      "type": 2
+    },
+    {
+      "id": 2162,
+      "name": "Iluminación inteligente",
+      "type": 2
+    },
+    {
+      "id": 2163,
+      "name": "Infraestructura para calefactor",
+      "type": 2
+    },
+    {
+      "id": 2164,
+      "name": "Infraestructura para aspiradora central",
+      "type": 2
+    },
+    {
+      "id": 2165,
+      "name": "Infraestructura para automatización",
+      "type": 2
+    },
+    {
+      "id": 2166,
+      "name": "Infraestructura para campana extractora",
+      "type": 2
+    },
+    {
+      "id": 2167,
+      "name": "Infraestructura para desempañador de espejos",
+      "type": 2
+    },
+    {
+      "id": 2168,
+      "name": "Infraestructura para ascensor",
+      "type": 2
+    },
+    {
+      "id": 2169,
+      "name": "Infraestructura para persianas",
+      "type": 2
+    },
+    {
+      "id": 2170,
+      "name": "Infraestructura para sauna",
+      "type": 2
+    },
+    {
+      "id": 2171,
+      "name": "Infraestructura para sistema de sonido",
+      "type": 2
+    },
+    {
+      "id": 2172,
+      "name": "Infraestructura para toallero eléctrico",
+      "type": 2
+    },
+    {
+      "id": 2173,
+      "name": "Interruptores táctiles",
+      "type": 3
+    },
+    {
+      "id": 2174,
+      "name": "Exento de consorcio",
+      "type": 3
+    },
+    {
+      "id": 2175,
+      "name": "Aislación térmica y acústica",
+      "type": 3
+    },
+    {
+      "id": 2176,
+      "name": "Ventana automatizada",
+      "type": 3
+    },
+    {
+      "id": 2177,
+      "name": "Ventanal",
+      "type": 3
+    },
+    {
+      "id": 2178,
+      "name": "Ventanales grandes",
+      "type": 3
+    },
+    {
+      "id": 2179,
+      "name": "Ventanales grandes con cortinas roller",
+      "type": 3
+    },
+    {
+      "id": 2180,
+      "name": "Ventanas con persianas eléctricas",
+      "type": 3
+    },
+    {
+      "id": 2181,
+      "name": "Chimenea de jardín",
+      "type": 3
+    },
+    {
+      "id": 2182,
+      "name": "Chimenea exterior",
+      "type": 3
+    },
+    {
+      "id": 2183,
+      "name": "Toilette con piso calefaccionado",
+      "type": 1
+    },
+    {
+      "id": 2184,
+      "name": "Lavapiés",
+      "type": 3
+    },
+    {
+      "id": 2185,
+      "name": "Lavado de autos",
+      "type": 3
+    },
+    {
+      "id": 2186,
+      "name": "Lavadero con bacha de agua caliente",
+      "type": 2
+    },
+    {
+      "id": 2187,
+      "name": "Lavadero con muebles a medida",
+      "type": 3
+    },
+    {
+      "id": 2188,
+      "name": "Sala con parrilla",
+      "type": 1
+    },
+    {
+      "id": 2189,
+      "name": "Sala gourmet",
+      "type": 1
+    },
+    {
+      "id": 2190,
+      "name": "Araña de techo",
+      "type": 3
+    },
+    {
+      "id": 2191,
+      "name": "Luces de emergencia",
+      "type": 3
+    },
+    {
+      "id": 2192,
+      "name": "Manta acústica para losa",
+      "type": 3
+    },
+    {
+      "id": 2193,
+      "name": "Manta asfáltica para losa",
+      "type": 3
+    },
+    {
+      "id": 2194,
+      "name": "Marina para lanchas",
+      "type": 2
+    },
+    {
+      "id": 2195,
+      "name": "Medidores individuales de gas y agua",
+      "type": 2
+    },
+    {
+      "id": 2196,
+      "name": "A mitad de cuadra",
+      "type": 3
+    },
+    {
+      "id": 2197,
+      "name": "Minimercado",
+      "type": 3
+    },
+    {
+      "id": 2198,
+      "name": "Mini estanque",
+      "type": 3
+    },
+    {
+      "id": 2199,
+      "name": "Mirador",
+      "type": 3
+    },
+    {
+      "id": 2200,
+      "name": "Área de juegos múltiples",
+      "type": 1
+    },
+    {
+      "id": 2201,
+      "name": "Amurallado",
+      "type": 3
+    },
+    {
+      "id": 2202,
+      "name": "Pared de vidrio",
+      "type": 3
+    },
+    {
+      "id": 2203,
+      "name": "Paredes de vidrio",
+      "type": 3
+    },
+    {
+      "id": 2204,
+      "name": "Nichos esculpidos en baño",
+      "type": 1
+    },
+    {
+      "id": 2205,
+      "name": "Bañera ofurô",
+      "type": 3
+    },
+    {
+      "id": 2206,
+      "name": "Pared de vidrio reflectivo",
+      "type": 3
+    },
+    {
+      "id": 2207,
+      "name": "Paredes aisladas",
+      "type": 3
+    },
+    {
+      "id": 2208,
+      "name": "Paredes dobles",
+      "type": 3
+    },
+    {
+      "id": 2209,
+      "name": "Parque de césped",
+      "type": 2
+    },
+    {
+      "id": 2210,
+      "name": "Pasaplatos para entregas",
+      "type": 3
+    },
+    {
+      "id": 2211,
+      "name": "Patio de servicio",
+      "type": 1
+    },
+    {
+      "id": 2212,
+      "name": "Patio de maniobras",
+      "type": 1
+    },
+    {
+      "id": 2213,
+      "name": "Techo elevado",
+      "type": 3
+    },
+    {
+      "id": 2214,
+      "name": "Personal trainer del edificio",
+      "type": 3
+    },
+    {
+      "id": 2215,
+      "name": "Muelle",
+      "type": 2
+    },
+    {
+      "id": 2216,
+      "name": "Pilotis",
+      "type": 3
+    },
+    {
+      "id": 2217,
+      "name": "Pintura acrílica",
+      "type": 3
+    },
+    {
+      "id": 2218,
+      "name": "Piscina infinita",
+      "type": 2
+    },
+    {
+      "id": 2219,
+      "name": "Piscina con bar",
+      "type": 2
+    },
+    {
+      "id": 2220,
+      "name": "Piscina con hidromasaje",
+      "type": 2
+    },
+    {
+      "id": 2221,
+      "name": "Pileta para niños",
+      "type": 2
+    },
+    {
+      "id": 2222,
+      "name": "Piso antirruido",
+      "type": 3
+    },
+    {
+      "id": 2223,
+      "name": "Piso de goma",
+      "type": 3
+    },
+    {
+      "id": 2224,
+      "name": "Piso de madera entablonada",
+      "type": 3
+    },
+    {
+      "id": 2225,
+      "name": "Pista para correr",
+      "type": 2
+    },
+    {
+      "id": 2226,
+      "name": "Pista para correr/caminar",
+      "type": 2
+    },
+    {
+      "id": 2227,
+      "name": "Pista de patinaje",
+      "type": 2
+    },
+    {
+      "id": 2228,
+      "name": "Pista de aterrizaje",
+      "type": 2
+    },
+    {
+      "id": 2229,
+      "name": "Carril para patinaje",
+      "type": 2
+    },
+    {
+      "id": 2230,
+      "name": "Parrilla para pizza",
+      "type": 3
+    },
+    {
+      "id": 2231,
+      "name": "Plaza pequeña",
+      "type": 2
+    },
+    {
+      "id": 2232,
+      "name": "Pozo",
+      "type": 3
+    },
+    {
+      "id": 2233,
+      "name": "Punto de agua caliente",
+      "type": 2
+    },
+    {
+      "id": 2234,
+      "name": "Desagüe para triturador de cocina",
+      "type": 1
+    },
+    {
+      "id": 2235,
+      "name": "Toma de TV en baño",
+      "type": 1
+    },
+    {
+      "id": 2236,
+      "name": "Huerta",
+      "type": 3
+    },
+    {
+      "id": 2237,
+      "name": "Solárium en la pileta",
+      "type": 1
+    },
+    {
+      "id": 2238,
+      "name": "Porte-cochère",
+      "type": 3
+    },
+    {
+      "id": 2239,
+      "name": "Portón con cámara de acceso",
+      "type": 3
+    },
+    {
+      "id": 2240,
+      "name": "Portón electrónico",
+      "type": 3
+    },
+    {
+      "id": 2241,
+      "name": "Puertas con reducción de ruido",
+      "type": 3
+    },
+    {
+      "id": 2242,
+      "name": "Puertas con burletes",
+      "type": 3
+    },
+    {
+      "id": 2243,
+      "name": "Puertas laqueadas",
+      "type": 3
+    },
+    {
+      "id": 2244,
+      "name": "Potencial constructivo",
+      "type": 3
+    },
+    {
+      "id": 2245,
+      "name": "Plaza boulevard",
+      "type": 3
+    },
+    {
+      "id": 2246,
+      "name": "Plaza social",
+      "type": 3
+    },
+    {
+      "id": 2247,
+      "name": "Edificio revestido en cerámico",
+      "type": 3
+    },
+    {
+      "id": 2248,
+      "name": "Edificio sin ascensor",
+      "type": 2
+    },
+    {
+      "id": 2249,
+      "name": "Pre-instalación para ascensor",
+      "type": 2
+    },
+    {
+      "id": 2250,
+      "name": "Pileta y sauna privados",
+      "type": 2
+    },
+    {
+      "id": 2251,
+      "name": "Piso entablonado",
+      "type": 3
+    },
+    {
+      "id": 2252,
+      "name": "Proyecto de automatización",
+      "type": 2
+    },
+    {
+      "id": 2253,
+      "name": "Proyecto lumínico",
+      "type": 2
+    },
+    {
+      "id": 2254,
+      "name": "Buffer de seguridad",
+      "type": 2
+    },
+    {
+      "id": 2255,
+      "name": "Cancha de beach tennis",
+      "type": 2
+    },
+    {
+      "id": 2256,
+      "name": "Cancha de césped",
+      "type": 2
+    },
+    {
+      "id": 2257,
+      "name": "Cancha de césped sintético",
+      "type": 2
+    },
+    {
+      "id": 2258,
+      "name": "Cancha de arena",
+      "type": 2
+    },
+    {
+      "id": 2259,
+      "name": "Cancha de futsal",
+      "type": 2
+    },
+    {
+      "id": 2260,
+      "name": "Cancha de bádminton",
+      "type": 2
+    },
+    {
+      "id": 2261,
+      "name": "Cancha de pickleball",
+      "type": 2
+    },
+    {
+      "id": 2262,
+      "name": "Cancha recreativa",
+      "type": 2
+    },
+    {
+      "id": 2263,
+      "name": "Dormitorio(s) con bañera",
+      "type": 1
+    },
+    {
+      "id": 2264,
+      "name": "Dormitorio(s) con placard",
+      "type": 1
+    },
+    {
+      "id": 2265,
+      "name": "Dormitorio(s) con piso flotante",
+      "type": 1
+    },
+    {
+      "id": 2266,
+      "name": "Dormitorio(s) simple(s)",
+      "type": 1
+    },
+    {
+      "id": 2267,
+      "name": "Quincho con parrilla",
+      "type": 3
+    },
+    {
+      "id": 2268,
+      "name": "Quincho gourmet",
+      "type": 3
+    },
+    {
+      "id": 2269,
+      "name": "Quinchos",
+      "type": 3
+    },
+    {
+      "id": 2270,
+      "name": "Cielorraso de yeso suspendido",
+      "type": 3
+    },
+    {
+      "id": 2271,
+      "name": "Reconocimiento facial",
+      "type": 3
+    },
+    {
+      "id": 2272,
+      "name": "Red de tratamiento de efluentes",
+      "type": 2
+    },
+    {
+      "id": 2273,
+      "name": "Red de seguridad en ventanas",
+      "type": 3
+    },
+    {
+      "id": 2274,
+      "name": "Cafetería",
+      "type": 1
+    },
+    {
+      "id": 2275,
+      "name": "Reforestación",
+      "type": 3
+    },
+    {
+      "id": 2276,
+      "name": "Reservas",
+      "type": 3
+    },
+    {
+      "id": 2277,
+      "name": "Restaurante privado",
+      "type": 3
+    },
+    {
+      "id": 2278,
+      "name": "Reutilización de agua de lluvia",
+      "type": 2
+    },
+    {
+      "id": 2279,
+      "name": "Zócalos de poliestireno",
+      "type": 3
+    },
+    {
+      "id": 2280,
+      "name": "Balcón con parrilla",
+      "type": 3
+    },
+    {
+      "id": 2281,
+      "name": "Habitación de Servicio",
+      "type": 1
+    },
+    {
+      "id": 2282,
+      "name": "Sala de entregas",
+      "type": 1
+    },
+    {
+      "id": 2283,
+      "name": "Living con barra",
+      "type": 1
+    },
+    {
+      "id": 2284,
+      "name": "Grandes livings y comedores",
+      "type": 1
+    },
+    {
+      "id": 2285,
+      "name": "Sala de estética",
+      "type": 1
+    },
+    {
+      "id": 2286,
+      "name": "Sala de herramientas",
+      "type": 1
+    },
+    {
+      "id": 2287,
+      "name": "Comedor con parrilla",
+      "type": 1
+    },
+    {
+      "id": 2288,
+      "name": "Sala de pintura",
+      "type": 1
+    },
+    {
+      "id": 2289,
+      "name": "Sala de ping pong",
+      "type": 1
+    },
+    {
+      "id": 2290,
+      "name": "Sala íntima",
+      "type": 1
+    },
+    {
+      "id": 2291,
+      "name": "Sala grande de 2 ambientes",
+      "type": 1
+    },
+    {
+      "id": 2292,
+      "name": "Sala grande de 3 ambientes",
+      "type": 1
+    },
+    {
+      "id": 2293,
+      "name": "Sala grande de 4 ambientes",
+      "type": 1
+    },
+    {
+      "id": 2294,
+      "name": "Sala grande de 6 ambientes",
+      "type": 1
+    },
+    {
+      "id": 2295,
+      "name": "Sala con aislación acústica",
+      "type": 1
+    },
+    {
+      "id": 2296,
+      "name": "Sala con placard",
+      "type": 1
+    },
+    {
+      "id": 2297,
+      "name": "Sala con balcón",
+      "type": 3
+    },
+    {
+      "id": 2298,
+      "name": "Sala integrada a cocina",
+      "type": 1
+    },
+    {
+      "id": 2299,
+      "name": "Hall con parrilla",
+      "type": 1
+    },
+    {
+      "id": 2300,
+      "name": "Moldura de yeso",
+      "type": 3
+    },
+    {
+      "id": 2301,
+      "name": "Sauna y jacuzzi",
+      "type": 2
+    },
+    {
+      "id": 2302,
+      "name": "Semisuites",
+      "type": 1
+    },
+    {
+      "id": 2303,
+      "name": "Sensor perimetral",
+      "type": 2
+    },
+    {
+      "id": 2304,
+      "name": "Sensor de presencia en áreas comunes",
+      "type": 1
+    },
+    {
+      "id": 2305,
+      "name": "Sensor de presencia en cochera",
+      "type": 3
+    },
+    {
+      "id": 2306,
+      "name": "Sistema de esclusa de aire",
+      "type": 2
+    },
+    {
+      "id": 2307,
+      "name": "Sistema de iluminación solar",
+      "type": 2
+    },
+    {
+      "id": 2308,
+      "name": "Sistema de presurización",
+      "type": 2
+    },
+    {
+      "id": 2309,
+      "name": "Suite con muebles a medida",
+      "type": 1
+    },
+    {
+      "id": 2310,
+      "name": "Suite con placard y bañera",
+      "type": 1
+    },
+    {
+      "id": 2311,
+      "name": "Suite con placard e hidromasaje",
+      "type": 1
+    },
+    {
+      "id": 2312,
+      "name": "Suite con doble bacha",
+      "type": 1
+    },
+    {
+      "id": 2313,
+      "name": "Suite con chimenea",
+      "type": 1
+    },
+    {
+      "id": 2314,
+      "name": "Suite principal con placard",
+      "type": 1
+    },
+    {
+      "id": 2315,
+      "name": "Suite principal con hidromasaje",
+      "type": 1
+    },
+    {
+      "id": 2316,
+      "name": "Bacha de lavadero",
+      "type": 3
+    },
+    {
+      "id": 2317,
+      "name": "Bacha de cocina auxiliar",
+      "type": 3
+    },
+    {
+      "id": 2318,
+      "name": "Acuario",
+      "type": 3
+    },
+    {
+      "id": 2319,
+      "name": "Estanque de peces",
+      "type": 3
+    },
+    {
+      "id": 2320,
+      "name": "Teja galvanizada",
+      "type": 3
+    },
+    {
+      "id": 2321,
+      "name": "Techo de teja",
+      "type": 3
+    },
+    {
+      "id": 2322,
+      "name": "Tejas de policarbonato",
+      "type": 3
+    },
+    {
+      "id": 2323,
+      "name": "Tejas de cemento",
+      "type": 3
+    },
+    {
+      "id": 2324,
+      "name": "Terraza con parrilla",
+      "type": 1
+    },
+    {
+      "id": 2325,
+      "name": "Terraza con techo retráctil",
+      "type": 1
+    },
+    {
+      "id": 2326,
+      "name": "Terraza con hidromasaje",
+      "type": 1
+    },
+    {
+      "id": 2327,
+      "name": "Terraza con jacuzzi",
+      "type": 1
+    },
+    {
+      "id": 2328,
+      "name": "Terraza con pileta",
+      "type": 1
+    },
+    {
+      "id": 2329,
+      "name": "Terraza con jardín",
+      "type": 1
+    },
+    {
+      "id": 2330,
+      "name": "Techo retráctil",
+      "type": 3
+    },
+    {
+      "id": 2331,
+      "name": "Techo retráctil automatizado",
+      "type": 3
+    },
+    {
+      "id": 2332,
+      "name": "Tirolesa",
+      "type": 2
+    },
+    {
+      "id": 2333,
+      "name": "Toallero eléctrico",
+      "type": 3
+    },
+    {
+      "id": 2334,
+      "name": "Toma para bicicleta eléctrica",
+      "type": 3
+    },
+    {
+      "id": 2335,
+      "name": "Tomas USB",
+      "type": 3
+    },
+    {
+      "id": 2336,
+      "name": "Embarcadero",
+      "type": 2
+    },
+    {
+      "id": 2337,
+      "name": "Sendero de trekking",
+      "type": 2
+    },
+    {
+      "id": 2338,
+      "name": "Turismo rural",
+      "type": 3
+    },
+    {
+      "id": 2339,
+      "name": "Espacio de carga y descarga",
+      "type": 3
+    },
+    {
+      "id": 2340,
+      "name": "Espacio de embarque",
+      "type": 3
+    },
+    {
+      "id": 2341,
+      "name": "Estacionamiento para personas con movilidad reducida",
+      "type": 2
+    },
+    {
+      "id": 2342,
+      "name": "Espacio(s) para motocicletas",
+      "type": 3
+    },
+    {
+      "id": 2343,
+      "name": "Tendedero compartido",
+      "type": 2
+    },
+    {
+      "id": 2344,
+      "name": "Balcón con jacuzzi",
+      "type": 3
+    },
+    {
+      "id": 2345,
+      "name": "Balcón con pileta",
+      "type": 3
+    },
+    {
+      "id": 2346,
+      "name": "Balcón gourmet",
+      "type": 3
+    },
+    {
+      "id": 2347,
+      "name": "Ventilación natural",
+      "type": 3
+    },
+    {
+      "id": 2348,
+      "name": "Carril de desaceleración",
+      "type": 3
+    },
+    {
+      "id": 2349,
+      "name": "Vidrio de alta calidad",
+      "type": 3
+    },
+    {
+      "id": 2350,
+      "name": "Aviario",
+      "type": 3
+    },
+    {
+      "id": 2351,
+      "name": "Ajedrez gigante",
+      "type": 3
+    }
+  ]

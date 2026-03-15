@@ -90,4 +90,8 @@ export class BaseBranchFieldsDto {
   @IsInt()
   @IsPositive()
   organizationId?: number;
+
+  @IsOptional()
+  @IsString()
+  external_reference?: string;
 }

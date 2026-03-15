@@ -167,6 +167,9 @@ export class Property {
   @Column({ type: 'boolean', nullable: true, default: false })
   credit_eligible?: boolean;
 
+  @Column({ type: 'boolean', nullable: true, default: false })
+  has_sign?: boolean;
+
   @Column({ type: 'integer', nullable: true })
   floors_amount?: number;
 

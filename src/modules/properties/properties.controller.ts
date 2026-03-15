@@ -26,7 +26,9 @@ import { EnhancedFileFieldsInterceptor } from '../../common/interceptors/enhance
 
 @Controller('properties')
 export class PropertiesController {
-  constructor(private readonly propertiesService: PropertiesService) {}
+  constructor(
+    private readonly propertiesService: PropertiesService,
+  ) {}
 
   /**
    * POST /properties/:propertyId/save-multimedia

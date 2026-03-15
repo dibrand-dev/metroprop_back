@@ -1,0 +1,1634 @@
+[
+    {
+      "address": "helguera al 11100",
+      "address_complement": "",
+      "age": 0,
+      "apartment_door": "",
+      "appartments_per_floor": 0,
+      "bathroom_amount": 1,
+      "block_number": "",
+      "branch": {
+        "address": "",
+        "alternative_phone": "",
+        "alternative_phone_area": "",
+        "alternative_phone_country_code": "",
+        "alternative_phone_extension": "",
+        "branch_type": "Internal",
+        "contact_time": "",
+        "created_date": "2026-03-12T20:48:40",
+        "display_name": "MetroProp",
+        "email": "norberto@dibrand.co",
+        "geo_lat": null,
+        "geo_long": null,
+        "gm_location_type": "UNKNOWN",
+        "id": 105067,
+        "is_default": true,
+        "logo": "https://static.tokkobroker.com/static/img/empty-logo.png",
+        "name": "MetroProp",
+        "pdf_footer_text": "",
+        "phone": "+5401165939115",
+        "phone_area": "",
+        "phone_country_code": "",
+        "phone_extension": "",
+        "use_pdf_footer": false
+      },
+      "building": "",
+      "cleaning_tax": "0.00",
+      "common_area": "0.00",
+      "covered_parking_lot": 1,
+      "created_at": "2026-03-13T21:18:02",
+      "credit_eligible": "Sin especificar",
+      "custom1": "0.00",
+      "custom_tags": [
+        {
+          "group_name": "Cartel",
+          "id": 76255,
+          "name": "Tiene cartel",
+          "public_name": ""
+        }
+      ],
+      "deleted_at": "2026-03-13T21:50:10",
+      "depth_measure": "12.00",
+      "description": "esto es mi descurption de prueba para la property tipo casa",
+      "development": null,
+      "development_excel_extra_data": "[]",
+      "dining_room": 1,
+      "disposition": null,
+      "down_payment": "0.00",
+      "expenses": 0,
+      "extra_attributes": [
+        {
+          "is_expenditure": false,
+          "is_measure": false,
+          "name": "extra one",
+          "value": ""
+        },
+        {
+          "is_expenditure": false,
+          "is_measure": false,
+          "name": "extra 2 ",
+          "value": "let love in "
+        }
+      ],
+      "fake_address": "helguera al 11100",
+      "files": [],
+      "fire_insurance_cost": "0.00",
+      "floor": "",
+      "floors_amount": 2,
+      "front_measure": "12.00",
+      "geo_lat": "-34.5792698",
+      "geo_long": "-58.5126525",
+      "gm_location_type": "RANGE_INTERPOLATED",
+      "guests_amount": 0,
+      "has_temporary_rent": false,
+      "id": 7861865,
+      "internal_data": {
+        "commission": "",
+        "cotization_users": [],
+        "internal_comments": "comnetario sinternos test",
+        "key_location": "In our posession",
+        "legally_checked": 3,
+        "legally_checked_text": "informacion legal impuset?",
+        "maintenance_user": {
+          "cellphone": "",
+          "email": "norberto@dibrand.co",
+          "id": 173321,
+          "name": "Norberto Patricio Riccitelli",
+          "phone": "+5401165939115",
+          "picture": "https://static.tokkobroker.com/static/img/user.png",
+          "position": ""
+        },
+        "network_information": "",
+        "producer_comision": "0.00",
+        "property_owners": [
+          {
+            "birthdate": null,
+            "cellphone": "",
+            "created_at": "2026-03-13T21:17:30",
+            "document_number": "",
+            "email": "huerta.em@gmail.com",
+            "id": 61389337,
+            "name": "Emilio",
+            "other_email": "",
+            "other_phone": "",
+            "phone": "01126531593",
+            "updated_at": "2026-03-14T13:06:49",
+            "work_email": "huerta.em@gmail.com"
+          }
+        ],
+        "transaction_requirements": ""
+      },
+      "iptu": "No informado",
+      "is_denounced": false,
+      "is_starred_on_web": false,
+      "legally_checked": "Desconocido",
+      "livable_area": "0.00",
+      "living_amount": 1,
+      "location": {
+        "divisions": [
+          {
+            "id": 24687,
+            "name": "Las Cañitas",
+            "resource_uri": "/api/v1/location/24687/"
+          },
+          {
+            "id": 24729,
+            "name": "Botanico",
+            "resource_uri": "/api/v1/location/24729/"
+          },
+          {
+            "id": 24730,
+            "name": "Palermo Chico",
+            "resource_uri": "/api/v1/location/24730/"
+          },
+          {
+            "id": 24731,
+            "name": "Palermo Hollywood",
+            "resource_uri": "/api/v1/location/24731/"
+          },
+          {
+            "id": 24732,
+            "name": "Palermo Nuevo",
+            "resource_uri": "/api/v1/location/24732/"
+          },
+          {
+            "id": 24733,
+            "name": "Palermo Soho",
+            "resource_uri": "/api/v1/location/24733/"
+          },
+          {
+            "id": 24734,
+            "name": "Palermo Viejo",
+            "resource_uri": "/api/v1/location/24734/"
+          },
+          {
+            "id": 255722,
+            "name": "Barrio Parque",
+            "resource_uri": "/api/v1/location/255722/"
+          }
+        ],
+        "full_location": "Argentina | Capital Federal | Palermo ",
+        "id": 24728,
+        "name": "Palermo",
+        "parent_division": null,
+        "short_location": "Argentina | Capital Federal | Palermo ",
+        "state": "/api/v1/state/146/",
+        "weight": 32767,
+        "zip_code": null
+      },
+      "location_level": null,
+      "lot_number": "",
+      "occupation": [],
+      "operations": [
+        {
+          "operation_id": 1,
+          "operation_type": "Venta",
+          "prices": [
+            {
+              "currency": "USD",
+              "is_promotional": false,
+              "period": 0,
+              "price": 120000
+            }
+          ]
+        }
+      ],
+      "orientation": "Sur",
+      "parking_lot_amount": 2,
+      "parking_lot_condition": null,
+      "parking_lot_type": null,
+      "photos": [
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7861865_104300543314926802186897028816071460904545485374644413175255010267863863193513.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 0,
+          "original": "https://static.tokkobroker.com/original_pictures/7861865_104300543314926802186897028816071460904545485374644413175255010267863863193513.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7861865_104300543314926802186897028816071460904545485374644413175255010267863863193513_thumb.jpg"
+        },
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7861865_67327953476521224141605837336798246611013454080064819667324589482363607520851.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 1,
+          "original": "https://static.tokkobroker.com/original_pictures/7861865_67327953476521224141605837336798246611013454080064819667324589482363607520851.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7861865_67327953476521224141605837336798246611013454080064819667324589482363607520851_thumb.jpg"
+        },
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7861865_68685619794047251549186420880056386536142932633829443990007991331532042235821.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 2,
+          "original": "https://static.tokkobroker.com/original_pictures/7861865_68685619794047251549186420880056386536142932633829443990007991331532042235821.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7861865_68685619794047251549186420880056386536142932633829443990007991331532042235821_thumb.jpg"
+        }
+      ],
+      "portal_footer": "",
+      "private_area": "0.00",
+      "producer": {
+        "cellphone": "",
+        "email": "norberto@dibrand.co",
+        "id": 173321,
+        "name": "Norberto Patricio Riccitelli",
+        "phone": "+5401165939115",
+        "picture": "https://static.tokkobroker.com/static/img/user.png",
+        "position": ""
+      },
+      "property_condition": "A refaccionar",
+      "public_url": "https://ficha.info/p/eG9ordTfFqieya",
+      "publication_title": "Casa en Palermo",
+      "quality_level": null,
+      "real_address": "helguera 11111",
+      "reference_code": "MHO7861865",
+      "rich_description": "esto es mi descurption de prueba para la property tipo casa",
+      "roofed_surface": "12.00",
+      "room_amount": 3,
+      "semiroofed_surface": "12.00",
+      "seo_description": "",
+      "seo_keywords": "",
+      "situation": "Vacía ",
+      "status": 2,
+      "suite_amount": 3,
+      "suites_with_closets": 1,
+      "surface": "12.00",
+      "surface_measurement": "M2",
+      "tags": [
+        {
+          "id": 1,
+          "name": "Agua Corriente",
+          "type": 1
+        },
+        {
+          "id": 2,
+          "name": "Cloaca",
+          "type": 1
+        },
+        {
+          "id": 3,
+          "name": "Gas Natural",
+          "type": 1
+        },
+        {
+          "id": 4,
+          "name": "Internet",
+          "type": 1
+        },
+        {
+          "id": 5,
+          "name": "Electricidad",
+          "type": 1
+        },
+        {
+          "id": 6,
+          "name": "Pavimento",
+          "type": 1
+        },
+        {
+          "id": 7,
+          "name": "Teléfono",
+          "type": 1
+        },
+        {
+          "id": 9,
+          "name": "Altillo",
+          "type": 2
+        },
+        {
+          "id": 10,
+          "name": "Balcón",
+          "type": 2
+        },
+        {
+          "id": 11,
+          "name": "Baulera",
+          "type": 2
+        },
+        {
+          "id": 12,
+          "name": "Cocina",
+          "type": 2
+        },
+        {
+          "id": 14,
+          "name": "Comedor diario",
+          "type": 2
+        },
+        {
+          "id": 15,
+          "name": "Dependencia",
+          "type": 2
+        },
+        {
+          "id": 17,
+          "name": "Oficina",
+          "type": 2
+        },
+        {
+          "id": 18,
+          "name": "Hall",
+          "type": 2
+        },
+        {
+          "id": 19,
+          "name": "Jardín",
+          "type": 2
+        },
+        {
+          "id": 20,
+          "name": "Lavadero",
+          "type": 2
+        },
+        {
+          "id": 22,
+          "name": "Living comedor",
+          "type": 2
+        },
+        {
+          "id": 23,
+          "name": "Patio",
+          "type": 2
+        },
+        {
+          "id": 24,
+          "name": "Sótano",
+          "type": 2
+        },
+        {
+          "id": 25,
+          "name": "Terraza",
+          "type": 2
+        },
+        {
+          "id": 26,
+          "name": "Toilette",
+          "type": 2
+        },
+        {
+          "id": 27,
+          "name": "Vestidor",
+          "type": 2
+        },
+        {
+          "id": 28,
+          "name": "Aire Acondicionado individual",
+          "type": 3
+        },
+        {
+          "id": 29,
+          "name": "Alarma",
+          "type": 3
+        },
+        {
+          "id": 30,
+          "name": "Amoblado",
+          "type": 3
+        },
+        {
+          "id": 31,
+          "name": "Calefacción",
+          "type": 3
+        },
+        {
+          "id": 32,
+          "name": "Centro de deportes",
+          "type": 3
+        },
+        {
+          "id": 33,
+          "name": "Gimnasio",
+          "type": 3
+        },
+        {
+          "id": 34,
+          "name": "Hidromasaje",
+          "type": 3
+        },
+        {
+          "id": 35,
+          "name": "Parrilla",
+          "type": 3
+        },
+        {
+          "id": 36,
+          "name": "Quincho",
+          "type": 3
+        },
+        {
+          "id": 38,
+          "name": "Sala de juegos",
+          "type": 3
+        },
+        {
+          "id": 39,
+          "name": "Sauna",
+          "type": 3
+        },
+        {
+          "id": 40,
+          "name": "Solarium",
+          "type": 3
+        },
+        {
+          "id": 41,
+          "name": "SUM",
+          "type": 3
+        },
+        {
+          "id": 42,
+          "name": "Seguridad",
+          "type": 3
+        },
+        {
+          "id": 46,
+          "name": "Apto mascotas",
+          "type": 3
+        },
+        {
+          "id": 47,
+          "name": "Apto profesional",
+          "type": 3
+        },
+        {
+          "id": 48,
+          "name": "Lote Interno",
+          "type": 3
+        },
+        {
+          "id": 49,
+          "name": "Ruta",
+          "type": 3
+        },
+        {
+          "id": 50,
+          "name": "Perimetral",
+          "type": 3
+        },
+        {
+          "id": 51,
+          "name": "Pileta",
+          "type": 3
+        },
+        {
+          "id": 52,
+          "name": "Riego automático",
+          "type": 3
+        },
+        {
+          "id": 101,
+          "name": "Calefacción central",
+          "type": 3
+        },
+        {
+          "id": 163,
+          "name": "Escritorio",
+          "type": 2
+        },
+        {
+          "id": 168,
+          "name": "Biblioteca",
+          "type": 2
+        },
+        {
+          "id": 203,
+          "name": "Preinstalación de aire acondicionado",
+          "type": 3
+        },
+        {
+          "id": 1030,
+          "name": "Cochera subterránea",
+          "type": 3
+        },
+        {
+          "id": 1248,
+          "name": "En construcción",
+          "type": 3
+        },
+        {
+          "id": 1390,
+          "name": "Luminoso",
+          "type": 3
+        },
+        {
+          "id": 1505,
+          "name": "Laundry",
+          "type": 3
+        },
+        {
+          "id": 1512,
+          "name": "Calefacción individual",
+          "type": 3
+        },
+        {
+          "id": 1513,
+          "name": "Calefacción por aire",
+          "type": 3
+        },
+        {
+          "id": 1514,
+          "name": "Calefacción por radiadores",
+          "type": 3
+        },
+        {
+          "id": 1516,
+          "name": "Galería",
+          "type": 2
+        },
+        {
+          "id": 1517,
+          "name": "Deck",
+          "type": 3
+        },
+        {
+          "id": 1524,
+          "name": "Seguridad 24hs",
+          "type": 3
+        },
+        {
+          "id": 1525,
+          "name": "Seguridad de día",
+          "type": 3
+        },
+        {
+          "id": 1526,
+          "name": "Seguridad portería",
+          "type": 3
+        }
+      ],
+      "toilet_amount": 1,
+      "total_suites": 3,
+      "total_surface": "12.00",
+      "transaction_requirements": "",
+      "tv_rooms": 1,
+      "type": {
+        "code": "HO",
+        "id": 3,
+        "name": "Casa"
+      },
+      "uncovered_parking_lot": 1,
+      "unroofed_surface": "12.00",
+      "videos": [
+        {
+          "description": "",
+          "id": 3424269,
+          "order": 1,
+          "player_url": "https://www.youtube.com/embed/JqEVESq9eX8&list=RDd2tGjI7BdG4&index=8",
+          "provider": "youtube",
+          "provider_id": 2,
+          "title": "el multimedia360 ?",
+          "url": "https://www.youtube.com/watch?v=JqEVESq9eX8&list=RDd2tGjI7BdG4&index=8",
+          "video_id": "JqEVESq9eX8&list=RDd2tGjI7BdG4&index=8"
+        }
+      ],
+      "web_price": true,
+      "zonification": "la zoni"
+    },
+    {
+      "address": "calle al 1200",
+      "address_complement": "",
+      "age": 0,
+      "apartment_door": "a",
+      "appartments_per_floor": 3,
+      "bathroom_amount": 3,
+      "block_number": "",
+      "branch": {
+        "address": "",
+        "alternative_phone": "",
+        "alternative_phone_area": "",
+        "alternative_phone_country_code": "",
+        "alternative_phone_extension": "",
+        "branch_type": "Internal",
+        "contact_time": "",
+        "created_date": "2026-03-12T20:48:40",
+        "display_name": "MetroProp",
+        "email": "norberto@dibrand.co",
+        "geo_lat": null,
+        "geo_long": null,
+        "gm_location_type": "UNKNOWN",
+        "id": 105067,
+        "is_default": true,
+        "logo": "https://static.tokkobroker.com/static/img/empty-logo.png",
+        "name": "MetroProp",
+        "pdf_footer_text": "",
+        "phone": "+5401165939115",
+        "phone_area": "",
+        "phone_country_code": "",
+        "phone_extension": "",
+        "use_pdf_footer": false
+      },
+      "building": "",
+      "cleaning_tax": "0.00",
+      "common_area": "0.00",
+      "covered_parking_lot": 1,
+      "created_at": "2026-03-14T13:06:49",
+      "credit_eligible": "Sin especificar",
+      "custom1": "0.00",
+      "custom_tags": [
+        {
+          "group_name": "Cartel",
+          "id": 76255,
+          "name": "Tiene cartel",
+          "public_name": ""
+        }
+      ],
+      "deleted_at": "2026-03-14T13:14:38",
+      "depth_measure": "0.00",
+      "description": "",
+      "development": null,
+      "development_excel_extra_data": "[]",
+      "dining_room": 1,
+      "disposition": "Frente",
+      "down_payment": "0.00",
+      "expenses": 900000,
+      "extra_attributes": [
+        {
+          "is_expenditure": false,
+          "is_measure": false,
+          "name": "suco",
+          "value": "manco"
+        }
+      ],
+      "fake_address": "calle al 1200",
+      "files": [],
+      "fire_insurance_cost": "0.00",
+      "floor": "3",
+      "floors_amount": 3,
+      "front_measure": "0.00",
+      "geo_lat": "-31.8236702",
+      "geo_long": "-64.9716642",
+      "gm_location_type": "APPROXIMATE",
+      "guests_amount": 0,
+      "has_temporary_rent": false,
+      "id": 7862527,
+      "internal_data": {
+        "commission": "10",
+        "cotization_users": [],
+        "internal_comments": "cometnarios internos importantisimos",
+        "key_location": "Unknown",
+        "legally_checked": 3,
+        "legally_checked_text": "info legal impuestos",
+        "maintenance_user": "",
+        "network_information": "",
+        "producer_comision": "0.00",
+        "property_owners": [
+          {
+            "birthdate": null,
+            "cellphone": "",
+            "created_at": "2026-03-13T21:17:30",
+            "document_number": "",
+            "email": "huerta.em@gmail.com",
+            "id": 61389337,
+            "name": "Emilio",
+            "other_email": "",
+            "other_phone": "",
+            "phone": "01126531593",
+            "updated_at": "2026-03-14T13:06:49",
+            "work_email": "huerta.em@gmail.com"
+          }
+        ],
+        "transaction_requirements": "requerimientos de transaccion "
+      },
+      "iptu": "No informado",
+      "is_denounced": false,
+      "is_starred_on_web": false,
+      "legally_checked": "Desconocido",
+      "livable_area": "0.00",
+      "living_amount": 1,
+      "location": {
+        "divisions": [],
+        "full_location": "Argentina | Cordoba | San Alberto | Las Calles",
+        "id": 32555,
+        "name": "Las Calles",
+        "parent_division": "/api/v1/location/32503/",
+        "short_location": "Cordoba | San Alberto | Las Calles",
+        "state": null,
+        "weight": 65,
+        "zip_code": null
+      },
+      "location_level": null,
+      "lot_number": "",
+      "occupation": [],
+      "operations": [
+        {
+          "operation_id": 1,
+          "operation_type": "Venta",
+          "prices": [
+            {
+              "currency": "USD",
+              "is_promotional": false,
+              "period": 0,
+              "price": 150000
+            }
+          ]
+        }
+      ],
+      "orientation": "Sudeste",
+      "parking_lot_amount": 2,
+      "parking_lot_condition": null,
+      "parking_lot_type": null,
+      "photos": [
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7862527_115338673093837493040525461782308223887511189647078271673303667420769974885748.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 0,
+          "original": "https://static.tokkobroker.com/original_pictures/7862527_115338673093837493040525461782308223887511189647078271673303667420769974885748.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7862527_115338673093837493040525461782308223887511189647078271673303667420769974885748_thumb.jpg"
+        },
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7862527_100098388874836696270041417637492166803554381206115796669154200295370474718740.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 1,
+          "original": "https://static.tokkobroker.com/original_pictures/7862527_100098388874836696270041417637492166803554381206115796669154200295370474718740.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7862527_100098388874836696270041417637492166803554381206115796669154200295370474718740_thumb.jpg"
+        },
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7862527_15601124942742825875118247759592138330096550033111210841300362594443771253210.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 2,
+          "original": "https://static.tokkobroker.com/original_pictures/7862527_15601124942742825875118247759592138330096550033111210841300362594443771253210.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7862527_15601124942742825875118247759592138330096550033111210841300362594443771253210_thumb.jpg"
+        }
+      ],
+      "portal_footer": "",
+      "private_area": "0.00",
+      "producer": {
+        "cellphone": "",
+        "email": "norberto@dibrand.co",
+        "id": 173321,
+        "name": "Norberto Patricio Riccitelli",
+        "phone": "+5401165939115",
+        "picture": "https://static.tokkobroker.com/static/img/user.png",
+        "position": ""
+      },
+      "property_condition": "Bueno",
+      "public_url": "https://ficha.info/p/eG9y7dTfFqijTa",
+      "publication_title": "Departamento titulo para portal",
+      "quality_level": null,
+      "real_address": "calle 1234 Piso 3 Departamento a",
+      "reference_code": "MAP7862527",
+      "rich_description": "",
+      "roofed_surface": "23.00",
+      "room_amount": 3,
+      "semiroofed_surface": "33.00",
+      "seo_description": "",
+      "seo_keywords": "",
+      "situation": "Vacía ",
+      "status": 2,
+      "suite_amount": 4,
+      "suites_with_closets": 3,
+      "surface": "23.00",
+      "surface_measurement": "M2",
+      "tags": [
+        {
+          "id": 1,
+          "name": "Agua Corriente",
+          "type": 1
+        },
+        {
+          "id": 2,
+          "name": "Cloaca",
+          "type": 1
+        },
+        {
+          "id": 3,
+          "name": "Gas Natural",
+          "type": 1
+        },
+        {
+          "id": 4,
+          "name": "Internet",
+          "type": 1
+        },
+        {
+          "id": 5,
+          "name": "Electricidad",
+          "type": 1
+        },
+        {
+          "id": 6,
+          "name": "Pavimento",
+          "type": 1
+        },
+        {
+          "id": 7,
+          "name": "Teléfono",
+          "type": 1
+        },
+        {
+          "id": 8,
+          "name": "Cable",
+          "type": 1
+        },
+        {
+          "id": 9,
+          "name": "Altillo",
+          "type": 2
+        },
+        {
+          "id": 10,
+          "name": "Balcón",
+          "type": 2
+        },
+        {
+          "id": 11,
+          "name": "Baulera",
+          "type": 2
+        },
+        {
+          "id": 12,
+          "name": "Cocina",
+          "type": 2
+        },
+        {
+          "id": 14,
+          "name": "Comedor diario",
+          "type": 2
+        },
+        {
+          "id": 15,
+          "name": "Dependencia",
+          "type": 2
+        },
+        {
+          "id": 17,
+          "name": "Oficina",
+          "type": 2
+        },
+        {
+          "id": 18,
+          "name": "Hall",
+          "type": 2
+        },
+        {
+          "id": 19,
+          "name": "Jardín",
+          "type": 2
+        },
+        {
+          "id": 20,
+          "name": "Lavadero",
+          "type": 2
+        },
+        {
+          "id": 22,
+          "name": "Living comedor",
+          "type": 2
+        },
+        {
+          "id": 23,
+          "name": "Patio",
+          "type": 2
+        },
+        {
+          "id": 24,
+          "name": "Sótano",
+          "type": 2
+        },
+        {
+          "id": 25,
+          "name": "Terraza",
+          "type": 2
+        },
+        {
+          "id": 26,
+          "name": "Toilette",
+          "type": 2
+        },
+        {
+          "id": 27,
+          "name": "Vestidor",
+          "type": 2
+        },
+        {
+          "id": 28,
+          "name": "Aire Acondicionado individual",
+          "type": 3
+        },
+        {
+          "id": 29,
+          "name": "Alarma",
+          "type": 3
+        },
+        {
+          "id": 30,
+          "name": "Amoblado",
+          "type": 3
+        },
+        {
+          "id": 31,
+          "name": "Calefacción",
+          "type": 3
+        },
+        {
+          "id": 32,
+          "name": "Centro de deportes",
+          "type": 3
+        },
+        {
+          "id": 33,
+          "name": "Gimnasio",
+          "type": 3
+        },
+        {
+          "id": 34,
+          "name": "Hidromasaje",
+          "type": 3
+        },
+        {
+          "id": 35,
+          "name": "Parrilla",
+          "type": 3
+        },
+        {
+          "id": 36,
+          "name": "Quincho",
+          "type": 3
+        },
+        {
+          "id": 38,
+          "name": "Sala de juegos",
+          "type": 3
+        },
+        {
+          "id": 39,
+          "name": "Sauna",
+          "type": 3
+        },
+        {
+          "id": 40,
+          "name": "Solarium",
+          "type": 3
+        },
+        {
+          "id": 41,
+          "name": "SUM",
+          "type": 3
+        },
+        {
+          "id": 42,
+          "name": "Seguridad",
+          "type": 3
+        },
+        {
+          "id": 46,
+          "name": "Apto mascotas",
+          "type": 3
+        },
+        {
+          "id": 47,
+          "name": "Apto profesional",
+          "type": 3
+        },
+        {
+          "id": 48,
+          "name": "Lote Interno",
+          "type": 3
+        },
+        {
+          "id": 49,
+          "name": "Ruta",
+          "type": 3
+        },
+        {
+          "id": 50,
+          "name": "Perimetral",
+          "type": 3
+        },
+        {
+          "id": 51,
+          "name": "Pileta",
+          "type": 3
+        },
+        {
+          "id": 52,
+          "name": "Riego automático",
+          "type": 3
+        },
+        {
+          "id": 101,
+          "name": "Calefacción central",
+          "type": 3
+        },
+        {
+          "id": 163,
+          "name": "Escritorio",
+          "type": 2
+        },
+        {
+          "id": 168,
+          "name": "Biblioteca",
+          "type": 2
+        },
+        {
+          "id": 203,
+          "name": "Preinstalación de aire acondicionado",
+          "type": 3
+        },
+        {
+          "id": 1030,
+          "name": "Cochera subterránea",
+          "type": 3
+        },
+        {
+          "id": 1248,
+          "name": "En construcción",
+          "type": 3
+        },
+        {
+          "id": 1390,
+          "name": "Luminoso",
+          "type": 3
+        },
+        {
+          "id": 1505,
+          "name": "Laundry",
+          "type": 3
+        },
+        {
+          "id": 1512,
+          "name": "Calefacción individual",
+          "type": 3
+        },
+        {
+          "id": 1513,
+          "name": "Calefacción por aire",
+          "type": 3
+        },
+        {
+          "id": 1514,
+          "name": "Calefacción por radiadores",
+          "type": 3
+        },
+        {
+          "id": 1516,
+          "name": "Galería",
+          "type": 2
+        },
+        {
+          "id": 1517,
+          "name": "Deck",
+          "type": 3
+        },
+        {
+          "id": 1524,
+          "name": "Seguridad 24hs",
+          "type": 3
+        },
+        {
+          "id": 1525,
+          "name": "Seguridad de día",
+          "type": 3
+        },
+        {
+          "id": 1526,
+          "name": "Seguridad portería",
+          "type": 3
+        }
+      ],
+      "toilet_amount": 1,
+      "total_suites": 3,
+      "total_surface": "123.00",
+      "transaction_requirements": "requerimientos de transaccion ",
+      "tv_rooms": 11,
+      "type": {
+        "code": "AP",
+        "id": 2,
+        "name": "Departamento"
+      },
+      "uncovered_parking_lot": 1,
+      "unroofed_surface": "12.00",
+      "videos": [],
+      "web_price": true,
+      "zonification": "zoni"
+    },
+     {
+      "address": "terreno test al 1200",
+      "address_complement": "",
+      "age": 0,
+      "apartment_door": "",
+      "appartments_per_floor": 0,
+      "bathroom_amount": 0,
+      "block_number": "",
+      "branch": {
+        "address": "",
+        "alternative_phone": "",
+        "alternative_phone_area": "",
+        "alternative_phone_country_code": "",
+        "alternative_phone_extension": "",
+        "branch_type": "Internal",
+        "contact_time": "",
+        "created_date": "2026-03-12T20:48:40",
+        "display_name": "MetroProp",
+        "email": "norberto@dibrand.co",
+        "geo_lat": null,
+        "geo_long": null,
+        "gm_location_type": "UNKNOWN",
+        "id": 105067,
+        "is_default": true,
+        "logo": "https://static.tokkobroker.com/static/img/empty-logo.png",
+        "name": "MetroProp",
+        "pdf_footer_text": "",
+        "phone": "+5401165939115",
+        "phone_area": "",
+        "phone_country_code": "",
+        "phone_extension": "",
+        "use_pdf_footer": false
+      },
+      "building": "",
+      "cleaning_tax": "0.00",
+      "common_area": "0.00",
+      "covered_parking_lot": 0,
+      "created_at": "2026-03-15T02:43:06",
+      "credit_eligible": "Apto crédito",
+      "custom1": "0.00",
+      "custom_tags": [],
+      "deleted_at": "2026-03-15T02:47:29",
+      "depth_measure": "50.00",
+      "description": "describo ",
+      "development": null,
+      "development_excel_extra_data": "[]",
+      "dining_room": 0,
+      "disposition": null,
+      "down_payment": "0.00",
+      "expenses": 10000,
+      "extra_attributes": [
+        {
+          "is_expenditure": false,
+          "is_measure": false,
+          "name": "saco",
+          "value": ""
+        },
+        {
+          "is_expenditure": false,
+          "is_measure": false,
+          "name": "taco",
+          "value": "zapato"
+        }
+      ],
+      "fake_address": "terreno test al 1200",
+      "files": [],
+      "fire_insurance_cost": "0.00",
+      "floor": "",
+      "floors_amount": 0,
+      "front_measure": "5.00",
+      "geo_lat": "19.341471",
+      "geo_long": "-99.1746778",
+      "gm_location_type": "APPROXIMATE",
+      "guests_amount": 0,
+      "has_temporary_rent": false,
+      "id": 7863326,
+      "internal_data": {
+        "commission": "23",
+        "cotization_users": [],
+        "internal_comments": "coment interonos",
+        "key_location": "Doorman",
+        "legally_checked": 3,
+        "legally_checked_text": "info legal impuestos",
+        "maintenance_user": {
+          "cellphone": "",
+          "email": "norberto@dibrand.co",
+          "id": 173321,
+          "name": "Norberto Patricio Riccitelli",
+          "phone": "+5401165939115",
+          "picture": "https://static.tokkobroker.com/static/img/user.png",
+          "position": ""
+        },
+        "network_information": "",
+        "producer_comision": "0.00",
+        "property_owners": [
+          {
+            "birthdate": null,
+            "cellphone": "",
+            "created_at": "2026-03-13T21:17:30",
+            "document_number": "",
+            "email": "huerta.em@gmail.com",
+            "id": 61389337,
+            "name": "Emilio",
+            "other_email": "",
+            "other_phone": "",
+            "phone": "01126531593",
+            "updated_at": "2026-03-15T02:43:06",
+            "work_email": "huerta.em@gmail.com"
+          }
+        ],
+        "transaction_requirements": "requerimeintos de transaccion ? "
+      },
+      "iptu": "No informado",
+      "is_denounced": false,
+      "is_starred_on_web": false,
+      "legally_checked": "Desconocido",
+      "livable_area": "0.00",
+      "living_amount": 0,
+      "location": {
+        "divisions": [],
+        "full_location": "México | Ciudad de Mexico | Coyoacán | Romero de Terreros",
+        "id": 110706,
+        "name": "Romero de Terreros",
+        "parent_division": "/api/v1/location/110597/",
+        "short_location": "Ciudad de Mexico | Coyoacán | Romero de Terreros",
+        "state": null,
+        "weight": 91,
+        "zip_code": "04310"
+      },
+      "location_level": null,
+      "lot_number": "",
+      "occupation": [],
+      "operations": [
+        {
+          "operation_id": 1,
+          "operation_type": "Venta",
+          "prices": [
+            {
+              "currency": "USD",
+              "is_promotional": false,
+              "period": 0,
+              "price": 50000
+            }
+          ]
+        }
+      ],
+      "orientation": "Oeste",
+      "parking_lot_amount": 0,
+      "parking_lot_condition": null,
+      "parking_lot_type": null,
+      "photos": [
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7863326_100158872794698188791124306642034273298136385971464383533366628690511810114787.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 0,
+          "original": "https://static.tokkobroker.com/original_pictures/7863326_100158872794698188791124306642034273298136385971464383533366628690511810114787.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7863326_100158872794698188791124306642034273298136385971464383533366628690511810114787_thumb.jpg"
+        },
+        {
+          "description": null,
+          "image": "https://static.tokkobroker.com/pictures/7863326_37233525743006786520281327350278859975120952501078722867607022469166507222842.jpg",
+          "is_blueprint": false,
+          "is_front_cover": false,
+          "order": 1,
+          "original": "https://static.tokkobroker.com/original_pictures/7863326_37233525743006786520281327350278859975120952501078722867607022469166507222842.jpg",
+          "thumb": "https://static.tokkobroker.com/thumbs/7863326_37233525743006786520281327350278859975120952501078722867607022469166507222842_thumb.jpg"
+        }
+      ],
+      "portal_footer": "",
+      "private_area": "0.00",
+      "producer": {
+        "cellphone": "",
+        "email": "norberto@dibrand.co",
+        "id": 173321,
+        "name": "Norberto Patricio Riccitelli",
+        "phone": "+5401165939115",
+        "picture": "https://static.tokkobroker.com/static/img/user.png",
+        "position": ""
+      },
+      "property_condition": "---",
+      "public_url": "https://ficha.info/p/eG9L0dTfFqiqka",
+      "publication_title": "Terreno en Romero de Terreros",
+      "quality_level": null,
+      "real_address": "terreno test 1234",
+      "reference_code": "MLA7863326",
+      "rich_description": "describo&nbsp;",
+      "roofed_surface": "50.00",
+      "room_amount": 0,
+      "semiroofed_surface": "50.00",
+      "seo_description": "",
+      "seo_keywords": "",
+      "situation": "---",
+      "status": 2,
+      "suite_amount": 0,
+      "suites_with_closets": 0,
+      "surface": "50000.00",
+      "surface_measurement": "M2",
+      "tags": [
+        {
+          "id": 1,
+          "name": "Agua Corriente",
+          "type": 1
+        },
+        {
+          "id": 2,
+          "name": "Cloaca",
+          "type": 1
+        },
+        {
+          "id": 3,
+          "name": "Gas Natural",
+          "type": 1
+        },
+        {
+          "id": 4,
+          "name": "Internet",
+          "type": 1
+        },
+        {
+          "id": 5,
+          "name": "Electricidad",
+          "type": 1
+        },
+        {
+          "id": 6,
+          "name": "Pavimento",
+          "type": 1
+        },
+        {
+          "id": 7,
+          "name": "Teléfono",
+          "type": 1
+        },
+        {
+          "id": 8,
+          "name": "Cable",
+          "type": 1
+        },
+        {
+          "id": 9,
+          "name": "Altillo",
+          "type": 2
+        },
+        {
+          "id": 10,
+          "name": "Balcón",
+          "type": 2
+        },
+        {
+          "id": 11,
+          "name": "Baulera",
+          "type": 2
+        },
+        {
+          "id": 12,
+          "name": "Cocina",
+          "type": 2
+        },
+        {
+          "id": 14,
+          "name": "Comedor diario",
+          "type": 2
+        },
+        {
+          "id": 15,
+          "name": "Dependencia",
+          "type": 2
+        },
+        {
+          "id": 17,
+          "name": "Oficina",
+          "type": 2
+        },
+        {
+          "id": 18,
+          "name": "Hall",
+          "type": 2
+        },
+        {
+          "id": 19,
+          "name": "Jardín",
+          "type": 2
+        },
+        {
+          "id": 20,
+          "name": "Lavadero",
+          "type": 2
+        },
+        {
+          "id": 22,
+          "name": "Living comedor",
+          "type": 2
+        },
+        {
+          "id": 23,
+          "name": "Patio",
+          "type": 2
+        },
+        {
+          "id": 24,
+          "name": "Sótano",
+          "type": 2
+        },
+        {
+          "id": 25,
+          "name": "Terraza",
+          "type": 2
+        },
+        {
+          "id": 26,
+          "name": "Toilette",
+          "type": 2
+        },
+        {
+          "id": 27,
+          "name": "Vestidor",
+          "type": 2
+        },
+        {
+          "id": 28,
+          "name": "Aire Acondicionado individual",
+          "type": 3
+        },
+        {
+          "id": 29,
+          "name": "Alarma",
+          "type": 3
+        },
+        {
+          "id": 30,
+          "name": "Amoblado",
+          "type": 3
+        },
+        {
+          "id": 31,
+          "name": "Calefacción",
+          "type": 3
+        },
+        {
+          "id": 32,
+          "name": "Centro de deportes",
+          "type": 3
+        },
+        {
+          "id": 33,
+          "name": "Gimnasio",
+          "type": 3
+        },
+        {
+          "id": 34,
+          "name": "Hidromasaje",
+          "type": 3
+        },
+        {
+          "id": 35,
+          "name": "Parrilla",
+          "type": 3
+        },
+        {
+          "id": 36,
+          "name": "Quincho",
+          "type": 3
+        },
+        {
+          "id": 38,
+          "name": "Sala de juegos",
+          "type": 3
+        },
+        {
+          "id": 39,
+          "name": "Sauna",
+          "type": 3
+        },
+        {
+          "id": 40,
+          "name": "Solarium",
+          "type": 3
+        },
+        {
+          "id": 41,
+          "name": "SUM",
+          "type": 3
+        },
+        {
+          "id": 42,
+          "name": "Seguridad",
+          "type": 3
+        },
+        {
+          "id": 46,
+          "name": "Apto mascotas",
+          "type": 3
+        },
+        {
+          "id": 47,
+          "name": "Apto profesional",
+          "type": 3
+        },
+        {
+          "id": 48,
+          "name": "Lote Interno",
+          "type": 3
+        },
+        {
+          "id": 49,
+          "name": "Ruta",
+          "type": 3
+        },
+        {
+          "id": 50,
+          "name": "Perimetral",
+          "type": 3
+        },
+        {
+          "id": 51,
+          "name": "Pileta",
+          "type": 3
+        },
+        {
+          "id": 52,
+          "name": "Riego automático",
+          "type": 3
+        },
+        {
+          "id": 101,
+          "name": "Calefacción central",
+          "type": 3
+        },
+        {
+          "id": 163,
+          "name": "Escritorio",
+          "type": 2
+        },
+        {
+          "id": 168,
+          "name": "Biblioteca",
+          "type": 2
+        },
+        {
+          "id": 203,
+          "name": "Preinstalación de aire acondicionado",
+          "type": 3
+        },
+        {
+          "id": 1030,
+          "name": "Cochera subterránea",
+          "type": 3
+        },
+        {
+          "id": 1248,
+          "name": "En construcción",
+          "type": 3
+        },
+        {
+          "id": 1390,
+          "name": "Luminoso",
+          "type": 3
+        },
+        {
+          "id": 1505,
+          "name": "Laundry",
+          "type": 3
+        },
+        {
+          "id": 1512,
+          "name": "Calefacción individual",
+          "type": 3
+        },
+        {
+          "id": 1513,
+          "name": "Calefacción por aire",
+          "type": 3
+        },
+        {
+          "id": 1514,
+          "name": "Calefacción por radiadores",
+          "type": 3
+        },
+        {
+          "id": 1516,
+          "name": "Galería",
+          "type": 2
+        },
+        {
+          "id": 1517,
+          "name": "Deck",
+          "type": 3
+        },
+        {
+          "id": 1524,
+          "name": "Seguridad 24hs",
+          "type": 3
+        },
+        {
+          "id": 1525,
+          "name": "Seguridad de día",
+          "type": 3
+        },
+        {
+          "id": 1526,
+          "name": "Seguridad portería",
+          "type": 3
+        }
+      ],
+      "toilet_amount": 0,
+      "total_suites": 0,
+      "total_surface": "50.00",
+      "transaction_requirements": "requerimeintos de transaccion ? ",
+      "tv_rooms": 0,
+      "type": {
+        "code": "LA",
+        "id": 1,
+        "name": "Terreno"
+      },
+      "uncovered_parking_lot": 0,
+      "unroofed_surface": "50.00",
+      "videos": [],
+      "web_price": true,
+      "zonification": "zonificado"
+    }
+  ]

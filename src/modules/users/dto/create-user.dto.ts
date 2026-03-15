@@ -66,5 +66,15 @@ export class CreateUserDto {
       'role_id debe ser uno de: 1 (ADMIN), 2 (SELLER), 3 (COLLABORATOR), 4 (SUPER_ADMIN)',
   })
   role_id?: UserRole;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  avatar?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  external_reference?: string;
 }
 

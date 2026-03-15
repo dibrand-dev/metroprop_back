@@ -97,6 +97,9 @@ export class Organization {
   @Column({ type: 'integer', nullable: true })
   source_partner_id?: number;
 
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  tokko_key?: string;
+
   @CreateDateColumn({ name: 'created_at' })
   created_at!: Date;
 

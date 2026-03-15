@@ -250,6 +250,10 @@ export class BasePropertyFieldsDto {
   credit_eligible?: boolean;
 
   @IsOptional()
+  @IsBoolean()
+  has_sign?: boolean;
+
+  @IsOptional()
   @IsInt()
   @Min(0)
   floors_amount?: number;

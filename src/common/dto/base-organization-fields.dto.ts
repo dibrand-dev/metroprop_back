@@ -109,4 +109,12 @@ export class BaseOrganizationFieldsDto {
   @IsInt()
   @Min(1)
   adminUserId?: number;
+
+  @IsOptional()
+  @IsString()
+  external_reference?: string;
+
+  @IsOptional()
+  @IsString()
+  tokko_key?: string;
 }

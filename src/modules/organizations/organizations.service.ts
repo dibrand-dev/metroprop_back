@@ -66,4 +66,81 @@ export class OrganizationsService {
     });
     return result.url;
   }
+
+  /**
+   * Obtencion de organización con branches y usuarios
+   * una sola query con relations
+   * @param searchCriteria Criterios de búsqueda flexibles
+   * @returns Información completa con mapas optimizados para búsqueda rápida
+   */
+  async getOrganizationWithRelations(searchCriteria: {
+    id?: number;
+    external_reference?: string;
+    company_name?: string;
+    tokko_key?: string;
+  }): Promise<{
+    organization?: Organization;
+    branchesMap?: Map<string, any>;
+    usersMap?: Map<string, any>;
+    branches?: any[];
+    users?: any[];
+    error?: string;
+  }> {
+    try {
+
+      // 1. Construir query dinámicamente según los criterios
+      const queryBuilder = this.repo.createQueryBuilder('organization')
+        .leftJoinAndSelect('organization.branches', 'branches')
+        .leftJoinAndSelect('organization.users', 'users') 
+        .where('organization.deleted = :deleted', { deleted: false });
+
+      // Agregar condiciones de búsqueda
+      if (searchCriteria.id) {
+        queryBuilder.andWhere('organization.id = :id', { id: searchCriteria.id });
+      } else if (searchCriteria.external_reference) {
+        queryBuilder.andWhere('organization.external_reference = :external_reference', { 
+          external_reference: searchCriteria.external_reference 
+        });
+      } else if (searchCriteria.company_name) {
+        queryBuilder.andWhere('organization.company_name ILIKE :company_name', { 
+          company_name: `%${searchCriteria.company_name}%` 
+        });
+      } else if (searchCriteria.tokko_key) {
+        queryBuilder.andWhere('organization.tokko_key = :tokko_key', { 
+          tokko_key: searchCriteria.tokko_key 
+        });
+      } else {
+        return {
+          error: 'At least one search criteria must be provided (id, external_reference, company_name, or tokko_key)'
+        };
+      }
+
+      // 2. Ejecutar query optimizada con todas las relaciones
+      const organization = await queryBuilder.getOne();
+      
+      if (!organization) {
+        return {
+          error: 'Organization not found with the provided criteria'
+        };
+      }
+
+      // 3. Extraer branches y users de las relaciones cargadas
+      const branches = organization.branches || [];
+      const users = organization.users || [];
+
+      
+      return {
+        organization,
+        branches,
+        users
+      };
+
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('Error pre-loading organization:', errorMessage);
+      return {
+        error: `Failed to preload organization: ${errorMessage}`
+      };
+    }
+  }
 }

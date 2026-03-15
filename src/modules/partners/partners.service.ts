@@ -77,6 +77,14 @@ export class PartnersService {
     return partner;
   }
 
+  async findByName(name: string): Promise<Partner | null> {
+    const partner = await this.partnersRepository.findOne({
+      where: { name: name, deleted: false },
+    });
+
+    return partner;
+  }
+
   async update(id: number, updatePartnerDto: UpdatePartnerDto): Promise<Partner> {
     const partner = await this.findById(id);
 

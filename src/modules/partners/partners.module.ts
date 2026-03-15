@@ -17,7 +17,11 @@ import { PropertyAttached } from '../properties/entities/property-attached.entit
 import { PropertiesModule } from '../properties/properties.module';
 import { EmailModule } from '../../common/email/email.module';
 import { UsersModule } from '../users/users.module';
+import { BranchesModule } from '../branches/branches.module';
+import { OrganizationsModule } from '../organizations/organizations.module';
 import { LocationsModule } from '../locations/locations.module';
+import { TagsModule } from '../tags/tags.module';
+import { TokkoHelperService } from '../../common/helpers/tokko-helper';
 
 @Module({
   imports: [
@@ -34,9 +38,12 @@ import { LocationsModule } from '../locations/locations.module';
     PropertiesModule,
     EmailModule,
     UsersModule,
+    BranchesModule,
+    OrganizationsModule,
     LocationsModule,
+    TagsModule,
   ],
-  providers: [PartnersService, PartnerApiService, ApiKeyAuthGuard],
+  providers: [PartnersService, PartnerApiService, ApiKeyAuthGuard, TokkoHelperService],
   controllers: [PartnersController, PartnerApiController],
   exports: [PartnersService],
 })

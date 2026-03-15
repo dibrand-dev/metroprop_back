@@ -3,8 +3,6 @@ import {
   IsNotEmpty,
   IsOptional,
   IsEmail,
-  IsInt,
-  IsPositive,
   MaxLength,
   MinLength,
 } from 'class-validator';
@@ -29,4 +27,8 @@ export class PartnerCreateOrganizationDto extends BaseOrganizationFieldsDto {
   @IsOptional()
   @IsString()
   admin_phone?: string;
+
+  @IsOptional()
+  @IsString()
+  admin_avatar?: string;
 }

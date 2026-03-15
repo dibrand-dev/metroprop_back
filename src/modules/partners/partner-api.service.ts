@@ -27,7 +27,7 @@ import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
 import { PartnerPatchImageDto } from './dto/partner-patch-image.dto';
 import { PartnerPatchAttachedDto } from './dto/partner-patch-attached.dto';
 
-import { MediaUploadStatus } from '../../common/enums';
+import { MediaUploadStatus, UserRole } from '../../common/enums';
 
 @Injectable()
 export class PartnerApiService {
@@ -78,7 +78,8 @@ export class PartnerApiService {
         sub_location_id: dto.sublocation_id,
         professional_type: dto.professional_type,
         cuit: dto.cuit || undefined,
-        external_reference: `partner-${partner.id}-org`,
+        external_reference: dto.external_reference,
+        tokko_key: dto.tokko_key,
         source_partner_id: partner.id,
         deleted: false,
       });
@@ -123,6 +124,8 @@ export class PartnerApiService {
         email: dto.admin_email,
         password: hashedPassword,
         phone: dto.admin_phone,
+        avatar: dto.admin_avatar,
+        role_id: UserRole.USER_ROL_ADMIN,
         organization: { id: savedOrg.id } as Organization,
         is_verified: false,
       });
