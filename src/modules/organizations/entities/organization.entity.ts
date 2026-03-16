@@ -106,6 +106,9 @@ export class Organization {
   @UpdateDateColumn({ name: 'updated_at' })
   updated_at!: Date;
 
+  @Column({ type: 'boolean', default: true })
+  status!: boolean;
+
   @Column({ type: 'boolean', default: false })
   deleted!: boolean;
 

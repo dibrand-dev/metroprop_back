@@ -60,6 +60,26 @@ export class OrganizationsController {
     return this.organizationsService.remove(id);
   }
 
+  @Post(':id/disable')
+  @HttpCode(HttpStatus.OK)
+  async disable(@Param('id', ParseIntPipe) id: number) {
+    const org = await this.organizationsService.disable(id);
+    return {
+      message: 'Organización deshabilitada correctamente',
+      data: org,
+    };
+  }
+
+  @Post(':id/enable')
+  @HttpCode(HttpStatus.OK)
+  async enable(@Param('id', ParseIntPipe) id: number) {
+    const org = await this.organizationsService.enable(id);
+    return {
+      message: 'Organización habilitada correctamente',
+      data: org,
+    };
+  }
+
   @Post(':id/logo')
   @UseInterceptors(FileInterceptor('logo'))
   async uploadLogo(

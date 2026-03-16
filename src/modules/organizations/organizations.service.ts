@@ -70,6 +70,24 @@ export class OrganizationsService {
     };
   }
 
+  /**
+   * Deshabilitar una organización (status = false)
+   */
+  async disable(id: number) {
+    const org = await this.findOne(id);
+    org.status = false;
+    return this.repo.save(org);
+  }
+
+  /**
+   * Habilitar una organización (status = true)
+   */
+  async enable(id: number) {
+    const org = await this.findOne(id);
+    org.status = true;
+    return this.repo.save(org);
+  }
+
   async findOne(id: number) {
     const org = await this.repo.findOne({ where: { id, deleted: false } });
     if (!org) throw new NotFoundException('Organization not found');

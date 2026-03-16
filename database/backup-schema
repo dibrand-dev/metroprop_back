@@ -477,6 +477,7 @@ CREATE INDEX IF NOT EXISTS idx_property_videos_property_id ON public.property_vi
 CREATE TABLE IF NOT EXISTS public.branches (
 	id serial4 NOT NULL,
 	branch_logo varchar NULL,
+	logo_status varchar(50) NULL, 
 	branch_name varchar(255) NULL,
 	address varchar NULL,
 	phone varchar NULL,
@@ -513,6 +514,7 @@ CREATE INDEX IF NOT EXISTS idx_branches_sub_location_id ON public.branches USING
 
 CREATE TABLE IF NOT EXISTS public.organizations (
 	id serial4 NOT NULL,
+    organizations ADD status bool DEFAULT true NULL,
 	company_logo varchar NULL,
 	company_name varchar(255) NOT NULL,
 	address varchar NULL,
@@ -532,7 +534,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
 	updated_at timestamp DEFAULT now() NOT NULL,
 	deleted bool DEFAULT false NOT NULL,
 	deleted_at timestamp NULL,
-	logo_status varchar(1000) NULL,
+	logo_status varchar(50) NULL,
 	source_partner_id int4 NULL,
 	external_reference varchar(255) NULL,
 	country_id int4 NULL,

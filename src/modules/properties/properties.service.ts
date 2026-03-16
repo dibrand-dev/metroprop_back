@@ -103,7 +103,10 @@ export class PropertiesService {
   ) {
     const qb = this.propertyRepository
       .createQueryBuilder('p')
-      .where('p.deleted = :deleted', { deleted: false });
+      .leftJoin('organizations', 'org', 'p.organization_id = org.id')
+      .where('p.deleted = :deleted', { deleted: false })
+      .andWhere('org.status = :orgStatus', { orgStatus: true })
+      .andWhere('org.deleted = :orgDeleted', { orgDeleted: false });
 
     const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
 
@@ -866,18 +869,57 @@ export class PropertiesService {
    */
   async searchProperties(
     filters: SearchPropertiesDto,
-  ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
+  ): Promise<{ 
+    data: Property[]; 
+    total: number; 
+    page: number; 
+    limit: number;
+    mapData: Array<{ id: number; lat: number; lng: number; price?: number; reference_code: string }>;
+    filterStats: {
+      priceRanges: Array<{ min: number; max: number; count: number }>;
+      totalProperties: number;
+      minPrice: number;
+      maxPrice: number;
+    };
+  }> {
     const limit = filters.limit ?? 20;
     const page = filters.page ?? 1;
     const offset = (page - 1) * limit;
 
     const qb = this.buildAdvancedSearchQuery(filters);
 
+    // Datos paginados
     qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
-
     const [data, total] = await qb.getManyAndCount();
 
-    return { data, total, page, limit };
+    // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
+    const mapQb = this.buildAdvancedSearchQuery(filters);
+    const mapData = await mapQb
+      .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.reference_code'])
+      .andWhere('p.geo_lat IS NOT NULL')
+      .andWhere('p.geo_long IS NOT NULL')
+      .getRawMany()
+      .then(results => 
+        results.map(r => ({
+          id: r.p_id,
+          lat: parseFloat(r.p_geo_lat),
+          lng: parseFloat(r.p_geo_long),
+          price: r.p_price,
+          reference_code: r.p_reference_code,
+        }))
+      );
+
+    // Estadísticas para filtros
+    const filterStats = await this.generateFilterStats(filters);
+
+    return { 
+      data, 
+      total, 
+      page, 
+      limit,
+      mapData,
+      filterStats
+    };
   }
 
   async searchPanelProperties(
@@ -898,6 +940,58 @@ export class PropertiesService {
     const [data, total] = await qb.getManyAndCount();
 
     return { data, total, page, limit };
+  }
+
+  /**
+   * Genera estadísticas para filtros (rangos de precios, conteos, etc.)
+   */
+  private async generateFilterStats(filters: SearchPropertiesDto) {
+    const baseQb = this.buildAdvancedSearchQuery(filters);
+    
+    // Obtener min y max precios de todas las propiedades que coinciden
+    const priceStats = await baseQb
+      .select([
+        'MIN(p.price) as minPrice',
+        'MAX(p.price) as maxPrice',
+        'COUNT(*) as totalProperties'
+      ])
+      .andWhere('p.price IS NOT NULL')
+      .andWhere('p.price > 0')
+      .getRawOne();
+
+    const minPrice = parseFloat(priceStats.minPrice) || 0;
+    const maxPrice = parseFloat(priceStats.maxPrice) || 0;
+    const totalProperties = parseInt(priceStats.totalProperties) || 0;
+
+    // Generar rangos de precios dinámicos
+    const priceRanges = [];
+    if (maxPrice > 0) {
+      const rangeSize = (maxPrice - minPrice) / 10; // 10 rangos
+      
+      for (let i = 0; i < 10; i++) {
+        const rangeMin = minPrice + (i * rangeSize);
+        const rangeMax = i === 9 ? maxPrice : minPrice + ((i + 1) * rangeSize);
+        
+        const rangeQb = this.buildAdvancedSearchQuery(filters);
+        const count = await rangeQb
+          .andWhere('p.price >= :rangeMin', { rangeMin })
+          .andWhere('p.price < :rangeMax', { rangeMax })
+          .getCount();
+
+        priceRanges.push({
+          min: Math.round(rangeMin),
+          max: Math.round(rangeMax),
+          count
+        });
+      }
+    }
+
+    return {
+      priceRanges,
+      totalProperties,
+      minPrice: Math.round(minPrice),
+      maxPrice: Math.round(maxPrice)
+    };
   }
 
   /**
