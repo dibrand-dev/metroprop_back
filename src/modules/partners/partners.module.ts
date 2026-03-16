@@ -21,6 +21,7 @@ import { BranchesModule } from '../branches/branches.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
 import { LocationsModule } from '../locations/locations.module';
 import { TagsModule } from '../tags/tags.module';
+import { RegistrationModule } from '../registration/registration.module';
 import { TokkoHelperService } from '../../common/helpers/tokko-helper';
 
 @Module({
@@ -42,6 +43,7 @@ import { TokkoHelperService } from '../../common/helpers/tokko-helper';
     OrganizationsModule,
     LocationsModule,
     TagsModule,
+    RegistrationModule,
   ],
   providers: [PartnersService, PartnerApiService, ApiKeyAuthGuard, TokkoHelperService],
   controllers: [PartnersController, PartnerApiController],

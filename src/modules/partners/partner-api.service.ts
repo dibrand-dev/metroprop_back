@@ -20,8 +20,9 @@ import { PropertyWriteService } from '../properties/property-write.service';
 import { UsersService } from '../users/users.service';
 import { EmailService } from '../../common/email/email.service';
 import { MediaService } from '../../common/media/media.service';
+import { RegistrationService } from '../registration/registration.service';
 
-import { PartnerCreateOrganizationDto } from './dto/partner-create-organization.dto';
+import { CreateOrganizationRegistrationDto } from '../registration/dto/create-organization-registration.dto';
 import { PartnerCreatePropertyDto } from './dto/partner-create-property.dto';
 import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
 import { PartnerPatchImageDto } from './dto/partner-patch-image.dto';
@@ -51,119 +52,19 @@ export class PartnerApiService {
     private readonly usersService: UsersService,
     private readonly emailService: EmailService,
     private readonly mediaService: MediaService,
+    private readonly registrationService: RegistrationService,
     private readonly dataSource: DataSource,
   ) {}
 
   // ================================================================
-  // CREATE ORGANIZATION + BRANCH + ADMIN USER
+  // CREATE ORGANIZATION + BRANCH + ADMIN USER 
   // ================================================================
 
   async createOrganization(
-    dto: PartnerCreateOrganizationDto,
+    dto: CreateOrganizationRegistrationDto,
     partner: Partner,
   ): Promise<{ organization_id: number; branch_id: number; admin_user_id: number }> {
-    return this.dataSource.transaction(async (manager) => {
-      // 1. Create Organization
-      const organization = manager.create(Organization, {
-        company_name: dto.company_name,
-        company_logo: dto.company_logo,
-        email: dto.email,
-        address: dto.address,
-        phone: dto.phone,
-        alternative_phone: dto.alternative_phone,
-        contact_time: dto.contact_time,
-        country_id: dto.country_id,
-        state_id: dto.state_id,
-        location_id: dto.location_id?.toString(),
-        sub_location_id: dto.sublocation_id,
-        professional_type: dto.professional_type,
-        cuit: dto.cuit || undefined,
-        external_reference: dto.external_reference,
-        tokko_key: dto.tokko_key,
-        source_partner_id: partner.id,
-        deleted: false,
-      });
-      const savedOrg = await manager.save(Organization, organization);
-      this.logger.log(`Created organization ${savedOrg.id} for partner ${partner.id}`);
-
-      // 2. Create Branch (mirror org data)
-      const branch = manager.create(Branch, {
-        branch_name: dto.company_name,
-        email: dto.email,
-        phone: dto.phone,
-        alternative_phone: dto.alternative_phone,
-        contact_time: dto.contact_time,
-        address: dto.address,
-        country_id: dto.country_id,
-        state_id: dto.state_id,
-        location_id: dto.location_id?.toString(),
-        sub_location_id: dto.sublocation_id,
-        organization: savedOrg,
-        deleted: false,
-      });
-      const savedBranch = await manager.save(Branch, branch);
-      this.logger.log(`Created branch ${savedBranch.id} for organization ${savedOrg.id}`);
-
-      // 3. Create Admin User
-      // Check if user with this email already exists
-      const existingUser = await manager.findOne(User, {
-        where: { email: dto.admin_email },
-      });
-
-      if (existingUser) {
-        throw new BadRequestException(
-          `El email ${dto.admin_email} ya se encuentra registrado. Use otro email para el administrador.`,
-        );
-      }
-
-      const bcrypt = await import('bcryptjs');
-      const hashedPassword = await bcrypt.hash(dto.admin_name, 10);
-
-      const user = manager.create(User, {
-        name: dto.admin_name,
-        email: dto.admin_email,
-        password: hashedPassword,
-        phone: dto.admin_phone,
-        avatar: dto.admin_avatar,
-        role_id: UserRole.USER_ROL_ADMIN,
-        organization: { id: savedOrg.id } as Organization,
-        is_verified: false,
-      });
-      const savedUser = await manager.save(User, user);
-
-      // Link user to branch
-      await manager
-        .createQueryBuilder()
-        .relation(User, 'branches')
-        .of(savedUser)
-        .add(savedBranch.id);
-
-      // Set as org admin
-      await manager.update(Organization, savedOrg.id, {
-        admin_user: { id: savedUser.id } as User,
-      });
-
-      this.logger.log(`Created admin user ${savedUser.id} (${dto.admin_email}) for organization ${savedOrg.id}`);
-
-      // 4. Send welcome email (non-blocking)
-      try {
-        const verificationToken = await this.usersService.setEmailVerificationToken(savedUser.id);
-        await this.emailService.sendProfessionalWelcomeEmail(
-          savedUser.email,
-          savedUser.name,
-          verificationToken,
-        );
-        this.logger.log(`Welcome email sent to ${savedUser.email}`);
-      } catch (emailError) {
-        this.logger.error(`Error sending welcome email to ${savedUser.email}: ${emailError}`);
-      }
-
-      return {
-        organization_id: savedOrg.id,
-        admin_user_id: savedUser.id,
-        branch_id: savedBranch.id
-      };
-    });
+    return this.registrationService.createOrganization(dto, partner);
   }
 
   // ================================================================
@@ -741,6 +642,33 @@ export class PartnerApiService {
     }
 
     return property;
+  }
+
+  /**
+   * Reintentar uploads fallidos para una propiedad del partner
+   */
+  async retryFailedUploadsForPartner(
+    referenceCode: string,
+    partner: Partner,
+  ) {
+    // Primero validar que la propiedad pertenece al partner
+    const property = await this.findPropertyByRefCode(referenceCode, partner);
+    
+    if (!property.id) {
+      throw new BadRequestException(`Propiedad ${referenceCode} no tiene un ID válido`);
+    }
+    
+    // Usar el service de properties para hacer el retry
+    const result = await this.propertiesService.retryFailedUploads(property.id);
+    
+    return {
+      success: true,
+      data: {
+        property_reference: referenceCode,
+        property_id: property.id,
+        retry_results: result
+      }
+    };
   }
 
 }

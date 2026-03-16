@@ -2,12 +2,13 @@ import { MediaService } from '../../common/media/media.service';
 import { USER_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, Like } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserFiltersDto } from './dto/user-filters.dto';
 import { Organization } from '../organizations/entities/organization.entity';
 import { UserRole } from '../../common/enums';
 
@@ -49,8 +50,39 @@ export class UsersService {
     return saved;
   }
 
-  async findAll(limit: number = 10, offset: number = 0) {
+  async findAll(filters: UserFiltersDto = {}) {
+    const {
+      id,
+      limit = 10,
+      offset = 0,
+      email,
+      is_verified,
+      deleted = false,
+      organization_id
+    } = filters;
+
+    const whereConditions: any = {
+      deleted
+    };
+
+    if (id !== undefined) {
+      whereConditions.id = id;
+    }
+
+    if (email) {
+      whereConditions.email = Like(`%${email}%`);
+    }
+
+    if (is_verified !== undefined) {
+      whereConditions.is_verified = is_verified;
+    }
+
+    if (organization_id !== undefined) {
+      whereConditions.organization = { id: organization_id };
+    }
+
     const [users, total] = await this.usersRepository.findAndCount({
+      where: whereConditions,
       skip: offset,
       take: limit,
       select: [
@@ -62,6 +94,9 @@ export class UsersService {
         'created_at',
         'updated_at',
       ],
+      order: {
+        created_at: 'DESC'
+      }
     });
 
     return { users, total };

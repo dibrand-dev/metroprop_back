@@ -32,7 +32,7 @@ import {
 import { ApiKeyAuthGuard } from '../../common/guards/api-key-auth.guard';
 import { PartnerApiService } from './partner-api.service';
 import { LocationsService } from '../locations/locations.service';
-import { PartnerCreateOrganizationDto } from './dto/partner-create-organization.dto';
+import { CreateOrganizationRegistrationDto } from '../registration/dto/create-organization-registration.dto';
 import { PartnerCreatePropertyDto } from './dto/partner-create-property.dto';
 import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
 import { PartnerPatchImageDto } from './dto/partner-patch-image.dto';
@@ -50,7 +50,6 @@ export class PartnerApiController {
     private readonly locationsService: LocationsService,
   ) {}
 
-  // ====== ORGANIZATION ======
 
   // ====== LOCATIONS ======
 
@@ -115,7 +114,7 @@ export class PartnerApiController {
   @ApiResponse({ status: 401, description: 'API Key/Secret inválidos' })
   @ApiResponse({ status: 429, description: 'Rate limit excedido' })
   async createOrganization(
-    @Body() dto: PartnerCreateOrganizationDto,
+    @Body() dto: CreateOrganizationRegistrationDto,
     @Req() request: Request,
   ) {
     const partner = (request as any).partner;
@@ -449,5 +448,24 @@ export class PartnerApiController {
     const partner = (request as any).partner;
     const result = await this.partnerApiService.removeAttached(referenceCode, attachedId, partner);
     return { success: true, ...result };
+  }
+
+  @Post('properties/:referenceCode/retry-uploads')
+  @HttpCode(HttpStatus.ACCEPTED)
+  @ApiTags('Properties')
+  @ApiOperation({
+    summary: 'Reintentar uploads fallidos de multimedia',
+    description: 'Reintenta subir a S3 todos los archivos (imágenes y adjuntos) que fallaron previamente para una propiedad específica del partner.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia de la propiedad' })
+  @ApiResponse({ status: 202, description: 'Reintentos en progreso' })
+  @ApiResponse({ status: 404, description: 'Propiedad no encontrada' })
+  async retryFailedUploads(
+    @Param('referenceCode') referenceCode: string,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.retryFailedUploadsForPartner(referenceCode, partner);
+    return result;
   }
 }

@@ -6,6 +6,7 @@ import {
   Delete, 
   Param, 
   Body,
+  Query,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
@@ -17,14 +18,21 @@ import { OrganizationsService } from './organizations.service';
 import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
+import { OrganizationFiltersDto } from './dto/organization-filters.dto';
 
 @Controller('organizations')
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
   @Get()
-  findAll() {
-    return this.organizationsService.findAll();
+  async findAll(@Query() filters: OrganizationFiltersDto) {
+    const result = await this.organizationsService.findAll(filters);
+    return {
+      data: result.data,
+      total: result.total,
+      limit: filters.limit,
+      offset: filters.offset,
+    };
   }
 
   @Get(':id')

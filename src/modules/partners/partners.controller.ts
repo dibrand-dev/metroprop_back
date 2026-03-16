@@ -1,5 +1,3 @@
-import { UploadedFile, UseInterceptors } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';  
 import {
   Controller,
   Get,
@@ -16,12 +14,9 @@ import {
 import { ApiExcludeController } from '@nestjs/swagger';
 import { PartnersService } from './partners.service';
 import { PartnerApiService } from './partner-api.service';
-import { BranchesService } from '../branches/branches.service';
-import { UsersService } from '../users/users.service';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { TokkoHelperService } from '../../common/helpers/tokko-helper';
-import { UserRole } from '@/common/enums';
 
 @ApiExcludeController()
 @Controller('partners')
@@ -29,8 +24,6 @@ export class PartnersController {
   constructor(
     private readonly partnersService: PartnersService,
     private readonly partnerApiService: PartnerApiService,
-    private readonly branchesService: BranchesService,
-    private readonly usersService: UsersService,
     private readonly tokkoHelperService: TokkoHelperService,
   ) {}
 
@@ -92,6 +85,12 @@ export class PartnersController {
     );
   }
 
+  /**
+   * Listado de partners con paginación
+   * @param limit 
+   * @param offset 
+   * @returns Json list partners 
+   */
   @Get()
   findAll(
     @Query('limit') limit: string = '10',
@@ -119,43 +118,38 @@ export class PartnersController {
     return this.partnersService.update(id, updatePartnerDto);
   }
 
+  /**
+   * GET /partners/:id/refresh-access-key
+   * Genera nuevos access keys seguros para un partner
+   */
+  @Get(':id/refresh-access-key')
+  async refreshAccessKey(@Param('id', ParseIntPipe) id: number) {
+    const updatedPartner = await this.partnersService.refreshAccessKeys(id);
+    return {
+      success: true,
+      message: 'Access keys refreshed successfully',
+      data: updatedPartner,
+    };
+  }
+
+  /**
+   * GET /partners/:id/disable
+   * Deshabilita un partner cambiando su status a inactivo
+   */
+  @Get(':id/disable')
+  async disablePartner(@Param('id', ParseIntPipe) id: number) {
+    const updatedPartner = await this.partnersService.disable(id);
+    return {
+      success: true,
+      message: 'Partner disabled successfully',
+      data: updatedPartner,
+    };
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.partnersService.remove(id);
   }
 
-  @Post(':id/image')
-  @UseInterceptors(FileInterceptor('image'))
-  async uploadImage(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    if (!file) {
-      throw new Error('No file uploaded');
-    }
-
-    // Chequear existencia del partner antes de subir
-    const partner = await this.partnersService.findById(id);
-    if (!partner) {
-      return {
-        statusCode: 404,
-        message: `Partner with id ${id} not found. No upload performed.`
-      };
-    }
-
-    // Upload a S3
-    const imageUrl = await this.partnersService.uploadImageToS3(file, id);
-
-    // Actualizar el campo image en la DB solo si subió bien
-    if (imageUrl) {
-      await this.partnersService.update(id, { image: imageUrl } as any);
-    }
-
-    return {
-      message: imageUrl ? 'Image uploaded successfully' : 'Image upload failed',
-      imageUrl: imageUrl,
-      partnerId: id,
-    };
-  }
 }

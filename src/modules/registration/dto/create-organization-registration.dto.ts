@@ -8,8 +8,7 @@ import {
 } from 'class-validator';
 import { BaseOrganizationFieldsDto } from '../../../common/dto/base-organization-fields.dto';
 
-export class PartnerCreateOrganizationDto extends BaseOrganizationFieldsDto {
-
+export class CreateOrganizationRegistrationDto extends BaseOrganizationFieldsDto {
 
   // ========== Admin User ==========
 

@@ -44,10 +44,60 @@ export class PropertiesService {
     private readonly propertyWriteService: PropertyWriteService,
   ) {}
 
+
+  /**
+   * Valida cada archivo individualmente para dar mensajes de error específicos
+   */
+  validateUploadedFiles(files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] }) {
+    const maxSize = 25 * 1024 * 1024; // 25MB
+    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+    const errors: string[] = [];
+
+    // Validar imágenes
+    if (files.images?.length) {
+      files.images.forEach((file, index) => {
+        // Validar tamaño
+        if (file.size > maxSize) {
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          errors.push(`Imagen "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
+        }
+        
+        // Validar tipo
+        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+          errors.push(`Imagen "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
+        }
+      });
+    }
+
+    // Validar archivos adjuntos
+    if (files.attached?.length) {
+      files.attached.forEach((file, index) => {
+        // Validar tamaño
+        if (file.size > maxSize) {
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          errors.push(`Archivo "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
+        }
+        
+        // Validar tipo
+        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+          errors.push(`Archivo "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
+        }
+      });
+    }
+
+    // Si hay errores, lanzar excepción con detalles
+    if (errors.length > 0) {
+      throw new BadRequestException(`Errores de validación de archivos: ${errors.join('; ')}`);
+    }
+  }
+
+
   private buildAdvancedSearchQuery(
     filters: SearchPropertiesDto,
     options?: {
-      organizationId?: number;
+      organizationId?: number;  
       includeStatusFilter?: boolean;
     },
   ) {

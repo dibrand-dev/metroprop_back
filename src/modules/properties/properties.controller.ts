@@ -79,61 +79,13 @@ export class PropertiesController {
     const safeFiles = files ?? {};
 
     // Validación personalizada archivo por archivo
-    this.validateUploadedFiles(safeFiles);
+    this.propertiesService.validateUploadedFiles(safeFiles);
     
     return this.propertiesService.saveMultimedia(
       propertyId,
       saveMultimediaDto,
       safeFiles,
     );
-  }
-
-  /**
-   * Valida cada archivo individualmente para dar mensajes de error específicos
-   */
-  private validateUploadedFiles(files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] }) {
-    const maxSize = 25 * 1024 * 1024; // 25MB
-    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
-    const errors: string[] = [];
-
-    // Validar imágenes
-    if (files.images?.length) {
-      files.images.forEach((file, index) => {
-        // Validar tamaño
-        if (file.size > maxSize) {
-          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-          errors.push(`Imagen "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
-        }
-        
-        // Validar tipo
-        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-          errors.push(`Imagen "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
-        }
-      });
-    }
-
-    // Validar archivos adjuntos
-    if (files.attached?.length) {
-      files.attached.forEach((file, index) => {
-        // Validar tamaño
-        if (file.size > maxSize) {
-          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-          errors.push(`Archivo "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
-        }
-        
-        // Validar tipo
-        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-          errors.push(`Archivo "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
-        }
-      });
-    }
-
-    // Si hay errores, lanzar excepción con detalles
-    if (errors.length > 0) {
-      throw new BadRequestException(`Errores de validación de archivos: ${errors.join('; ')}`);
-    }
   }
 
   /**
@@ -188,19 +140,6 @@ export class PropertiesController {
   }
 
   /**
-   * GET /properties/search
-   * Buscar propiedades por texto
-   * Nota: DEBE estar antes de GET :id para evitar conflicto
-   */
-  @Get('search')
-  search(@Query('q') query: string) {
-    if (!query) {
-      return { error: 'Parámetro de búsqueda requerido' };
-    }
-    return this.propertiesService.search(query);
-  }
-
-  /**
    * GET /properties/filter
    * Búsqueda avanzada con múltiples filtros
    *
@@ -225,33 +164,6 @@ export class PropertiesController {
     }
 
     return this.propertiesService.searchPanelProperties(searchDto, searchDto.organization_id);
-  }
-
-  /**
-   * GET /properties
-   * Obtener todas las propiedades con paginación y filtros
-   */
-  @Get()
-  findAll(
-    @Query('skip') skip: string = '0',
-    @Query('take') take: string = '10',
-    @Query('property_type') property_type?: string,
-    @Query('status') status?: string,
-    @Query('min_price') min_price?: string,
-    @Query('max_price') max_price?: string,
-  ) {
-    const filters = {
-      property_type: property_type ? parseInt(property_type) : undefined,
-      status: status ? parseInt(status) : undefined,
-      min_price: min_price ? parseFloat(min_price) : undefined,
-      max_price: max_price ? parseFloat(max_price) : undefined,
-    };
-
-    return this.propertiesService.findAll(
-      parseInt(skip),
-      parseInt(take),
-      filters,
-    );
   }
 
   /**

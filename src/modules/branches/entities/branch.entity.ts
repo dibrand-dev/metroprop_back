@@ -25,6 +25,9 @@ export class Branch {
   @Column({ nullable: true })
   branch_logo?: string;
 
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  logo_status?: string | null;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   branch_name?: string;
 

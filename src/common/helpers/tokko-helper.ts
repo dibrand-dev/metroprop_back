@@ -392,14 +392,11 @@ export class TokkoHelperService {
    * Categoriza un tag para organizar en la descripción
    */
   private categorizeTag(tagType: string | number): string {
-    console.log('🔍 [categorizeTag] Entrando con tagType:', tagType, 'tipo:', typeof tagType);
+
     if (!tagType && tagType !== 0) {
-      console.log('🔍 [categorizeTag] tagType es null/undefined, retornando otros');
       return 'otros';
     }
-    console.log('🔍 [categorizeTag] Convirtiendo a string y llamando toLowerCase() en:', tagType);
-    const type = String(tagType).toLowerCase(); // CONVERTIR A STRING PRIMERO
-    console.log('🔍 [categorizeTag] Resultado String().toLowerCase():', type);
+    const type = String(tagType).toLowerCase();
     if(type == "1") return 'servicios';
     if(type == "2") return 'ambientes';
     return 'otros';
@@ -448,20 +445,15 @@ export class TokkoHelperService {
    * Extrae has_sign de los custom tags de Tokko
    */
   private extractHasSignFromCustomTags(customTags: any[]): boolean {
-    console.log('🔍 [extractHasSignFromCustomTags] customTags:', customTags, 'length:', customTags?.length);
     return customTags.some(tag => {
-      console.log('🔍 [extractHasSignFromCustomTags] Procesando tag:', tag);
-      console.log('🔍 [extractHasSignFromCustomTags] tag.name:', tag?.name, 'tipo:', typeof tag?.name);
-      
+
       if (tag.group_name === 'Cartel') return true;
-      
+
       if (tag.name) {
-        console.log('🔍 [extractHasSignFromCustomTags] Llamando toLowerCase() en tag.name:', tag.name);
-        const lowerName = tag.name.toLowerCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-        console.log('🔍 [extractHasSignFromCustomTags] Resultado toLowerCase():', lowerName);
+        const lowerName = tag.name.toLowerCase();
         return lowerName.includes('cartel') || lowerName.includes('tiene cartel');
       }
-      
+
       return false;
     });
   }
@@ -471,13 +463,10 @@ export class TokkoHelperService {
    * Mapea type de Tokko a PropertyType enum
    */
   private mapTokkoPropertyTypeToEnum(type: any): PropertyType {
-    console.log('🔍 [mapTokkoPropertyTypeToEnum] type:', type, 'tipo:', typeof type);
+
     if (!type?.code) return PropertyType.CASA;
-    
-    console.log('🔍 [mapTokkoPropertyTypeToEnum] type.code:', type.code, 'tipo:', typeof type.code);
-    console.log('🔍 [mapTokkoPropertyTypeToEnum] Llamando toUpperCase() en:', type.code);
-    const typeCode = type.code.toUpperCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-    console.log('🔍 [mapTokkoPropertyTypeToEnum] Resultado toUpperCase():', typeCode);
+    const typeCode = type.code.toUpperCase(); 
+
     switch (typeCode) {
       case 'HO': return PropertyType.CASA;
       case 'AP': return PropertyType.DEPARTAMENTO;
@@ -508,16 +497,12 @@ export class TokkoHelperService {
    * Extrae operation_type del array de operaciones de Tokko
    */
   private mapTokkoOperationTypeToEnum(operations: any[]): OperationType {
-    console.log('🔍 [mapTokkoOperationTypeToEnum] operations:', operations, 'tipo:', typeof operations);
     if (!operations?.length) return OperationType.VENTA;
     
     const operationTypeValue = operations[0]?.operation_type;
-    console.log('🔍 [mapTokkoOperationTypeToEnum] operation_type:', operationTypeValue, 'tipo:', typeof operationTypeValue);
     if (!operationTypeValue) return OperationType.VENTA;
-    
-    console.log('🔍 [mapTokkoOperationTypeToEnum] Llamando toLowerCase() en:', operationTypeValue);
-    const operationType = operationTypeValue.toLowerCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-    console.log('🔍 [mapTokkoOperationTypeToEnum] Resultado toLowerCase():', operationType);
+    const operationType = String(operationTypeValue).toLowerCase();
+
     switch (operationType) {
       case 'venta': return OperationType.VENTA;
       case 'alquiler': return OperationType.ALQUILER;
@@ -572,12 +557,9 @@ export class TokkoHelperService {
    * Mapea disposition de Tokko
    */
   private mapTokkoDisposition(disposition: string | null): Disposition | undefined {
-    console.log('🔍 [mapTokkoDisposition] disposition:', disposition, 'tipo:', typeof disposition);
     if (!disposition) return undefined;
-    
-    console.log('🔍 [mapTokkoDisposition] Llamando toLowerCase() en:', disposition);
-    const disp = disposition.toLowerCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-    console.log('🔍 [mapTokkoDisposition] Resultado toLowerCase():', disp);
+    const disp = String(disposition).toLowerCase(); 
+
     if (disp.includes('frente')) return Disposition.FRENTE;
     if (disp.includes('contrafrente')) return Disposition.CONTRAFRENTE;
     if (disp.includes('interno')) return Disposition.INTERNO;
@@ -589,12 +571,10 @@ export class TokkoHelperService {
    * Mapea surface measurement de Tokko
    */
   private mapTokkoSurfaceMeasurement(measurement: string | undefined): SurfaceMeasurement {
-    console.log('🔍 [mapTokkoSurfaceMeasurement] measurement:', measurement, 'tipo:', typeof measurement);
+    
     if (!measurement) return SurfaceMeasurement.M2;
     
-    console.log('🔍 [mapTokkoSurfaceMeasurement] Llamando toUpperCase() en:', measurement);
-    const upperMeasurement = measurement.toUpperCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-    console.log('🔍 [mapTokkoSurfaceMeasurement] Resultado toUpperCase():', upperMeasurement);
+    const upperMeasurement = String(measurement).toUpperCase(); 
     switch (upperMeasurement) {
       case 'M2': return SurfaceMeasurement.M2;
       case 'HA': return SurfaceMeasurement.HA;
@@ -606,12 +586,10 @@ export class TokkoHelperService {
    * Mapea orientation de Tokko
    */
   private mapTokkoOrientation(orientation: string | undefined): Orientation | undefined {
-    console.log('🔍 [mapTokkoOrientation] orientation:', orientation, 'tipo:', typeof orientation);
+    
     if (!orientation) return undefined;
     
-    console.log('🔍 [mapTokkoOrientation] Llamando toLowerCase() en:', orientation);
-    const orient = orientation.toLowerCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-    console.log('🔍 [mapTokkoOrientation] Resultado toLowerCase():', orient);
+    const orient = orientation.toLowerCase();
     if (orient.includes('norte')) return Orientation.NORTE;
     if (orient.includes('sur')) return Orientation.SUR;
     if (orient.includes('este')) return Orientation.ESTE;
@@ -627,12 +605,10 @@ export class TokkoHelperService {
    * Mapea string de credit_eligible a boolean
    */
   private mapTokkoStringToBoolean(value: string | undefined): boolean | undefined {
-    console.log('🔍 [mapTokkoStringToBoolean] value:', value, 'tipo:', typeof value);
+
     if (!value) return undefined;
-    
-    console.log('🔍 [mapTokkoStringToBoolean] Llamando toLowerCase() en:', value);
-    const val = value.toLowerCase(); // SI FALLA AQUÍ, SE VERÁ EN EL LOG
-    console.log('🔍 [mapTokkoStringToBoolean] Resultado toLowerCase():', val);
+    const val = value.toLowerCase();
+
     if (val === 'sí' || val === 'si' || val === 'yes' || val === 'true') return true;
     if (val === 'no' || val === 'false') return false;
     return undefined;
@@ -1136,16 +1112,22 @@ export class TokkoHelperService {
                 branchesMap: branchesMap,
                 usersMap: usersMap
               });
-              
+
               console.log(`Propiedad ${propertyNumber} mapeada exitosamente`);
               console.log('Propiedad mapeada:', JSON.stringify(mappedProperty, null, 2));
-              
+
+              // Crear la propiedad en la base de datos
+              console.log(`Creando propiedad ${propertyNumber} en base de datos...`);
+              const createdProperty = await this.propertiesService.create(mappedProperty as CreatePropertyDto);
+              console.log(`Propiedad ${propertyNumber} creada exitosamente con ID: ${createdProperty.data.id}`);
+
               stats.propiedades_creadas++;
               processedProperties.push({
                 tokko_data: property,
-                status: 'processed',
+                status: 'created',
                 reference_code: referenceCode,
-                mapped_property: mappedProperty
+                mapped_property: mappedProperty,
+                created_property_id: createdProperty.data.id
               });
             }
             

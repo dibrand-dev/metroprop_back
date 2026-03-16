@@ -6,6 +6,7 @@ import {
   Delete, 
   Param, 
   Body,
+  Query,
   ParseIntPipe,
   HttpCode,
   HttpStatus,
@@ -16,6 +17,7 @@ import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { UserFiltersDto } from './dto/user-filters.dto';
 import { VerifyEmailDto, RequestPasswordResetDto, ResetPasswordDto } from './dto/auth-validation.dto';
 import { EmailService } from '../../common/email/email.service';
 
@@ -27,8 +29,14 @@ export class UsersController {
   ) {}
 
   @Get()
-  findAll() {
-    return this.usersService.findAll();
+  async findAll(@Query() filters: UserFiltersDto) {
+    const result = await this.usersService.findAll(filters);
+    return {
+      data: result.users,
+      total: result.total,
+      limit: filters.limit,
+      offset: filters.offset,
+    };
   }
 
   @Get(':id')
