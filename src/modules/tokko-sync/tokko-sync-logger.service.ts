@@ -25,7 +25,14 @@ export class TokkoSyncLoggerService {
     return path.join(this.logsDir, `tokko-sync-errors-${this.dateStamp}.log`);
   }
 
+  private ensureLogsDir(): void {
+    if (!fs.existsSync(this.logsDir)) {
+      fs.mkdirSync(this.logsDir, { recursive: true });
+    }
+  }
+
   private write(filePath: string, line: string): void {
+    this.ensureLogsDir();
     const timestamp = new Date().toISOString();
     const entry = `[${timestamp}] ${line}\n`;
     fs.appendFileSync(filePath, entry, 'utf8');
