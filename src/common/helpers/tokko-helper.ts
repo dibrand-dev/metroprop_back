@@ -5,6 +5,7 @@ import { TagsService } from '../../modules/tags/tags.service';
 import { BranchesService } from '../../modules/branches/branches.service';
 import { UsersService } from '../../modules/users/users.service';
 import { OrganizationsService } from '../../modules/organizations/organizations.service';
+import { LocationsService } from '../../modules/locations/locations.service';
 import { PropertyType, OperationType, SurfaceMeasurement, Orientation, Disposition, PropertyStatus, Currency, GarageCoverage, UserRole, ProfessionalType } from '../enums';
 import { CreatePropertyDto } from '../../modules/properties/dto/create-property.dto';
 import axios from 'axios';
@@ -111,6 +112,10 @@ export interface TokkoToMetropropResponse {
   operation_type: OperationType;
   price: number;
   currency: Currency;
+
+  // Freeportals identifiers
+  tokko_id?: string;
+  publication_id?: string;
   
   // Campos opcionales mapeados
   description?: string;
@@ -119,6 +124,9 @@ export interface TokkoToMetropropResponse {
   floor?: string;
   apartments_per_floor?: number;
   location_id?: number;
+  country_id?: number;
+  state_id?: number;
+  sub_location_id?: number;
   geo_lat?: number;
   geo_long?: number;
   suite_amount?: number;
@@ -199,6 +207,7 @@ export class TokkoHelperService {
     private readonly branchesService: BranchesService,
     private readonly usersService: UsersService,
     private readonly organizationsService: OrganizationsService,
+    private readonly locationsService: LocationsService,
   ) {}
 
   /**
@@ -267,8 +276,8 @@ export class TokkoHelperService {
       apartment: tokkoData.apartment_door || undefined, // apartment_door -> apartment
       apartments_per_floor: tokkoData.appartments_per_floor || undefined, // appartments_per_floor -> apartments_per_floor
       garage_coverage: this.mapTokkoGarageCoverage(tokkoData), // covered/uncovered -> garage_coverage
-      surface_length: this.parseNumericString(tokkoData.depth_measure), // depth_measure -> surface_length  
-      surface_front: this.parseNumericString(tokkoData.front_measure), // front_measure -> surface_front
+      surface_length: this.parseIntegerString(tokkoData.depth_measure), // depth_measure -> surface_length  
+      surface_front: this.parseIntegerString(tokkoData.front_measure), // front_measure -> surface_front
       dispositions: this.mapTokkoDisposition(tokkoData.disposition), // disposition -> dispositions
       number_of_guests: tokkoData.guests_amount || undefined, // guests_amount -> number_of_guests
       
@@ -545,6 +554,14 @@ export class TokkoHelperService {
   }
 
   /**
+   * Parsea string numérico a integer (trunca decimales para campos INTEGER en DB)
+   */
+  private parseIntegerString(value: string | undefined): number | undefined {
+    const num = this.parseNumericString(value);
+    return num != null ? Math.trunc(num) : undefined;
+  }
+
+  /**
    * Mapea garage coverage de Tokko
    */
   private mapTokkoGarageCoverage(tokkoData: TokkoPropertyResponse): GarageCoverage | undefined {
@@ -619,7 +636,7 @@ export class TokkoHelperService {
    */
   private mapTokkoVideos(videos: any[]): any[] {
     return videos.map(video => ({
-      url: video.url || video.player_url || '',
+      url: video.url || video.player_url || video.video_url || '',
       order: video.order || 1,
       description: video.title || video.description || undefined
     }));
@@ -688,6 +705,87 @@ export class TokkoHelperService {
   }
 
   // ========== API CALLS A TOKKO ==========
+
+  // ========== FREEPORTAL-SPECIFIC MAPPING HELPERS ==========
+
+  /**
+   * Sanitizes "---" placeholder strings from the freeportal API to undefined.
+   */
+  private sanitizeDashValue(value: string | undefined): string | undefined {
+    if (!value || value.trim() === '---') return undefined;
+    return value;
+  }
+
+  /**
+   * Maps freeportal flat operation_type string to OperationType enum.
+   */
+  private mapFreePortalOperationType(operationType: string | undefined): OperationType {
+    if (!operationType) return OperationType.VENTA;
+    const op = operationType.toLowerCase();
+    if (op.includes('alquiler temporal')) return OperationType.ALQUILER_TEMPORAL;
+    if (op.includes('alquiler')) return OperationType.ALQUILER;
+    return OperationType.VENTA;
+  }
+
+  /**
+   * Maps freeportal operation_category / operation_category_id to PropertyType enum.
+   */
+  private mapFreePortalPropertyType(category: string | undefined, categoryId: string | undefined): PropertyType {
+    if (category) {
+      const cat = category.toLowerCase();
+      if (cat.includes('departamento') || cat.includes('apartment')) return PropertyType.DEPARTAMENTO;
+      if (cat === 'ph') return PropertyType.PH;
+      if (cat.includes('local')) return PropertyType.LOCAL_COMERCIAL;
+      if (cat.includes('oficina')) return PropertyType.OFICINA_COMERCIAL;
+      if (cat.includes('terreno') || cat.includes('lote')) return PropertyType.TERRENO;
+      if (cat.includes('casa')) return PropertyType.CASA;
+    }
+    return PropertyType.CASA;
+  }
+
+  // ========== LOCATION HIERARCHY ==========
+
+  /**
+   * Given a Tokko location id, walks the parent chain in our locations table
+   * and returns the correct ids for each hierarchy level:
+   * sub_location_id, location_id, state_id, country_id.
+   */
+  async resolveLocationHierarchy(locationId: number): Promise<{
+    location_id?: number;
+    country_id?: number;
+    state_id?: number;
+    sub_location_id?: number;
+  }> {
+    const result: { location_id?: number; country_id?: number; state_id?: number; sub_location_id?: number } = {};
+    let currentId: number | null = locationId;
+
+    while (currentId != null) {
+      const loc = await this.locationsService.findById(currentId);
+      if (!loc) break;
+
+      switch (loc.type) {
+        case 'sub_location':
+          result.sub_location_id = loc.id;
+          break;
+        case 'location':
+          result.location_id = loc.id;
+          break;
+        case 'state':
+          result.state_id = loc.id;
+          break;
+        case 'country':
+          result.country_id = loc.id;
+          currentId = null;
+          continue;
+        default:
+          break;
+      }
+
+      currentId = loc.parent_id ?? null;
+    }
+
+    return result;
+  }
 
   /**
    * Obtiene branches desde la API de Tokko
@@ -1107,6 +1205,7 @@ export class TokkoHelperService {
             } else {
               // Mapear la propiedad al formato Metroprop usando la información pre-cargada
               console.log(`Mapeando propiedad ${propertyNumber}...`);
+
               const mappedProperty = await this.mapToMetropropFormat(property, {
                 organization: organizationData.organization,
                 branchesMap: branchesMap,
@@ -1189,5 +1288,225 @@ export class TokkoHelperService {
         details: errorMessage
       };
     }
+  }
+
+  // ========== FREEPORTALS API METHODS ==========
+
+  /**
+   * Calls the Tokko freeportals feed endpoint with pagination.
+   */
+  async fetchFreePortalProperties(
+    apiKey: string,
+    limit: number = 10,
+    offset: number = 0,
+    dateFrom: string = '2000-01-01T00:00:00',
+  ): Promise<{ objects: any[]; meta: any } | { error: string; details?: string }> {
+    try {
+      const url =
+        `https://tokkobroker.com/portals/simple_portal/api/v1/freeportals/` +
+        `?api_key=${encodeURIComponent(apiKey)}&format=json&lang=es-MX` +
+        `&filter=updated&date_from=${encodeURIComponent(dateFrom)}` +
+        `&limit=${limit}&offset=${offset}`;
+
+      console.log(`[TokkoHelper] fetchFreePortalProperties offset=${offset}, limit=${limit}, from=${dateFrom}`);
+      const response = await axios.get(url, { timeout: 30000 });
+
+      if (!response.data) {
+        return { error: 'No data received from freeportals endpoint' };
+      }
+
+      return {
+        objects: response.data.objects || [],
+        meta: response.data.meta || {},
+      };
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      console.error('[TokkoHelper] fetchFreePortalProperties error:', errorMessage);
+      return { error: 'Failed to fetch freeportal properties', details: errorMessage };
+    }
+  }
+
+  /**
+   * Fetches a single freeportal property by publication_id from the detail endpoint.
+   * No date filter — always returns current data regardless of update date.
+   */
+  async fetchFreePortalPropertyById(
+    apiKey: string,
+    publicationId: string,
+  ): Promise<{ item: any } | { error: string; details?: string; notFound?: boolean }> {
+    
+    const url =
+        `https://tokkobroker.com/portals/simple_portal/api/v1/freeportals/` +
+        `?api_key=${encodeURIComponent(apiKey)}&publication_id=${encodeURIComponent(publicationId)}&format=json&lang=es-MX`;
+
+    try { 
+      console.log(`[TokkoHelper] fetchFreePortalPropertyById publication_id=${publicationId}`);
+      const response = await axios.get(url, { timeout: 30000 });
+
+      // The endpoint always returns a paginated list format even when filtering by publication_id
+      const objects: any[] = response.data?.objects ?? [];
+      const item = objects.find(
+        (o: any) => o.publication_id != null && String(o.publication_id) === publicationId,
+      ) ?? objects[0];
+
+      if (!item || !item.publication_id) {
+        return { error: 'Empty or invalid response from freeportals detail endpoint', notFound: true };
+      }
+
+      return { item };
+    } catch (err: any) {
+      if (err?.response?.status === 404) {
+        return { error: `publication_id ${publicationId} not found`, notFound: true };
+      }
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
+      console.error('[TokkoHelper] fetchFreePortalPropertyById error:', errorMessage);
+      return { error: 'Failed to fetch freeportal property by id ' + url, details: errorMessage };
+    }
+  }
+
+  /**
+   * Normalizes the freeportal tag dict format to a flat array for processTokkoTags.
+   * Input:  { "Servicios": ["WiFi", "Gas"], "Adicionales": ["Luminoso"] }
+   * Output: [{ name: "WiFi", type: "Servicios" }, { name: "Gas", type: "Servicios" }, ...]
+   */
+  normalizeFreePortalTags(tags: Record<string, string[]>): Array<{ name: string; type: string }> {
+    if (!tags || typeof tags !== 'object') return [];
+    const result: Array<{ name: string; type: string }> = [];
+    for (const [type, names] of Object.entries(tags)) {
+      if (Array.isArray(names)) {
+        names.forEach(name => {
+          if (name && typeof name === 'string') {
+            result.push({ name: name.trim(), type });
+          }
+        });
+      }
+    }
+    return result;
+  }
+
+  /**
+   * Maps a freeportal property item to Metroprop format.
+   * Tags come as { type: [names] } dict and are resolved by partner_tag_name only.
+   */
+  async mapFreePortalPropertyToMetropropFormat(
+    item: any,
+    orgId: number,
+    branchId: number,
+    userId?: number,
+  ): Promise<TokkoToMetropropResponse> {
+    // Normalize and process tags by name only (freeportals has no tag IDs)
+    const normalizedTags = this.normalizeFreePortalTags(item.tags || {});
+    const { mappedTagIds, unmappedTags: rawUnmapped } = normalizedTags.length
+      ? await this.tagsService.processTokkoTags(normalizedTags)
+      : { mappedTagIds: [], unmappedTags: [] };
+
+    const categorizedUnmapped = rawUnmapped.map(t => ({
+      ...t,
+      category: this.categorizeTag(t.type),
+    }));
+    const unmappedTagsDescription = this.generateUnmappedTagsDescription(categorizedUnmapped);
+
+    const hasSign = this.extractHasSignFromCustomTags(item.custom_tags || []);
+
+    const rawLocationId: number | undefined = item.operation_location_id ?? item.location?.id ?? undefined;
+    const locationHierarchy = rawLocationId
+      ? await this.resolveLocationHierarchy(rawLocationId)
+      : {};
+
+    const mapped: TokkoToMetropropResponse = {
+      // Freeportals-specific identifiers
+      tokko_id: item.tokko_id != null ? String(item.tokko_id) : (item.id != null ? String(item.id) : undefined),
+      publication_id: item.publication_id != null ? String(item.publication_id) : undefined,
+      reference_code: item.reference_code || `TOKKO-${item.publication_id ?? item.tokko_id ?? item.id ?? Date.now()}`,
+      publication_title: item.publication_title || item.title || '',
+
+      property_type: item.operation_category != null
+        ? this.mapFreePortalPropertyType(item.operation_category, item.operation_category_id)
+        : this.mapTokkoPropertyTypeToEnum(item.type),
+      status: this.mapTokkoStatusToEnum(item.status),
+      operation_type: item.operation_type != null && item.operations == null
+        ? this.mapFreePortalOperationType(item.operation_type)
+        : this.mapTokkoOperationTypeToEnum(item.operations),
+      price: item.operations == null ? (item.operation_amount ?? 0) : this.extractPriceFromOperations(item.operations),
+      currency: item.operations == null
+        ? ((item.operation_currency ?? Currency.USD) as Currency)
+        : (this.extractCurrencyFromOperations(item.operations) as Currency),
+
+      description: this.combineDescription(
+        item.description || item.rich_description,
+        unmappedTagsDescription,
+      ),
+
+      age: item.age || undefined,
+      bathroom_amount: item.bathroom_amount || undefined,
+      floor: item.floor || undefined,
+      floors_amount: item.floors_amount || undefined,
+      geo_lat: this.parseNumericString(item.geo_lat),
+      geo_long: this.parseNumericString(item.geo_long),
+      parking_lot_amount: item.parking_lot_amount || undefined,
+      property_condition: this.sanitizeDashValue(item.property_condition),
+      room_amount: item.room_amount || undefined,
+      situation: this.sanitizeDashValue(item.situation),
+      suite_amount: item.suite_amount || undefined,
+      toilet_amount: item.toilet_amount || undefined,
+      zonification: item.zonification || undefined,
+      expenses: item.expenses || undefined,
+      transaction_requirements: item.transaction_requirements || undefined,
+      development: item.development || undefined,
+
+      street: item.address || item.real_address || item.fake_address || undefined,
+      apartment: item.apartment_door || undefined,
+      apartments_per_floor: item.appartments_per_floor || undefined,
+      garage_coverage: this.mapTokkoGarageCoverage(item),
+      surface_length: this.parseIntegerString(item.depth_measure),
+      surface_front: this.parseIntegerString(item.front_measure),
+      dispositions: this.mapTokkoDisposition(item.disposition),
+      number_of_guests: item.guests_amount || undefined,
+
+      surface: this.parseNumericString(item.surface) ?? this.parseNumericString(item.land),
+      roofed_surface: this.parseNumericString(item.roofed_surface),
+      unroofed_surface: this.parseNumericString(item.unroofed_surface),
+      semiroofed_surface: this.parseNumericString(item.semiroofed_surface),
+      total_surface: this.parseNumericString(item.total_surface),
+      surface_measurement: this.mapTokkoSurfaceMeasurement(item.surface_measurement ?? item.land_measurement),
+
+      orientation: this.mapTokkoOrientation(item.orientation),
+      credit_eligible: this.mapTokkoStringToBoolean(item.credit_eligible),
+      has_sign: hasSign,
+
+      ...locationHierarchy,
+      postal_code: item.zipcode ?? item.location?.zip_code ?? undefined,
+      period: item.operations != null ? this.extractPeriodFromOperations(item.operations) : undefined,
+
+      organization_id: orgId,
+      branch_id: branchId,
+      user_id: userId,
+
+      images: this.mapFreePortalPhotos(item.photos || []),
+      videos: this.mapTokkoVideos(item.videos || []),
+      attached: this.mapTokkoFiles(item.files || []),
+      tags: mappedTagIds,
+    };
+
+    return mapped;
+  }
+
+  /**
+   * Maps freeportal photos to image DTO, preserving original URL in original_image.
+   */
+  mapFreePortalPhotos(photos: any[]): Array<{
+    url: string;
+    original_image: string;
+    description?: string;
+    is_blueprint?: boolean;
+    order_position?: number;
+  }> {
+    return photos.map(photo => ({
+      url: photo.original || photo.image || '',
+      original_image: photo.original || photo.image || '',
+      description: photo.description || undefined,
+      is_blueprint: photo.is_blueprint || false,
+      order_position: photo.order || 0,
+    }));
   }
 }

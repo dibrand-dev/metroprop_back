@@ -79,6 +79,9 @@ export class Branch {
   @Column({ type: 'timestamp', nullable: true })
   deleted_at?: Date;
 
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  external_reference?: string;
+
   // Relaciones
   @ManyToOne(() => Organization, (org) => org.branches, { 
     onDelete: 'CASCADE',

@@ -38,6 +38,9 @@ export class PropertyImage {
   @Column({ type: 'timestamp', nullable: true })
   upload_completed_at?: Date | null;
 
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  original_image?: string | null;
+
   @CreateDateColumn()
   created_at!: Date;
 

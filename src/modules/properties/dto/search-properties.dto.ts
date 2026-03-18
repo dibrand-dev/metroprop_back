@@ -4,6 +4,7 @@ import {
   IsArray,
   IsNumber,
   IsString,
+  IsBoolean,
   Min,
   Max,
 } from 'class-validator';
@@ -188,6 +189,13 @@ export class SearchPropertiesDto {
   @IsOptional()
   @IsString()
   q?: string;
+
+  // ========== Modo de respuesta ==========
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' || value === true)
+  @IsBoolean()
+  card?: boolean = false;
 }
 
 /**

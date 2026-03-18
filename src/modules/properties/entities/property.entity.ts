@@ -43,6 +43,12 @@ export class Property {
   @Column({ type: 'varchar', length: 100, unique: true, nullable: false })
   reference_code!: string;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  tokko_id?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  publication_id?: string;
+
   // ========== Datos Básicos ==========
   @Column({ type: 'varchar', length: 500, nullable: false })
   publication_title!: string;

@@ -25,4 +25,8 @@ export class LocationsService {
   async getLocationChildrens(locationId: number) {
     return this.locationRepository.find({ where: { parent_id: locationId } });
   }
+
+  async findById(id: number): Promise<Location | null> {
+    return this.locationRepository.findOne({ where: { id } });
+  }
 }

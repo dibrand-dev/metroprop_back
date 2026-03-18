@@ -28,6 +28,21 @@ import {
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
 
+export interface PropertyCard {
+  id: number;
+  publication_title: string;
+  street?: string;
+  total_surface?: number;
+  room_amount?: number;
+  bathroom_amount?: number;
+  currency: Currency;
+  price: number;
+  price_square_meter?: number;
+  images?: PropertyImage[];
+  lat?: number;
+  long?: number;
+}
+
 @Injectable()
 export class PropertiesService {
   constructor(
@@ -869,10 +884,10 @@ export class PropertiesService {
    */
   async searchProperties(
     filters: SearchPropertiesDto,
-  ): Promise<{ 
-    data: Property[]; 
-    total: number; 
-    page: number; 
+  ): Promise<{
+    data: Property[] | PropertyCard[];
+    total: number;
+    page: number;
     limit: number;
     mapData: Array<{ id: number; lat: number; lng: number; price?: number; reference_code: string }>;
     filterStats: {
@@ -886,11 +901,54 @@ export class PropertiesService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * limit;
 
-    const qb = this.buildAdvancedSearchQuery(filters);
+    let data: Property[] | PropertyCard[];
+    let total: number;
 
-    // Datos paginados
-    qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
-    const [data, total] = await qb.getManyAndCount();
+    if (filters.card) {
+      // Modo card: SELECT solo las columnas necesarias + join de imágenes
+      // No se cargan relaciones eager (attributes, tags, videos, attached)
+      const cardQb = this.buildAdvancedSearchQuery(filters)
+        .select([
+          'p.id',
+          'p.publication_title',
+          'p.street',
+          'p.total_surface',
+          'p.room_amount',
+          'p.bathroom_amount',
+          'p.currency',
+          'p.price',
+          'p.price_square_meter',
+          'p.geo_lat',
+          'p.geo_long',
+        ])
+        .leftJoinAndSelect('p.images', 'img')
+        .orderBy('p.created_at', 'DESC')
+        .skip(offset)
+        .take(limit);
+
+      const [partialProps, cardTotal] = await cardQb.getManyAndCount();
+      total = cardTotal;
+
+      data = partialProps.map((p) => ({
+        id: p.id as number,
+        publication_title: p.publication_title,
+        street: p.street,
+        total_surface: p.total_surface,
+        room_amount: p.room_amount,
+        bathroom_amount: p.bathroom_amount,
+        currency: p.currency,
+        price: p.price,
+        price_square_meter: p.price_square_meter,
+        images: p.images,
+        lat: p.geo_lat,
+        long: p.geo_long,
+      }));
+    } else {
+      // Modo full: query completa con todas las relaciones
+      const qb = this.buildAdvancedSearchQuery(filters);
+      qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
+      [data, total] = await qb.getManyAndCount();
+    }
 
     // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
     const mapQb = this.buildAdvancedSearchQuery(filters);
@@ -899,7 +957,7 @@ export class PropertiesService {
       .andWhere('p.geo_lat IS NOT NULL')
       .andWhere('p.geo_long IS NOT NULL')
       .getRawMany()
-      .then(results => 
+      .then(results =>
         results.map(r => ({
           id: r.p_id,
           lat: parseFloat(r.p_geo_lat),
@@ -912,13 +970,13 @@ export class PropertiesService {
     // Estadísticas para filtros
     const filterStats = await this.generateFilterStats(filters);
 
-    return { 
-      data, 
-      total, 
-      page, 
+    return {
+      data,
+      total,
+      page,
       limit,
       mapData,
-      filterStats
+      filterStats,
     };
   }
 

@@ -41,6 +41,17 @@ export class BranchesService {
     return branch;
   }
 
+  async findByExternalReference(organizationId: number, externalRef: string): Promise<Branch | null> {
+    return this.repo.findOne({
+      where: {
+        external_reference: externalRef,
+        organization: { id: organizationId },
+        deleted: false,
+      } as any,
+      relations: ['organization'],
+    });
+  }
+
   create(data: CreateBranchDto | (Partial<Branch> & { organizationId?: number })): Promise<Branch> {
     const { organizationId, ...rest } = data as any;
     const branch = this.repo.create(rest as Partial<Branch>);

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { S3Module } from './common/s3.module';
@@ -16,9 +17,11 @@ import { EmailModule } from './common/email/email.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { DevelopersModule } from './modules/developers/developers.module';
+import { TokkoSyncModule } from './modules/tokko-sync/tokko-sync.module';
 @Module({
   imports: [
     S3Module,
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: process.env.NODE_ENV === 'production' ? '.env.prod' : '.env',
@@ -69,6 +72,7 @@ import { DevelopersModule } from './modules/developers/developers.module';
     LocationsModule,
     TagsModule,
     DevelopersModule,
+    TokkoSyncModule,
   ],
   controllers: [AppController],
   providers: [AppService],

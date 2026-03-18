@@ -308,6 +308,8 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	number_of_guests int4 NULL,
 	business_type varchar(255) NULL,
 	fot int4 NULL,
+	tokko_id varchar(100) NULL,
+	publication_id varchar(100) NULL,
 	CONSTRAINT pk_properties PRIMARY KEY (id),
 	CONSTRAINT uk_properties_reference_code UNIQUE (reference_code)
 );
@@ -318,6 +320,7 @@ CREATE INDEX IF NOT EXISTS idx_properties_reference_code ON public.properties US
 CREATE INDEX IF NOT EXISTS idx_properties_state_id ON public.properties USING btree (state_id);
 CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_properties_sub_location_id ON public.properties USING btree (sub_location_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_properties_publication_id ON public.properties USING btree (publication_id) WHERE (publication_id IS NOT NULL);
 
 
 -- public.tags definition
@@ -405,6 +408,7 @@ CREATE TABLE IF NOT EXISTS public.property_images (
 	retry_count int2 DEFAULT '0'::smallint NOT NULL,
 	error_message varchar(1000) NULL,
 	upload_completed_at timestamp NULL,
+	original_image varchar(1000) NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
 	updated_at timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "PK_317c3774ee70c26d70c4f80e200" PRIMARY KEY (id),
@@ -647,6 +651,25 @@ ALTER TABLE public.users_branches ADD CONSTRAINT "FK_a2298d713539687b12f2c169ba4
 
 ALTER TABLE public.users_permissions DROP CONSTRAINT IF EXISTS "FK_4de7d0b175f702be3be55270023";
 ALTER TABLE public.users_permissions ADD CONSTRAINT "FK_4de7d0b175f702be3be55270023" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE ON UPDATE CASCADE;
+
+
+-- public.tokko_sync_state definition
+
+CREATE TABLE IF NOT EXISTS public.tokko_sync_state (
+	id serial4 NOT NULL,
+	api_key varchar(500) NOT NULL,
+	sync_from_date timestamp DEFAULT '2000-01-01 00:00:00' NOT NULL,
+	current_offset int4 DEFAULT 0 NOT NULL,
+	total_count int4 DEFAULT 0 NOT NULL,
+	is_complete bool DEFAULT true NOT NULL,
+	started_at timestamp NULL,
+	completed_at timestamp NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT pk_tokko_sync_state PRIMARY KEY (id),
+	CONSTRAINT uq_tokko_sync_state_api_key UNIQUE (api_key)
+);
+CREATE INDEX IF NOT EXISTS idx_branches_external_reference ON public.branches USING btree (external_reference) WHERE (external_reference IS NOT NULL);
 
 
 -- Ensure serial id columns have their DEFAULT nextval properly set
