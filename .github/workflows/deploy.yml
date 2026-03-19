@@ -16,5 +16,5 @@ jobs:
           key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
           script: |
             cd ~/metroprop_back
-            ./deploy.sh
+            bash deploy.sh
 
