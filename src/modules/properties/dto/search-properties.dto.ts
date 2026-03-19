@@ -193,7 +193,7 @@ export class SearchPropertiesDto {
   // ========== Modo de respuesta ==========
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true)
+  @Transform(({ value }) => value === 'true' || value === true || value === '1' || value === 1)
   @IsBoolean()
   card?: boolean = false;
 }
