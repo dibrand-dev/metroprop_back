@@ -155,6 +155,8 @@ export class PropertiesService {
 
     if (filters.state_id != null) {
       qb.andWhere('p.state_id = :state_id', { state_id: filters.state_id });
+    } else {
+      qb.andWhere('p.state_id = :state_id', { state_id: PropertyStatus.DISPONIBLE });
     }
 
     if (filters.location_id != null) {
