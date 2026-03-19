@@ -9,5 +9,6 @@ docker run -d --name metroprop-app --restart unless-stopped \
   --add-host=host.docker.internal:host-gateway \
   -p 80:3000 \
   --env-file .env \
+  -v ~/metroprop_back/logs:/app/logs \
   metroprop-backend:latest
 echo "Deployed!"

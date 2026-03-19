@@ -920,6 +920,7 @@ export class PropertiesService {
           'p.price_square_meter',
           'p.geo_lat',
           'p.geo_long',
+          'p.created_at',
         ])
         .leftJoinAndSelect('p.images', 'img')
         .orderBy('p.created_at', 'DESC')

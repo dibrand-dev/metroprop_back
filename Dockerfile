@@ -27,6 +27,8 @@ RUN npm ci --only=production
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
 
+RUN mkdir -p /app/logs && chmod 775 /app/logs
+
 EXPOSE 3000
 
 CMD ["node", "dist/main"]

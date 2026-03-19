@@ -32,10 +32,16 @@ export class TokkoSyncLoggerService {
   }
 
   private write(filePath: string, line: string): void {
-    this.ensureLogsDir();
-    const timestamp = new Date().toISOString();
-    const entry = `[${timestamp}] ${line}\n`;
-    fs.appendFileSync(filePath, entry, 'utf8');
+    try {
+      this.ensureLogsDir();
+      const timestamp = new Date().toISOString();
+      const entry = `[${timestamp}] ${line}\n`;
+      fs.appendFileSync(filePath, entry, 'utf8');
+    } catch (err) {
+      // Fallback to stdout so errors are never lost
+      console.error(`[TokkoSyncLogger] Failed to write log to ${filePath}: ${(err as Error).message}`);
+      console.error(`[TokkoSyncLogger] Log entry: ${line}`);
+    }
   }
 
   // ─── Public API ─────────────────────────────────────────────────────────────
