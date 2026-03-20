@@ -11,19 +11,19 @@ export class LocationsService {
   ) {}
 
   async getCountries() {
-    return this.locationRepository.find({ where: { type: 'country' } });
+    return this.locationRepository.find({ where: { type: 'country' }, order: { name: 'ASC' } });
   }
 
   async getCountryStates(countryId: number) {
-    return this.locationRepository.find({ where: { type: 'state', parent_id: countryId } });
+    return this.locationRepository.find({ where: { type: 'state', parent_id: countryId }, order: { name: 'ASC' } });
   }
 
   async getStateLocations(stateId: number) {
-    return this.locationRepository.find({ where: { type: 'location', parent_id: stateId } });
+    return this.locationRepository.find({ where: { type: 'location', parent_id: stateId }, order: { name: 'ASC' } });
   }
 
   async getLocationChildrens(locationId: number) {
-    return this.locationRepository.find({ where: { parent_id: locationId } });
+    return this.locationRepository.find({ where: { parent_id: locationId }, order: { name: 'ASC' } });
   }
 
   async findById(id: number): Promise<Location | null> {
