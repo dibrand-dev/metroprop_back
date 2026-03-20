@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Location } from './entities/location.entity';
+import { Not } from 'typeorm';
 
 @Injectable()
 export class LocationsService {
@@ -28,5 +29,9 @@ export class LocationsService {
 
   async findById(id: number): Promise<Location | null> {
     return this.locationRepository.findOne({ where: { id } });
+  }
+
+  async getAllLocations(): Promise<Location[]> {
+    return this.locationRepository.find({ where: { type: Not('country') }, order: { name: 'ASC' } });
   }
 }

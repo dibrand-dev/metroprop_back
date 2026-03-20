@@ -24,4 +24,9 @@ export class LocationsController {
   getLocationChildrens(@Query('locationId') locationId: number) {
     return this.locationsService.getLocationChildrens(locationId);
   }
+
+  @Get('getAllLocations')
+  getAllLocations() {
+    return this.locationsService.getAllLocations();
+  }
 }
