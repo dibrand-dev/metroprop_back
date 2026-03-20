@@ -34,6 +34,9 @@ export class Organization {
   @Column({ type: 'varchar', length: 1000, nullable: true })
   logo_status?: string | null;
 
+  @Column({ type: 'smallint', default: 0 })
+  logo_retry_count!: number;
+
   @Column({ type: 'varchar', length: 255, nullable: false })
   company_name!: string;
 

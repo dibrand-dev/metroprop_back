@@ -18,6 +18,7 @@ import { LocationsModule } from './modules/locations/locations.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { DevelopersModule } from './modules/developers/developers.module';
 import { TokkoSyncModule } from './modules/tokko-sync/tokko-sync.module';
+import { ImageUploadS3CronModule } from './modules/cron-tasks/image-upload-s3/image-upload-s3.module';
 @Module({
   imports: [
     S3Module,
@@ -73,6 +74,7 @@ import { TokkoSyncModule } from './modules/tokko-sync/tokko-sync.module';
     TagsModule,
     DevelopersModule,
     TokkoSyncModule,
+    ImageUploadS3CronModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -44,6 +44,9 @@ export class User {
   @Column({ type: 'varchar', length: 1000, nullable: true })
   avatar_status?: string | null;
 
+  @Column({ type: 'smallint', default: 0 })
+  avatar_retry_count!: number;
+
   @Column({ type: 'boolean', default: false })
   is_verified!: boolean;
 

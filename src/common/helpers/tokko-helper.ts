@@ -1294,21 +1294,27 @@ export class TokkoHelperService {
 
   /**
    * Calls the Tokko freeportals feed endpoint with pagination.
+   * Pass `organizationId` to filter results to a single company (maps to `company_id` query param).
    */
   async fetchFreePortalProperties(
     apiKey: string,
     limit: number = 10,
     offset: number = 0,
     dateFrom: string = '2000-01-01T00:00:00',
+    organizationId?: string,
   ): Promise<{ objects: any[]; meta: any } | { error: string; details?: string }> {
     try {
-      const url =
+      let url =
         `https://tokkobroker.com/portals/simple_portal/api/v1/freeportals/` +
         `?api_key=${encodeURIComponent(apiKey)}&format=json&lang=es-MX` +
         `&filter=updated&date_from=${encodeURIComponent(dateFrom)}` +
         `&limit=${limit}&offset=${offset}`;
 
-      console.log(`[TokkoHelper] fetchFreePortalProperties offset=${offset}, limit=${limit}, from=${dateFrom}`);
+      if (organizationId) {
+        url += `&company_id=${encodeURIComponent(organizationId)}`;
+      }
+
+      console.log(`[TokkoHelper] fetchFreePortalProperties offset=${offset}, limit=${limit}, from=${dateFrom}${organizationId ? `, org=${organizationId}, url=${url}` : ''}`);
       const response = await axios.get(url, { timeout: 30000 });
 
       if (!response.data) {

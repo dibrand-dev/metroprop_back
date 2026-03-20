@@ -11,7 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   UploadedFile,
-  UseInterceptors
+  UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
@@ -20,6 +21,10 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserFiltersDto } from './dto/user-filters.dto';
 import { VerifyEmailDto, RequestPasswordResetDto, ResetPasswordDto } from './dto/auth-validation.dto';
 import { EmailService } from '../../common/email/email.service';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/enums';
 
 @Controller('users')
 export class UsersController {
@@ -29,6 +34,8 @@ export class UsersController {
   ) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   async findAll(@Query() filters: UserFiltersDto) {
     const result = await this.usersService.findAll(filters);
     return {
@@ -60,45 +67,10 @@ export class UsersController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.remove(id);
-  }
-
-  @Post(':id/avatar')
-  @UseInterceptors(FileInterceptor('avatar'))
-  async uploadAvatar(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    if (!file) {
-      throw new Error('No file uploaded');
-    }
-
-    // Chequear existencia del usuario antes de subir
-    const user = await this.usersService.findById(id);
-    if (!user) {
-      return {
-        statusCode: 404,
-        message: `User with id ${id} not found. No upload performed.`
-      };
-    }
-
-    // Upload a S3
-    const imageUrl = await this.usersService.uploadAvatarToS3(file, id);
-
-    // Actualizar el avatar del usuario en la DB solo si subió bien
-    if (imageUrl) {
-      await this.usersService.update(id, { avatar: imageUrl } as any);
-    }
-
-    return {
-      message: imageUrl ? 'Avatar uploaded successfully' : 'Avatar upload failed',
-      imageUrl: imageUrl,
-      userId: id,
-      fileSize: file.size,
-      fileName: file.originalname,
-      avatar_status: imageUrl ? null : 'Ver campo avatar_status en la entidad para detalles de error',
-    };
   }
 
   @Post('verify-email')

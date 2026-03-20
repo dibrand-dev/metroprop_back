@@ -465,7 +465,7 @@ export class PartnerApiController {
     @Req() request: Request,
   ) {
     const partner = (request as any).partner;
-    const result = await this.partnerApiService.retryFailedUploadsForPartner(referenceCode, partner);
+    const result = await this.partnerApiService.resetFailedUploadsForPartner(referenceCode, partner);
     return result;
   }
 }

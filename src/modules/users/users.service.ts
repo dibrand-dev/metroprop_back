@@ -176,21 +176,6 @@ export class UsersService {
   }
 
   /**
-   * Sube un avatar a S3 usando el key relativo (ej: 147/avatar.jpg)
-   * El path final será users/147/avatar.jpg
-   */
-  async uploadAvatarToS3(file: Express.Multer.File, userId: number): Promise<string | null> {
-    const result = await this.mediaService.uploadEntityImage(file, {
-      repository: this.usersRepository,
-      entityId: userId,
-      imageFieldName: 'avatar',
-      statusFieldName: 'avatar_status',
-      s3Folder: USER_IMAGE_FOLDER,
-    });
-    return result.url;
-  }
-
-  /**
    * Genera un token de verificación de email
    */
   generateEmailVerificationToken(): string {

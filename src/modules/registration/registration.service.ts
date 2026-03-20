@@ -367,33 +367,7 @@ export class RegistrationService {
         admin_user_id: savedUser.id,
         branch_id: savedBranch.id
       };
-    }).then(result => {
-      // 5. Procesar logos después de que la transacción se complete (fire and forget)
-      if (organizationData.company_logo && this.isValidUrl(organizationData.company_logo)) {
-        // Delegar al OrganizationsService para el procesamiento del logo
-        this.processOrganizationLogo(result.organization_id, organizationData.company_logo);
-      }
-      
-      return result;
     });
   }
 
-  /**
-   * Delega el procesamiento de logo de organización al servicio especializado
-   */
-  private processOrganizationLogo(orgId: number, logoUrl: string): void {
-    this.organizationsService.processLogoFromUrl(orgId, logoUrl);
-  }
-  
-  /**
-   * Valida si una cadena es una URL válida
-   */
-  private isValidUrl(string: string): boolean {
-    try {
-      const url = new URL(string);
-      return url.protocol === 'http:' || url.protocol === 'https:';
-    } catch {
-      return false;
-    }
-  }
 }

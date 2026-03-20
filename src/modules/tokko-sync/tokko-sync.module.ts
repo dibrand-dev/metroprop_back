@@ -16,6 +16,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { UsersModule } from '../users/users.module';
 import { TagsModule } from '../tags/tags.module';
 import { LocationsModule } from '../locations/locations.module';
+import { PartnersModule } from '../partners/partners.module';
 import { TokkoHelperService } from '../../common/helpers/tokko-helper';
 import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
 
@@ -28,6 +29,7 @@ import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
     UsersModule,
     TagsModule,
     LocationsModule,
+    PartnersModule,
   ],
   providers: [TokkoSyncService, TokkoHelperService, TokkoSyncLoggerService],
   controllers: [TokkoSyncController],

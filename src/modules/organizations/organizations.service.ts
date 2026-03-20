@@ -7,7 +7,6 @@ import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { OrganizationFiltersDto } from './dto/organization-filters.dto';
-import axios from 'axios';
 
 @Injectable()
 export class OrganizationsService {
@@ -101,18 +100,7 @@ export class OrganizationsService {
       (org as any).admin_user = { id: adminUserId };
     }
     
-    const savedOrgPromise = this.repo.save(org);
-    
-    // Si hay logo URL, procesarlo automáticamente (fire and forget)
-    if (data.company_logo && this.isValidUrl(data.company_logo)) {
-      savedOrgPromise.then(savedOrg => {
-        this.processLogoFromUrl(savedOrg.id, data.company_logo!);
-      }).catch(err => {
-        this.logger.error(`Error saving organization: ${err.message}`);
-      });
-    }
-    
-    return savedOrgPromise;
+    return this.repo.save(org);
   }
 
   async update(id: number, data: UpdateOrganizationDto): Promise<Organization> {
@@ -148,67 +136,14 @@ export class OrganizationsService {
   }
 
   /**
-   * Procesa un logo desde URL de forma asíncrona (fire and forget)
-   * Descarga la imagen, la sube a S3 y actualiza el campo company_logo
+   * @deprecated Use the ImageUploadS3CronModule cron job instead.
+   * The cron picks up any org with company_logo LIKE 'http%' every 5 minutes.
    */
-  public processLogoFromUrl(orgId: number, logoUrl: string): void {
-    setImmediate(async () => {
-      try {
-        this.logger.log(`Processing logo from URL for organization ${orgId}: ${logoUrl}`);
-        
-        // Descargar imagen desde URL
-        const response = await axios.get(logoUrl, { 
-          responseType: 'arraybuffer',
-          timeout: 30000, // 30 segundos timeout
-          maxContentLength: 10 * 1024 * 1024, // 10MB máximo
-        });
-        
-        const buffer = Buffer.from(response.data, 'binary');
-        const contentType = response.headers['content-type'] || 'image/jpeg';
-        
-        // Validar que sea una imagen
-        if (!contentType.startsWith('image/')) {
-          throw new Error(`Invalid content type: ${contentType}`);
-        }
-        
-        // Crear archivo simulado para MediaService
-        const fakeFile = {
-          buffer,
-          mimetype: contentType,
-          originalname: `logo.${contentType.split('/')[1] || 'jpg'}`,
-        } as Express.Multer.File;
-        
-        // Subir a S3 usando el método existente
-        const result = await this.mediaService.uploadEntityImage(fakeFile, {
-          repository: this.repo,
-          entityId: orgId,
-          imageFieldName: 'company_logo',
-          statusFieldName: 'logo_status',
-          s3Folder: ORGANIZATION_IMAGE_FOLDER,
-        });
-        
-        if (result.url) {
-          this.logger.log(`Logo uploaded successfully for organization ${orgId}: ${result.url}`);
-        } else {
-          this.logger.error(`Failed to upload logo for organization ${orgId}`);
-        }
-        
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-        this.logger.error(`Error processing logo for organization ${orgId}: ${errorMsg}`);
-        
-        // Actualizar el campo logo_status con el error
-        try {
-          await this.repo.update(orgId, {
-            logo_status: `Error downloading/uploading logo: ${errorMsg}`
-          });
-        } catch (updateError) {
-          this.logger.error(`Failed to update logo_status for organization ${orgId}`);
-        }
-      }
-    });
+  public processLogoFromUrl(_orgId: number, _logoUrl: string): void {
+    // no-op: upload is now handled by ImageUploadS3CronModule
+    this.logger.warn('[OrganizationsService] processLogoFromUrl called — upload delegated to cron');
   }
-  
+
   /**
    * Valida si una cadena es una URL válida
    */

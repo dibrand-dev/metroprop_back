@@ -25,6 +25,10 @@ export class TokkoSyncLoggerService {
     return path.join(this.logsDir, `tokko-sync-errors-${this.dateStamp}.log`);
   }
 
+  private orgLogPath(orgId: string): string {
+    return path.join(this.logsDir, `tokko-sync-organization-${orgId}-${this.dateStamp}.log`);
+  }
+
   private ensureLogsDir(): void {
     if (!fs.existsSync(this.logsDir)) {
       fs.mkdirSync(this.logsDir, { recursive: true });
@@ -63,6 +67,23 @@ export class TokkoSyncLoggerService {
     this.write(this.errorLogPath, `ERROR ${line}`);
   }
 
+  /** Writes to the main log AND to the per-organization log file. */
+  orgInfo(orgId: string, msg: string): void {
+    this.write(this.mainLogPath, `INFO  [org=${orgId}] ${msg}`);
+    this.write(this.orgLogPath(orgId), `INFO  ${msg}`);
+  }
+
+  /** Writes to the main log, error log AND the per-organization log file. */
+  orgError(orgId: string, msg: string, err?: unknown): void {
+    const detail = err instanceof Error
+      ? `${err.message}${err.stack ? `\n       Stack: ${err.stack.split('\n').slice(0, 4).join(' | ')}` : ''}`
+      : err != null ? String(err) : '';
+    const line = detail ? `${msg} — ${detail}` : msg;
+    this.write(this.mainLogPath, `ERROR [org=${orgId}] ${line}`);
+    this.write(this.errorLogPath, `ERROR [org=${orgId}] ${line}`);
+    this.write(this.orgLogPath(orgId), `ERROR ${line}`);
+  }
+
   // ─── Batch-level helpers ─────────────────────────────────────────────────────
 
   logBatchStart(offset: number, total: number, dateFrom: string): void {
@@ -80,18 +101,19 @@ export class TokkoSyncLoggerService {
   // ─── Property-level helpers ──────────────────────────────────────────────────
 
   logItemReceived(item: any): void {
-    const seller = item.seller || {};
+    const safeItem = item ?? {};
+    const seller = safeItem.seller || {};
     this.info(
-      `RECEIVED pub_id=${item.publication_id ?? 'N/A'} ` +
-      `tokko_id=${item.id ?? 'N/A'} ` +
-      `ref=${item.reference_code ?? 'N/A'} ` +
-      `title="${(item.publication_title ?? item.title ?? '').substring(0, 60)}" ` +
+      `RECEIVED pub_id=${safeItem.publication_id ?? 'N/A'} ` +
+      `tokko_id=${safeItem.id ?? 'N/A'} ` +
+      `ref=${safeItem.reference_code ?? 'N/A'} ` +
+      `title="${(safeItem.publication_title ?? safeItem.title ?? '').substring(0, 60)}" ` +
       `company="${seller.company_name ?? 'N/A'}" ` +
       `company_id=${seller.company_id ?? 'N/A'} ` +
       `branch_id=${seller.branch_id ?? 'N/A'} ` +
-      `op_types=${JSON.stringify((item.operations ?? []).map((o: any) => o.operation_type))} ` +
-      `photos=${(item.photos ?? []).length} ` +
-      `tags=${JSON.stringify(Object.keys(item.tags ?? {}))}`,
+      `op_types=${JSON.stringify((safeItem.operations ?? []).map((o: any) => o.operation_type))} ` +
+      `photos=${(safeItem.photos ?? []).length} ` +
+      `tags=${JSON.stringify(Object.keys(safeItem.tags ?? {}))}`,
     );
   }
 
@@ -107,23 +129,25 @@ export class TokkoSyncLoggerService {
   }
 
   logItemSkipped(reason: string, item: any): void {
+    const safeItem = item ?? {};
     this.warn(
-      `SKIPPED pub_id=${item.publication_id ?? 'N/A'} tokko_id=${item.id ?? 'N/A'} reason="${reason}"`,
+      `SKIPPED pub_id=${safeItem.publication_id ?? 'N/A'} tokko_id=${safeItem.id ?? 'N/A'} reason="${reason}"`,
     );
   }
 
   logItemFailed(item: any, err: unknown): void {
+    const safeItem = item ?? {};
     const msg = err instanceof Error ? err.message : String(err);
     const header =
-      `FAILED pub_id=${item.publication_id ?? 'N/A'} tokko_id=${item.id ?? 'N/A'} ` +
-      `ref=${item.reference_code ?? 'N/A'} error="${msg}"`;
+      `FAILED pub_id=${safeItem.publication_id ?? 'N/A'} tokko_id=${safeItem.id ?? 'N/A'} ` +
+      `ref=${safeItem.reference_code ?? 'N/A'} error="${msg}"`;
 
     // Serialize the full item so the raw payload is visible in the error log
     let fullPayload: string;
     try {
-      fullPayload = JSON.stringify(item, null, 2);
+      fullPayload = JSON.stringify(safeItem, null, 2);
     } catch (_) {
-      fullPayload = String(item);
+      fullPayload = String(safeItem);
     }
 
     const stack = err instanceof Error && err.stack

@@ -1,4 +1,5 @@
 import { ImageUploadModule } from '../../common/image-upload/image-upload.module';
+import { ImageUploadS3CronModule } from '../cron-tasks/image-upload-s3/image-upload-s3.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PropertiesService } from './properties.service';
@@ -25,6 +26,7 @@ import { PropertyAttached } from './entities/property-attached.entity';
       PropertyAttached,
     ]),
     ImageUploadModule,
+    ImageUploadS3CronModule,
   ],
   controllers: [PropertiesController],
   providers: [PropertiesService, PropertyWriteService],

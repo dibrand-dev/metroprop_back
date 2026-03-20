@@ -15,7 +15,6 @@ import { MediaService } from '../../common/media/media.service';
 import { PropertyVideo } from './entities/property-video.entity';
 import { PropertyAttached } from './entities/property-attached.entity';
 import { SaveMultimediaDto } from './dto/save-multimedia.dto';
-import axios from 'axios';
 import { sanitizeFilename, getFileExtension, createUniqueFilename } from '../../common/helpers/file-helpers';
 
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
@@ -318,59 +317,38 @@ export class PropertiesService {
       { tags, videos, multimedia360 },
     );
 
-    // 2. Guardar imágenes si se proporcionan (fire-and-forget)
+    // 2. Guardar imágenes si se proporcionan — URL externa queda almacenada; el cron la sube a S3
     if (images && images.length > 0) {
-      const imagesToProcess: {
-        imageId: number;
-        originalUrl: string;
-        propertyId: number;
-      }[] = [];
       for (const imageData of images) {
+        const isExternal = imageData.url?.startsWith('http');
         const propertyImage = this.propertyImageRepository.create({
           ...imageData,
           url: imageData.url ?? '',
+          original_image: isExternal ? (imageData.url ?? null) : null,
           property: savedProperty,
-          upload_status: MediaUploadStatus.PENDING,
+          upload_status: isExternal ? MediaUploadStatus.PENDING : MediaUploadStatus.COMPLETED,
           retry_count: 0,
         });
-        const savedImage = await this.propertyImageRepository.save(propertyImage) as unknown as PropertyImage;
-
-        imagesToProcess.push({
-          imageId: savedImage.id!,
-          originalUrl: savedImage.url ?? '',
-          propertyId: savedProperty.id!,
-        });
+        await this.propertyImageRepository.save(propertyImage);
       }
-
-      // Disparar el proceso de subida en segundo plano SIN ESPERARLO (fire-and-forget)
-      this.processAndUploadImages(imagesToProcess);
     }
 
-    // 3. Crear archivos adjuntos si se proporcionan (fire-and-forget)
+    // 3. Crear archivos adjuntos si se proporcionan — URL externa queda almacenada; el cron la sube a S3
     if (attached && Array.isArray(attached) && attached.length > 0) {
-      const savedAttachedList: PropertyAttached[] = [];
-
       for (const attachedData of attached) {
         const propertyAttached = this.propertyAttachedRepository.create({
           ...attachedData,
           property: savedProperty,
-          upload_status: MediaUploadStatus.PENDING,
+          upload_status: attachedData.file_url?.startsWith('http')
+            ? MediaUploadStatus.PENDING
+            : MediaUploadStatus.COMPLETED,
           upload_completed_at: null,
           retry_count: 0,
         });
-        const saveResult = await this.propertyAttachedRepository.save(propertyAttached);
-        const savedAttached = Array.isArray(saveResult) ? saveResult[0] : saveResult;
-        savedAttachedList.push(savedAttached);
-
-        // Si tiene URL, procesar para descargar y subir a S3
-        if (attachedData.file_url && attachedData.file_url.startsWith('http') && savedAttached.id) {
-          setImmediate(() => {
-            this._processAndUploadAttached(savedAttached.id!, savedProperty.id!, { originalUrl: attachedData.file_url! });
-          });
-        }
+        await this.propertyAttachedRepository.save(propertyAttached);
       }
 
-      console.log(`📁 create - Queued ${savedAttachedList.length} attached files for processing`);
+      console.log(`📁 create - Saved ${attached.length} attached files`);
     }
 
     // 4. Retornar la propiedad con todas sus relaciones cargadas
@@ -540,7 +518,6 @@ export class PropertiesService {
         // estructura auxiliar para manejar el flujo
         const finalImages: { entity: PropertyImage; order_position: number }[] = [];
         const filesToUpload: { entity: PropertyImage; file: Express.Multer.File }[] = [];
-        const urlsToDownload: { imageId: number; originalUrl: string }[] = [];
 
         // función auxiliar para saber si una url apunta a nuestro bucket/properties
         const isOwnS3Url = (url: string): boolean => {
@@ -575,17 +552,17 @@ export class PropertiesService {
             const saved = await manager.save(PropertyImage, newImg);
             finalImages.push({ entity: saved as PropertyImage, order_position: order });
           } else {
-            // URL externa → descargar y subir a S3
+            // URL externa → guardar la URL; el cron la descargará y subirá a S3
             const newImg = manager.create(PropertyImage, {
               property,
               order_position: order,
-              url: '',
+              url: url,
+              original_image: url,
               upload_status: MediaUploadStatus.PENDING,
               retry_count: 0,
             });
             const saved = await manager.save(PropertyImage, newImg);
             finalImages.push({ entity: saved as PropertyImage, order_position: order });
-            urlsToDownload.push({ imageId: saved.id!, originalUrl: url });
             results.images.queued++;
           }
         }
@@ -627,18 +604,6 @@ export class PropertiesService {
           });
         }
 
-        if (urlsToDownload.length > 0) {
-          const imagesToProcess = urlsToDownload.map(u => ({
-            imageId: u.imageId,
-            originalUrl: u.originalUrl,
-            propertyId,
-          }));
-          setImmediate(() => {
-            console.log(`🚀 Starting background image download for ${urlsToDownload.length} URL images`);
-            this.processAndUploadImages(imagesToProcess);
-          });
-        }
-
         console.log(`✅ Image processing finished, queued ${results.images.queued}`);
       }
 
@@ -654,7 +619,6 @@ export class PropertiesService {
         // Estructura auxiliar para manejar el flujo
         const finalAttached: { entity: PropertyAttached; order: number }[] = [];
         const filesToUpload: { entity: PropertyAttached; file: Express.Multer.File }[] = [];
-        const urlsToDownload: { attachedId: number; originalUrl: string }[] = [];
 
         // Función auxiliar para saber si una url apunta a nuestro bucket/properties
         const isOwnS3Url = (url: string): boolean => {
@@ -690,18 +654,17 @@ export class PropertiesService {
             const saved = await manager.save(PropertyAttached, newAtt);
             finalAttached.push({ entity: saved as PropertyAttached, order });
           } else {
-            // URL externa → descargar y subir a S3
+            // URL externa → el cron la descarga y sube a S3
             const newAtt = manager.create(PropertyAttached, {
               property,
               order,
               description: `Documento ${order}`,
-              file_url: '',
+              file_url: fileUrl,
               upload_status: MediaUploadStatus.PENDING,
               retry_count: 0,
             });
             const saved = await manager.save(PropertyAttached, newAtt);
             finalAttached.push({ entity: saved as PropertyAttached, order });
-            urlsToDownload.push({ attachedId: saved.id!, originalUrl: fileUrl });
             results.attached.queued++;
           }
         }
@@ -744,15 +707,6 @@ export class PropertiesService {
           });
         }
 
-        if (urlsToDownload.length > 0) {
-          // Para URLs externas, usar el método existente que descarga y sube
-          for (const u of urlsToDownload) {
-            setImmediate(() => {
-              this._processAndUploadAttached(u.attachedId, propertyId, { originalUrl: u.originalUrl });
-            });
-          }
-        }
-
         console.log(`✅ Attached processing finished, queued ${results.attached.queued}`);
       }
 
@@ -788,19 +742,11 @@ export class PropertiesService {
     files: Express.Multer.File[],
     propertyId: number,
   ) {
-    const uploadPromises = [];
+    const uploadPromises: Promise<void>[] = [];
 
     for (let i = 0; i < savedAttached.length; i++) {
         const attached = savedAttached[i];
         const file = files[i];
-
-        // Si el adjunto ya tiene una URL pero no hay archivo, procesarlo como URL
-        if (attached.file_url && attached.file_url.startsWith('http') && !file) {
-          uploadPromises.push(
-            this._processAndUploadAttached(attached.id, propertyId, { originalUrl: attached.file_url! })
-          );
-          continue;
-        }
 
         if (!file) continue;
 
@@ -829,16 +775,6 @@ export class PropertiesService {
                 error,
                 'Failed to upload attached file'
               );
-
-              const isCircuitBreakerError = error instanceof Error && error.message.includes('Circuit Breaker');
-              if (isCircuitBreakerError) {
-                const currentAttached = await this.propertyAttachedRepository.findOne({ where: { id: attached.id } });
-                if (currentAttached && currentAttached.retry_count < 3) {
-                  setTimeout(() => {
-                    this.retryAttachedUpload(attached.id, file, propertyId);
-                  }, 60000);
-                }
-              }
           }
         })();
 
@@ -846,38 +782,6 @@ export class PropertiesService {
     }
 
     await Promise.all(uploadPromises);
-  }
-
-  /**
-   * Reintentar upload de un archivo adjunto específico
-   */
-  private async retryAttachedUpload(attachedId: number, file: Express.Multer.File, propertyId: number) {
-    try {
-      await this.propertyAttachedRepository.update(attachedId, { 
-        upload_status: MediaUploadStatus.UPLOADING,
-        error_message: null,
-      });
-
-      const cleanFilename = this.cleanFilenameForUrl(file.originalname, attachedId);
-      const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
-
-      await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
-      await this.propertyAttachedRepository.update(attachedId, {
-        file_url: s3Key,
-        upload_status: MediaUploadStatus.COMPLETED,
-        upload_completed_at: new Date(),
-        error_message: null,
-      });
-
-      console.log(`Successfully retried attached file upload: ${attachedId}`);
-    } catch (error) {
-      await this.handleUploadError(
-        this.propertyAttachedRepository,
-        attachedId,
-        error,
-        'Retry failed for attached file'
-      );
-    }
   }
 
   /**
@@ -949,7 +853,11 @@ export class PropertiesService {
     } else {
       // Modo full: query completa con todas las relaciones
       const qb = this.buildAdvancedSearchQuery(filters);
-      qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
+      qb.leftJoinAndSelect('p.images', 'img')
+        .orderBy('p.created_at', 'DESC')
+        .addOrderBy('img.order_position', 'ASC')
+        .skip(offset)
+        .take(limit);
       [data, total] = await qb.getManyAndCount();
     }
 
@@ -1249,82 +1157,31 @@ export class PropertiesService {
   }
 
   /**
-   * Reintentar uploads fallidos para una propiedad
+   * Reintentar uploads fallidos: resetea registros FAILED con URL a PENDING
+   * para que el cron los recoja en el próximo ciclo (5 min imágenes, 10 min adjuntos).
+   * Registros sin URL (subida de archivo fallida) no pueden re-intentarse.
    */
-  async retryFailedUploads(propertyId: number) {
-    const property = await this.findOne(propertyId);
-    if (!property) {
-      throw new NotFoundException(`Propiedad con ID ${propertyId} no encontrada`);
-    }
+  async resetFailedUploads(propertyId: number) {
+    await this.propertyImageRepository
+      .createQueryBuilder()
+      .update()
+      .set({ upload_status: MediaUploadStatus.PENDING, retry_count: 0, error_message: null })
+      .where('propertyId = :propertyId', { propertyId })
+      .andWhere('upload_status = :status', { status: MediaUploadStatus.FAILED })
+      .andWhere("url LIKE 'http%'")
+      .execute();
 
-    // Obtener imágenes fallidas
-    const failedImages = await this.propertyImageRepository.find({
-      where: { 
-        property: { id: propertyId },
-        upload_status: MediaUploadStatus.FAILED
-      }
-    });
-
-    // Obtener archivos adjuntos fallidos
-    const failedAttached = await this.propertyAttachedRepository.find({
-      where: { 
-        property: { id: propertyId },
-        upload_status: MediaUploadStatus.FAILED
-      }
-    });
-
-    const retryResults = {
-      images: { queued: 0, skipped: 0 },
-      attached: { queued: 0, skipped: 0 }
-    };
-
-    // Reintentar imágenes
-    for (const image of failedImages) {
-      if (image.retry_count < 3) {
-        await this.propertyImageRepository.update(image.id, {
-          upload_status: MediaUploadStatus.RETRYING,
-          error_message: null
-        });
-        
-        // Solo reintentamos si tenemos la URL original guardada
-        if (image.url && image.url.startsWith('http')) {
-          setImmediate(() => {
-            this._processAndUploadImage(image.id, propertyId, { originalUrl: image.url! });
-          });
-          retryResults.images.queued++;
-        } else {
-          retryResults.images.skipped++;
-        }
-      } else {
-        retryResults.images.skipped++;
-      }
-    }
-
-    // Reintentar archivos adjuntos
-    for (const attached of failedAttached) {
-      if (attached.retry_count < 3) {
-        await this.propertyAttachedRepository.update(attached.id, {
-          upload_status: MediaUploadStatus.RETRYING,
-          error_message: null
-        });
-        
-        // Solo reintentamos si tenemos la URL original guardada
-        if (attached.file_url && attached.file_url.startsWith('http')) {
-          setImmediate(() => {
-            this._processAndUploadAttached(attached.id, propertyId, { originalUrl: attached.file_url! });
-          });
-          retryResults.attached.queued++;
-        } else {
-          retryResults.attached.skipped++;
-        }
-      } else {
-        retryResults.attached.skipped++;
-      }
-    }
+    await this.propertyAttachedRepository
+      .createQueryBuilder()
+      .update()
+      .set({ upload_status: MediaUploadStatus.PENDING, retry_count: 0, error_message: null })
+      .where('propertyId = :propertyId', { propertyId })
+      .andWhere('upload_status = :status', { status: MediaUploadStatus.FAILED })
+      .andWhere("file_url LIKE 'http%'")
+      .execute();
 
     return {
-      message: 'Reintento de uploads iniciado',
-      results: retryResults
+      message: 'Uploads fallidos re-encolados; serán procesados en el próximo ciclo del cron',
     };
   }
 
@@ -1406,54 +1263,6 @@ export class PropertiesService {
   // =============================================
 
   /**
-   * Sube una imagen de propiedad a S3 con la estructura correcta: properties/{propertyId}/images/{filename}
-   */
-  async uploadImageToS3(file: Express.Multer.File, imageId: number, propertyId: number): Promise<string | null> {
-    try {
-      const timestamp = Date.now();
-      const fileExtension = file.originalname.split('.').pop() || 'jpg';
-      const filename = `${imageId}-${timestamp}.${fileExtension}`;
-      const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/images`, filename);
-
-      await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
-      await this.propertyImageRepository.update(imageId, {
-        url: s3Key,
-        upload_status: MediaUploadStatus.COMPLETED,
-        upload_completed_at: new Date(),
-        error_message: null,
-      });
-
-      return s3Key;
-    } catch (error) {
-      await this.handleUploadError(
-        this.propertyImageRepository,
-        imageId,
-        error,
-        'Failed to upload image'
-      );
-      return null;
-    }
-  }
-
-  /**
-   * Procesa y sube imágenes a S3 en segundo plano desde URLs originales (usado en create process).
-   * Descarga la imagen de la URL original, la sube a S3 y actualiza la DB.
-   */
-  private async processAndUploadImages(
-    imagesToProcess: {
-      imageId: number;
-      originalUrl: string;
-      propertyId: number;
-    }[],
-  ) {
-    for (const image of imagesToProcess) {
-      await this._processAndUploadImage(image.imageId, image.propertyId, {
-        originalUrl: image.originalUrl,
-      });
-    }
-  }
-
-  /**
    * Procesa y sube archivos recibidos por file upload a S3 en segundo plano.
    * Actualiza la url y el status en la base.
    */
@@ -1477,11 +1286,14 @@ export class PropertiesService {
    * Delega la compresión y el upload multi-tamaño a MediaService.
    * Solo almacena en DB la URL del tamaño FULL; el thumb se deriva
    * anteponiendo THUMB_PREFIX al nombre del archivo.
+   * 
+   * Solo se usa para archivos Multer (buffers en memoria). Las
+   * imágenes de URL externa son manejadas por el cron.
    */
   private async _processAndUploadImage(
     imageId: number,
     propertyId: number,
-    imageSource: { file?: Express.Multer.File; originalUrl?: string },
+    imageSource: { file: Express.Multer.File },
   ) {
     try {
       await this.propertyImageRepository.update(imageId, {
@@ -1504,111 +1316,16 @@ export class PropertiesService {
       console.log(`Successfully processed all sizes for image: ${imageId}`);
     } catch (error) {
       const err: any = error;
-      let errorMsg = 'Unknown error';
-
-      if (err?.code === 'ENOTFOUND') {
-        errorMsg = `URL not found: ${imageSource.originalUrl}`;
-      } else if (err?.response?.status) {
-        errorMsg = `HTTP ${err.response.status}: ${imageSource.originalUrl}`;
-      } else if (err?.message) {
-        errorMsg = `Error: ${err.message.substring(0, 100)}`;
-      } else {
-        errorMsg = `Processing failed for image ID: ${imageId}`;
-      }
-
+      let errorMsg = err?.message ? `Error: ${err.message.substring(0, 100)}` : `Processing failed for image ID: ${imageId}`;
       errorMsg = errorMsg.substring(0, 1000);
 
-      const isCircuitBreakerError = err instanceof Error && err.message.includes('Circuit Breaker');
-      const errorStatus = isCircuitBreakerError ? MediaUploadStatus.RETRYING : MediaUploadStatus.FAILED;
-
       await this.propertyImageRepository.update(imageId, {
-        upload_status: errorStatus,
+        upload_status: MediaUploadStatus.FAILED,
         error_message: errorMsg,
       });
       await this.propertyImageRepository.increment({ id: imageId }, 'retry_count', 1);
 
       console.error(`Failed to process image ID ${imageId}:`, err?.message || error);
-
-      if (isCircuitBreakerError && imageSource.originalUrl) {
-        const currentImage = await this.propertyImageRepository.findOne({ where: { id: imageId } });
-        if (currentImage && currentImage.retry_count < 3) {
-          setTimeout(() => {
-            this._processAndUploadImage(imageId, propertyId, imageSource);
-          }, 60000);
-        }
-      }
-    }
-  }
-
-  /**
-   * Procesar y subir archivo adjunto (privado).
-   * Delega la descarga desde URL y el upload a MediaService.
-   */
-  private async _processAndUploadAttached(
-    attachedId: number,
-    propertyId: number,
-    attachedSource: { file?: Express.Multer.File; originalUrl?: string },
-  ) {
-    try {
-      await this.propertyAttachedRepository.update(attachedId, { 
-        upload_status: MediaUploadStatus.UPLOADING,
-        error_message: null,
-      });
-
-      let fileBuffer: Buffer;
-      let filename: string;
-      let mimetype: string;
-
-      if (attachedSource.originalUrl) {
-        ({ buffer: fileBuffer, filename, mimetype } = await this.mediaService.downloadFromUrl(attachedSource.originalUrl));
-      } else if (attachedSource.file) {
-        fileBuffer = attachedSource.file.buffer;
-        filename = attachedSource.file.originalname;
-        mimetype = attachedSource.file.mimetype;
-      } else {
-        throw new Error('No file source provided');
-      }
-
-      const cleanFilename = this.cleanFilenameForUrl(filename, attachedId);
-      const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
-
-      await this.mediaService.uploadFile(fileBuffer, s3Key, mimetype);
-      await this.propertyAttachedRepository.update(attachedId, {
-        file_url: s3Key,
-        upload_status: MediaUploadStatus.COMPLETED,
-        upload_completed_at: new Date(),
-        error_message: null,
-      });
-
-      console.log(`Successfully processed attached file: ${attachedId}`);
-    } catch (error) {
-      let contextInfo = 'Failed to process attached file';
-      if (axios.isAxiosError(error)) {
-        if (error.response?.status === 404) {
-          contextInfo = `URL not found: ${attachedSource.originalUrl}`;
-        } else if (error.response?.status) {
-          contextInfo = `HTTP ${error.response.status}: ${attachedSource.originalUrl}`;
-        } else {
-          contextInfo = error.message || 'Network error downloading file';
-        }
-      }
-
-      await this.handleUploadError(
-        this.propertyAttachedRepository,
-        attachedId,
-        error,
-        contextInfo
-      );
-
-      const isCircuitBreakerError = error instanceof Error && error.message.includes('Circuit Breaker');
-      if (isCircuitBreakerError && attachedSource.originalUrl) {
-        const currentAttached = await this.propertyAttachedRepository.findOne({ where: { id: attachedId } });
-        if (currentAttached && currentAttached.retry_count < 3) {
-          setTimeout(() => {
-            this._processAndUploadAttached(attachedId, propertyId, attachedSource);
-          }, 60000);
-        }
-      }
     }
   }
 }

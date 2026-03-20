@@ -11,16 +11,20 @@ import {
   HttpCode,
   HttpStatus,
   UploadedFile,
-  UseInterceptors
+  UseInterceptors,
+  UseGuards,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { OrganizationsService } from './organizations.service';
-import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
 import { OrganizationFiltersDto } from './dto/organization-filters.dto';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/enums';
 
 @Controller('organizations')
+@UseGuards(JwtAuthGuard)
 export class OrganizationsController {
   constructor(private readonly organizationsService: OrganizationsService) {}
 
@@ -56,12 +60,15 @@ export class OrganizationsController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
+  @UseGuards(RolesGuard)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.organizationsService.remove(id);
   }
 
   @Post(':id/disable')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   async disable(@Param('id', ParseIntPipe) id: number) {
     const org = await this.organizationsService.disable(id);
     return {
@@ -72,6 +79,8 @@ export class OrganizationsController {
 
   @Post(':id/enable')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   async enable(@Param('id', ParseIntPipe) id: number) {
     const org = await this.organizationsService.enable(id);
     return {
@@ -80,40 +89,4 @@ export class OrganizationsController {
     };
   }
 
-  @Post(':id/logo')
-  @UseInterceptors(FileInterceptor('logo'))
-  async uploadLogo(
-    @Param('id', ParseIntPipe) id: number,
-    @UploadedFile() file: Express.Multer.File
-  ) {
-    if (!file) {
-      throw new Error('No file uploaded');
-    }
-
-    // Chequear existencia de la organización antes de subir
-    const org = await this.organizationsService.findOne(id);
-    if (!org) {
-      return {
-        statusCode: 404,
-        message: `Organization with id ${id} not found. No upload performed.`
-      };
-    }
-
-    // Upload a S3
-    const imageUrl = await this.organizationsService.uploadLogoToS3(file, id);
-
-    // Actualizar el company_logo de la organización en la DB solo si subió bien
-    if (imageUrl) {
-      await this.organizationsService.update(id, { company_logo: imageUrl } as any);
-    }
-
-    return {
-      message: imageUrl ? 'Logo uploaded successfully' : 'Logo upload failed',
-      imageUrl: imageUrl,
-      organizationId: id,
-      fileSize: file.size,
-      fileName: file.originalname,
-      logo_status: imageUrl ? null : 'Ver campo logo_status en la entidad para detalles de error',
-    };
-  }
 }

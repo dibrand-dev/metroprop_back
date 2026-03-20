@@ -13,6 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
+import { ImageUploadS3Service } from '../cron-tasks/image-upload-s3/image-upload-s3.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
@@ -23,11 +24,17 @@ import { UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { SaveMultimediaDto } from './dto/save-multimedia.dto';
 import { MultipartFormDataInterceptor } from '../../common/interceptors/multipart-form-data.interceptor';
 import { EnhancedFileFieldsInterceptor } from '../../common/interceptors/enhanced-file-fields.interceptor';
+import { UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/enums';
 
 @Controller('properties')
 export class PropertiesController {
   constructor(
     private readonly propertiesService: PropertiesService,
+    private readonly imageUploadS3Service: ImageUploadS3Service,
   ) {}
 
   /**
@@ -61,6 +68,7 @@ export class PropertiesController {
    * - attached: Cualquier tipo de archivo (pdf, doc, etc.)
    */
   @Post(':propertyId/save-multimedia')
+  @UseGuards(JwtAuthGuard)
   @UseInterceptors(
     EnhancedFileFieldsInterceptor(
       [{ name: 'images', maxCount: 20 }, { name: 'attached', maxCount: 20 }],
@@ -93,18 +101,36 @@ export class PropertiesController {
    * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
   @Get(':propertyId/multimedia')
+  @UseGuards(JwtAuthGuard)
   async getMultimedia(@Param('propertyId', ParseIntPipe) propertyId: number) {
     return this.propertiesService.getMultimedia(propertyId);
   }
 
   /**
-   * POST /properties/:propertyId/retry-uploads
-   * Reintentar uploads fallidos para una propiedad
+   * POST /properties/:propertyId/reset-failed-uploads
+   * Resetea a PENDING todos los registros FAILED con URL externa,
+   * para que el cron los procese en el próximo ciclo.
    */
-  @Post(':propertyId/retry-uploads')
+  @Post(':propertyId/reset-failed-uploads')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   @HttpCode(HttpStatus.ACCEPTED)
-  async retryFailedUploads(@Param('propertyId', ParseIntPipe) propertyId: number) {
-    return this.propertiesService.retryFailedUploads(propertyId);
+  async resetFailedUploads(@Param('propertyId', ParseIntPipe) propertyId: number) {
+    return this.propertiesService.resetFailedUploads(propertyId);
+  }
+
+  /**
+   * POST /properties/:propertyId/force-upload
+   * Dispara inmediatamente el proceso de subida a S3 de todas las imágenes
+   * y archivos adjuntos con URL externa pendientes para esta propiedad.
+   * No espera al siguiente ciclo del cron.
+   */
+  @Post(':propertyId/force-upload')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  @HttpCode(HttpStatus.ACCEPTED)
+  async forceUpload(@Param('propertyId', ParseIntPipe) propertyId: number) {
+    return this.imageUploadS3Service.forceUploadForProperty(propertyId);
   }
 
   /**
@@ -113,6 +139,7 @@ export class PropertiesController {
    * Nota: DEBE estar antes de GET :id para evitar conflicto
    */
   @Get('service-status')
+  @UseGuards(JwtAuthGuard)
   async getServiceStatus() {
     return this.propertiesService.getS3ServiceStatus();
   }
@@ -125,6 +152,7 @@ export class PropertiesController {
    */
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
   create(@Body() createPropertyDto: CreatePropertyDto) {
     return this.propertiesService.create(createPropertyDto);
   }
@@ -135,6 +163,7 @@ export class PropertiesController {
    */
   @Post('draft')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
   createDraft(@Body() createDraftDto: CreateDraftPropertyDto) {
     return this.propertiesService.createDraft(createDraftDto);
   }
@@ -156,13 +185,11 @@ export class PropertiesController {
    * Listado privado por organization_id
    */
   @Get('mis-propiedades')
+  @UseGuards(JwtAuthGuard)
   myProperties(@Query() searchDto: SearchPropertiesDto) {
     if (!searchDto.organization_id) {
-      throw new BadRequestException(
-        'organization_id es obligatorio en mis-propiedades',
-      );
+      throw new BadRequestException('organization_id es obligatorio en mis-propiedades');
     }
-
     return this.propertiesService.searchPanelProperties(searchDto, searchDto.organization_id);
   }
 
@@ -189,6 +216,7 @@ export class PropertiesController {
    * Actualizar una propiedad
    */
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePropertyDto: UpdatePropertyDto,
@@ -201,6 +229,7 @@ export class PropertiesController {
    * Eliminar lógico (soft delete) una propiedad
    */
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.propertiesService.remove(id);

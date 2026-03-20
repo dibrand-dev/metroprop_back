@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -9,6 +9,8 @@ import { Property } from '../properties/entities/property.entity';
 import { PropertyImage } from '../properties/entities/property-image.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
+import { OrganizationsService } from '../organizations/organizations.service';
+import { PartnersService } from '../partners/partners.service';
 
 import { TokkoHelperService } from '../../common/helpers/tokko-helper';
 import { BranchesService } from '../branches/branches.service';
@@ -17,9 +19,10 @@ import { MediaUploadStatus, UserRole } from '../../common/enums';
 import { TokkoSyncLoggerService, BatchStats } from './tokko-sync-logger.service';
 
 @Injectable()
-export class TokkoSyncService {
+export class TokkoSyncService implements OnModuleInit {
   private readonly logger = new Logger(TokkoSyncService.name);
   private readonly BATCH_SIZE = 100;
+  private tokkoPartnerId: number | null = null;
 
   constructor(
     @InjectRepository(TokkoSyncState)
@@ -34,10 +37,16 @@ export class TokkoSyncService {
     private readonly branchRepo: Repository<Branch>,
     private readonly tokkoHelperService: TokkoHelperService,
     private readonly branchesService: BranchesService,
+    private readonly organizationsService: OrganizationsService,
+    private readonly partnersService: PartnersService,
     private readonly usersService: UsersService,
     private readonly configService: ConfigService,
     private readonly fileLogger: TokkoSyncLoggerService,
   ) {}
+
+  async onModuleInit(): Promise<void> {
+    await this.resolveTokkoPartnerId();
+  }
 
   // ─── Cron Entry Point ────────────────────────────────────────────────────────
 
@@ -55,6 +64,11 @@ export class TokkoSyncService {
       return;
     }
 
+    const partnerId = await this.resolveTokkoPartnerId();
+    if (!partnerId) {
+      return;
+    }
+
     await this.syncFreePortalFeed(apiKey);
   }
 
@@ -65,6 +79,11 @@ export class TokkoSyncService {
     if (!apiKey) {
       return { message: 'TOKKO_FREEPORTAL_API_KEY not configured' };
     }
+    const partnerId = await this.resolveTokkoPartnerId();
+    if (!partnerId) {
+      return { message: 'Partner "tokko" not configured. Sync skipped.' };
+    }
+
     await this.syncFreePortalFeed(apiKey);
     return { message: 'Sync triggered' };
   }
@@ -80,6 +99,11 @@ export class TokkoSyncService {
     const apiKey = this.configService.get<string>('TOKKO_FREEPORTAL_API_KEY');
     if (!apiKey) {
       return { outcome: 'skipped', message: 'TOKKO_FREEPORTAL_API_KEY not configured' };
+    }
+
+    const partnerId = await this.resolveTokkoPartnerId();
+    if (!partnerId) {
+      return { outcome: 'skipped', message: 'Partner "tokko" not configured' };
     }
 
     this.logger.log(`[TokkoSync] syncSingleProperty publication_id=${publicationId}`);
@@ -113,6 +137,86 @@ export class TokkoSyncService {
       return { outcome: 'skipped', message: msg };
     }
   }
+
+  async syncOrganization(
+    apiKey: string,
+    tokkoOrganizationId: string,
+    limit: number = 500,
+    offset: number = 0,
+  ): Promise<{
+    message: string;
+    processed: number;
+    total: number;
+    pending: number;
+    created: number;
+    updated: number;
+    skipped: number;
+    failed: number;
+  }> {
+    const partnerId = await this.resolveTokkoPartnerId();
+    if (!partnerId) {
+      return {
+        message: 'Partner "tokko" not configured. Sync skipped.',
+        processed: 0, total: 0, pending: 0,
+        created: 0, updated: 0, skipped: 0, failed: 0,
+      };
+    }
+
+    this.logger.log(`[TokkoSync] syncOrganization org=${tokkoOrganizationId} limit=${limit} offset=${offset}`);
+    this.fileLogger.orgInfo(tokkoOrganizationId, `ORG_SYNC_START org=${tokkoOrganizationId} limit=${limit} offset=${offset}`);
+
+    const result = await this.tokkoHelperService.fetchFreePortalProperties(
+      apiKey,
+      limit,
+      offset,
+      '2000-01-01T00:00:00',
+      tokkoOrganizationId,
+    );
+
+    if ('error' in result) {
+      const msg = result.details ? `${result.error}: ${result.details}` : result.error;
+      this.logger.error(`[TokkoSync] syncOrganization API error: ${msg}`);
+      this.fileLogger.orgError(tokkoOrganizationId, `ORG_SYNC_API_ERROR ${msg}`);
+      throw new Error(msg);
+    }
+
+    const { objects, meta } = result;
+    const totalCount: number = meta.total_count ?? objects.length;
+    const stats = { created: 0, updated: 0, skipped: 0, failed: 0 };
+
+    for (const item of objects) {
+      const pubId = item?.publication_id != null ? String(item.publication_id) : 'N/A';
+      try {
+        const outcome = await this.processProperty(item);
+        if (outcome === 'created') stats.created++;
+        else if (outcome === 'updated') stats.updated++;
+        else stats.skipped++;
+        this.fileLogger.orgInfo(tokkoOrganizationId, `ITEM pub_id=${pubId} outcome=${outcome}`);
+      } catch (err) {
+        stats.failed++;
+        const msg = err instanceof Error ? err.message : String(err);
+        this.logger.error(
+          `[TokkoSync] syncOrganization error processing item id=${item.id}: ${msg}`,
+        );
+        this.fileLogger.orgError(tokkoOrganizationId, `ITEM_FAILED pub_id=${pubId} error="${msg}"`, err);
+      }
+    }
+
+    const processed = objects.length;
+    const pending = Math.max(0, totalCount - offset - processed);
+
+    const message = pending > 0
+      ? `${processed} de ${totalCount} procesadas, ${pending} pendientes`
+      : `${processed} de ${totalCount} procesadas`;
+
+    this.logger.log(`[TokkoSync] syncOrganization done — ${message}`);
+    this.fileLogger.orgInfo(
+      tokkoOrganizationId,
+      `ORG_SYNC_DONE ${message} created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} failed=${stats.failed}`,
+    );
+    return { message, processed, total: totalCount, pending, ...stats };
+  }
+
 
   // ─── Sync Orchestration ──────────────────────────────────────────────────────
 
@@ -229,6 +333,12 @@ export class TokkoSyncService {
   // ─── Single Property Upsert ──────────────────────────────────────────────────
 
   private async processProperty(item: any): Promise<'created' | 'updated' | 'skipped'> {
+    if (!item || typeof item !== 'object') {
+      this.logger.warn('[TokkoSync] Skipping item: payload is null or invalid');
+      this.fileLogger.warn('SKIPPED reason="invalid payload: item is null or not an object"');
+      return 'skipped';
+    }
+
     const publicationId = item.publication_id != null ? String(item.publication_id) : null;
 
     if (!publicationId) {
@@ -239,7 +349,27 @@ export class TokkoSyncService {
       return 'skipped';
     }
 
-    const seller = item.seller || {};
+    const seller = item.seller;
+    if (!seller || typeof seller !== 'object') {
+      this.logger.warn(
+        `[TokkoSync] Skipping pub_id=${publicationId}: missing seller data`,
+      );
+      this.fileLogger.warn(
+        `SKIPPED pub_id=${publicationId ?? 'N/A'} tokko_id=${item.id ?? 'N/A'} reason="missing seller data"`,
+      );
+      return 'skipped';
+    }
+
+    if (seller.company_id == null) {
+      this.logger.warn(
+        `[TokkoSync] Skipping pub_id=${publicationId}: seller without company_id`,
+      );
+      this.fileLogger.warn(
+        `SKIPPED pub_id=${publicationId ?? 'N/A'} tokko_id=${item.id ?? 'N/A'} reason="seller without company_id"`,
+      );
+      return 'skipped';
+    }
+
     this.fileLogger.info(
       `STEP seller_resolution pub_id=${publicationId} company_id=${seller.company_id ?? 'N/A'} branch_id=${seller.branch_id ?? 'N/A'}`,
     );
@@ -382,7 +512,8 @@ export class TokkoSyncService {
           address: seller.address ?? '',
           external_reference: branchExtRef ?? undefined,
           organizationId: org.id!,
-          branch_logo: seller.branch_logo ?? undefined,
+          // Creation-only fallback: if branch logo is missing, reuse company logo.
+          branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
         } as any);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
@@ -402,7 +533,12 @@ export class TokkoSyncService {
   }
 
   private async createOrgFromSeller(seller: any): Promise<Organization> {
-    const org = this.organizationRepo.create({
+    const partnerId = this.tokkoPartnerId;
+    if (!partnerId) {
+      throw new Error('Tokko partner not loaded');
+    }
+
+    const savedOrg = await this.organizationsService.create({
       company_name: seller.company_name ?? 'Unknown',
       email: seller.email ?? '',
       address: seller.address ?? '',
@@ -416,9 +552,8 @@ export class TokkoSyncService {
       company_logo: seller.company_logo ?? undefined,
       status: true,
       deleted: false,
+      source_partner_id: partnerId,
     } as any);
-
-    const savedOrg = await this.organizationRepo.save(org) as unknown as Organization;
 
     // Create admin user with hashed "demo" password
     try {
@@ -445,6 +580,23 @@ export class TokkoSyncService {
     }
 
     return savedOrg;
+  }
+
+  private async resolveTokkoPartnerId(): Promise<number | null> {
+    if (this.tokkoPartnerId) {
+      return this.tokkoPartnerId;
+    }
+
+    const tokkoPartner = await this.partnersService.findByName('tokko');
+
+    if (!tokkoPartner) {
+      this.logger.warn('[TokkoSync] Partner "tokko" not found; skipping sync run');
+      this.fileLogger.warn('TOKKO_PARTNER_NOT_FOUND name="tokko"');
+      return null;
+    }
+
+    this.tokkoPartnerId = tokkoPartner.id;
+    return this.tokkoPartnerId;
   }
 
   // ─── Image Smart-Sync ────────────────────────────────────────────────────────
