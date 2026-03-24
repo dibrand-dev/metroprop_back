@@ -5,6 +5,7 @@ import {
   IsEmail,
   MaxLength,
   MinLength,
+  IsBoolean,
 } from 'class-validator';
 import { BaseOrganizationFieldsDto } from '../../../common/dto/base-organization-fields.dto';
 
@@ -30,4 +31,8 @@ export class CreateOrganizationRegistrationDto extends BaseOrganizationFieldsDto
   @IsOptional()
   @IsString()
   admin_avatar?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  admin_is_verified?: boolean;
 }

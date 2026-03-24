@@ -17,8 +17,8 @@ import { EmailModule } from './common/email/email.module';
 import { LocationsModule } from './modules/locations/locations.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { DevelopersModule } from './modules/developers/developers.module';
-import { TokkoSyncModule } from './modules/tokko-sync/tokko-sync.module';
-import { ImageUploadS3CronModule } from './modules/cron-tasks/image-upload-s3/image-upload-s3.module';
+import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.module';
+import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.module';
 @Module({
   imports: [
     S3Module,
@@ -74,7 +74,7 @@ import { ImageUploadS3CronModule } from './modules/cron-tasks/image-upload-s3/im
     TagsModule,
     DevelopersModule,
     TokkoSyncModule,
-    ImageUploadS3CronModule,
+    UploadS3CronModule,
   ],
   controllers: [AppController],
   providers: [AppService],

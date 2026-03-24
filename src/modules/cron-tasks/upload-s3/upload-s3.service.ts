@@ -1,7 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { Cron } from '@nestjs/schedule';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { S3Service } from '../../../common/s3.service';
 
 import { PropertyImage } from '../../properties/entities/property-image.entity';
 import { PropertyAttached } from '../../properties/entities/property-attached.entity';
@@ -14,20 +16,9 @@ import { MediaUploadStatus } from '../../../common/enums';
 const BATCH_SIZE = 100;
 const MAX_RETRIES = 5;
 
-/**
- * Cron service that picks up pending external-URL images every 5 minutes,
- * downloads them and uploads to S3, updating the corresponding entity fields.
- *
- * Covers:
- *  - PropertyImage:    url LIKE 'http%' && retry_count < 5         (every 5 min)
- *  - Organization:     company_logo LIKE 'http%' && logo_retry_count < 5  (every 5 min)
- *  - Branch:           branch_logo LIKE 'http%' && logo_retry_count < 5   (every 5 min)
- *  - User:             avatar LIKE 'http%' && avatar_retry_count < 5      (every 5 min)
- *  - PropertyAttached: file_url LIKE 'http%' && retry_count < 5           (every 10 min)
- */
 @Injectable()
-export class ImageUploadS3Service {
-  private readonly logger = new Logger(ImageUploadS3Service.name);
+export class UploadS3Service {
+  private readonly logger = new Logger(UploadS3Service.name);
 
   constructor(
     @InjectRepository(PropertyImage)
@@ -40,21 +31,68 @@ export class ImageUploadS3Service {
     private readonly branchRepo: Repository<Branch>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    private readonly configService: ConfigService,
     private readonly mediaService: MediaService,
+    private readonly s3Service: S3Service,
   ) {}
 
   // ─── Cron Entry Point ────────────────────────────────────────────────────────
 
   @Cron('0 */5 * * * *')
   async handleImageUploadCron(): Promise<void> {
+    const enabled = this.configService.get<string>('FEATURE_FLAG_S3_UPLOAD');
+    if (enabled === 'false') {
+      this.logger.debug('[ImageUploadCron] S3 upload disabled via FEATURE_FLAG_S3_UPLOAD=false');
+      return;
+    }
     this.logger.log('[ImageUploadCron] Starting batch');
-
     await this.processPropertyImages();
     await this.processOrganizationLogos();
     await this.processBranchLogos();
     await this.processUserAvatars();
-
     this.logger.log('[ImageUploadCron] Batch complete');
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleImageDeleteCron() {
+    this.logger.log('[ImageDeleteCron] Running S3 image delete cron...');
+    const images = await this.propertyImageRepo.find({
+      where: { upload_status: MediaUploadStatus.DELETING },
+      take: 100,
+    });
+    if (!images.length) return;
+    for (const img of images) {
+      try {
+        if (img.url && !img.url.startsWith('http')) {
+          await this.s3Service.deleteObject(img.url);
+        }
+        await this.propertyImageRepo.delete(img.id);
+        this.logger.log(`[ImageDeleteCron] Deleted image ${img.id} from S3 and DB`);
+      } catch (err) {
+        this.logger.error(`[ImageDeleteCron] Failed to delete image ${img.id}: ${err}`);
+      }
+    }
+  }
+
+  @Cron(CronExpression.EVERY_HOUR)
+  async handleAttachedDeleteCron() {
+    this.logger.log('[AttachedDeleteCron] Running S3 attached delete cron...');
+    const attachedFiles = await this.propertyAttachedRepo.find({
+      where: { upload_status: MediaUploadStatus.DELETING },
+      take: 100,
+    });
+    if (!attachedFiles.length) return;
+    for (const att of attachedFiles) {
+      try {
+        if (att.file_url && !att.file_url.startsWith('http')) {
+          await this.s3Service.deleteObject(att.file_url);
+        }
+        await this.propertyAttachedRepo.delete(att.id);
+        this.logger.log(`[AttachedDeleteCron] Deleted attached file ${att.id} from S3 and DB`);
+      } catch (err) {
+        this.logger.error(`[AttachedDeleteCron] Failed to delete attached file ${att.id}: ${err}`);
+      }
+    }
   }
 
   // ─── Property Images ─────────────────────────────────────────────────────────
@@ -68,11 +106,8 @@ export class ImageUploadS3Service {
       .orderBy('img.created_at', 'ASC')
       .take(BATCH_SIZE)
       .getMany();
-
     if (!images.length) return;
-
     this.logger.log(`[ImageUploadCron] Processing ${images.length} property images`);
-
     for (const img of images) {
       await this.uploadPropertyImage(img);
     }
@@ -83,29 +118,24 @@ export class ImageUploadS3Service {
       await this.propertyImageRepo.update(img.id, {
         upload_status: MediaUploadStatus.UPLOADING,
       });
-
       const folder = `properties/${img.property.id}/images`;
       const keys = await this.mediaService.uploadImageWithSizes(
         { originalUrl: img.url! },
         folder,
         img.id,
       );
-
       const fullKey = keys['FULL'];
       if (!fullKey) throw new Error('FULL size key missing after upload');
-
       await this.propertyImageRepo.update(img.id, {
         url: fullKey,
         upload_status: MediaUploadStatus.COMPLETED,
         upload_completed_at: new Date(),
         error_message: null,
       });
-
       this.logger.debug(`[ImageUploadCron] PropertyImage id=${img.id} → ${fullKey}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[ImageUploadCron] PropertyImage id=${img.id} failed: ${msg}`);
-
       await this.propertyImageRepo.update(img.id, {
         upload_status: MediaUploadStatus.FAILED,
         error_message: msg.substring(0, 1000),
@@ -124,11 +154,8 @@ export class ImageUploadS3Service {
       .orderBy('org.updated_at', 'ASC')
       .take(BATCH_SIZE)
       .getMany();
-
     if (!orgs.length) return;
-
     this.logger.log(`[ImageUploadCron] Processing ${orgs.length} organization logos`);
-
     for (const org of orgs) {
       await this.uploadOrganizationLogo(org);
     }
@@ -139,18 +166,15 @@ export class ImageUploadS3Service {
       const { buffer, mimetype } = await this.mediaService.downloadFromUrl(org.company_logo!);
       const ext = this.mimetypeToExt(mimetype);
       const key = this.mediaService.buildS3Key(`organizations/${org.id}`, `${Date.now()}.${ext}`);
-
       await this.mediaService.uploadFile(buffer, key, mimetype);
       await this.organizationRepo.update(org.id!, {
         company_logo: key,
         logo_status: null,
       });
-
       this.logger.debug(`[ImageUploadCron] Organization id=${org.id} logo → ${key}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[ImageUploadCron] Organization id=${org.id} logo failed: ${msg}`);
-
       await this.organizationRepo.update(org.id!, {
         logo_status: msg.substring(0, 1000),
       });
@@ -168,11 +192,8 @@ export class ImageUploadS3Service {
       .orderBy('b.updated_at', 'ASC')
       .take(BATCH_SIZE)
       .getMany();
-
     if (!branches.length) return;
-
     this.logger.log(`[ImageUploadCron] Processing ${branches.length} branch logos`);
-
     for (const branch of branches) {
       await this.uploadBranchLogo(branch);
     }
@@ -183,18 +204,15 @@ export class ImageUploadS3Service {
       const { buffer, mimetype } = await this.mediaService.downloadFromUrl(branch.branch_logo!);
       const ext = this.mimetypeToExt(mimetype);
       const key = this.mediaService.buildS3Key(`branches/${branch.id}`, `${Date.now()}.${ext}`);
-
       await this.mediaService.uploadFile(buffer, key, mimetype);
       await this.branchRepo.update(branch.id!, {
         branch_logo: key,
         logo_status: null,
       });
-
       this.logger.debug(`[ImageUploadCron] Branch id=${branch.id} logo → ${key}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[ImageUploadCron] Branch id=${branch.id} logo failed: ${msg}`);
-
       await this.branchRepo.update(branch.id!, {
         logo_status: msg.substring(0, 1000),
       });
@@ -212,11 +230,8 @@ export class ImageUploadS3Service {
       .orderBy('u.updated_at', 'ASC')
       .take(BATCH_SIZE)
       .getMany();
-
     if (!users.length) return;
-
     this.logger.log(`[ImageUploadCron] Processing ${users.length} user avatars`);
-
     for (const user of users) {
       await this.uploadUserAvatar(user);
     }
@@ -227,18 +242,15 @@ export class ImageUploadS3Service {
       const { buffer, mimetype } = await this.mediaService.downloadFromUrl(user.avatar!);
       const ext = this.mimetypeToExt(mimetype);
       const key = this.mediaService.buildS3Key(`users/${user.id}`, `${Date.now()}.${ext}`);
-
       await this.mediaService.uploadFile(buffer, key, mimetype);
       await this.userRepo.update(user.id!, {
         avatar: key,
         avatar_status: null,
       });
-
       this.logger.debug(`[ImageUploadCron] User id=${user.id} avatar → ${key}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[ImageUploadCron] User id=${user.id} avatar failed: ${msg}`);
-
       await this.userRepo.update(user.id!, {
         avatar_status: msg.substring(0, 1000),
       });
@@ -327,11 +339,8 @@ export class ImageUploadS3Service {
       .orderBy('att.created_at', 'ASC')
       .take(BATCH_SIZE)
       .getMany();
-
     if (!records.length) return;
-
     this.logger.log(`[AttachedUploadCron] Processing ${records.length} attached files`);
-
     for (const att of records) {
       await this.uploadPropertyAttached(att);
     }
@@ -342,14 +351,12 @@ export class ImageUploadS3Service {
       await this.propertyAttachedRepo.update(att.id, {
         upload_status: MediaUploadStatus.UPLOADING,
       });
-
       const { buffer, mimetype, filename } = await this.mediaService.downloadFromUrl(att.file_url!);
       const ext = filename?.split('.').pop() || this.mimetypeToExt(mimetype);
       const key = this.mediaService.buildS3Key(
         `properties/${att.property.id}/attached`,
         `${att.id}-${Date.now()}.${ext}`,
       );
-
       await this.mediaService.uploadFile(buffer, key, mimetype);
       await this.propertyAttachedRepo.update(att.id, {
         file_url: key,
@@ -357,12 +364,10 @@ export class ImageUploadS3Service {
         upload_completed_at: new Date(),
         error_message: null,
       });
-
       this.logger.debug(`[AttachedUploadCron] PropertyAttached id=${att.id} → ${key}`);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       this.logger.error(`[AttachedUploadCron] PropertyAttached id=${att.id} failed: ${msg}`);
-
       await this.propertyAttachedRepo.update(att.id, {
         upload_status: MediaUploadStatus.FAILED,
         error_message: msg.substring(0, 1000),

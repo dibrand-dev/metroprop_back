@@ -80,6 +80,7 @@ export enum MediaUploadStatus {
   COMPLETED = 'completed',   // Subido exitosamente
   FAILED = 'failed',         // Error en la subida
   RETRYING = 'retrying',     // Reintentando después de error
+  DELETING = 'deleting',     // En proceso de eliminación (para archivos fallidos)
 }
 
 /**

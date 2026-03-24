@@ -26,7 +26,7 @@ import {
 
 /**
  * Clase base con todos los campos compartidos de una propiedad.
- * Tanto CreatePropertyDto como PartnerCreatePropertyDto extienden esta clase.
+ * CreatePropertyDto extienden esta clase.
  */
 export class BasePropertyFieldsDto {
   // ========== CAMPOS OBLIGATORIOS ==========

@@ -24,6 +24,10 @@ import { TagsModule } from '../tags/tags.module';
 import { RegistrationModule } from '../registration/registration.module';
 import { TokkoHelperService } from '../../common/helpers/tokko-helper';
 
+import { TokkoSyncService } from '../cron-tasks/tokko-sync/tokko-sync.service';
+import { TokkoSyncLoggerService } from '../cron-tasks/tokko-sync/tokko-sync-logger.service';
+import { TokkoSyncState } from '../cron-tasks/tokko-sync/entities/tokko-sync-state.entity';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -34,6 +38,7 @@ import { TokkoHelperService } from '../../common/helpers/tokko-helper';
       Property,
       PropertyImage,
       PropertyAttached,
+      TokkoSyncState,
     ]),
     ImageUploadModule,
     PropertiesModule,
@@ -45,7 +50,7 @@ import { TokkoHelperService } from '../../common/helpers/tokko-helper';
     TagsModule,
     RegistrationModule,
   ],
-  providers: [PartnersService, PartnerApiService, ApiKeyAuthGuard, TokkoHelperService],
+  providers: [PartnersService, PartnerApiService, ApiKeyAuthGuard, TokkoHelperService, TokkoSyncService, TokkoSyncLoggerService],
   controllers: [PartnersController, PartnerApiController],
   exports: [PartnersService],
 })

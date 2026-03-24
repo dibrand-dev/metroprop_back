@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -44,6 +45,8 @@ export interface PropertyCard {
 
 @Injectable()
 export class PropertiesService {
+  private readonly logger = new Logger(PropertiesService.name);
+
   constructor(
     @InjectRepository(Property)
     private propertyRepository: Repository<Property>,
@@ -256,6 +259,30 @@ export class PropertiesService {
       });
     }
 
+    if (filters.direct_owner !== undefined) {
+      qb.andWhere('p.direct_owner = :direct_owner', { direct_owner: filters.direct_owner });
+    }
+
+    if (
+      filters.northWestLat != null &&
+      filters.northWestLng != null &&
+      filters.southEastLat != null &&
+      filters.southEastLng != null
+    ) {
+      // Bounding box: lat entre southEastLat y northWestLat, lng entre northWestLng y southEastLng
+      qb.andWhere('p.geoLat BETWEEN :southEastLat AND :northWestLat', {
+        southEastLat: filters.southEastLat,
+        northWestLat: filters.northWestLat,
+      });
+      qb.andWhere('p.geoLong BETWEEN :northWestLng AND :southEastLng', {
+        northWestLng: filters.northWestLng,
+        southEastLng: filters.southEastLng,
+      });
+    }
+
+
+
+
     if (filters.q) {
       qb.andWhere(
         '(p.publication_title ILIKE :q OR p.street ILIKE :q OR p.reference_code ILIKE :q)',
@@ -273,6 +300,10 @@ export class PropertiesService {
   async createDraft(createDraftDto: CreateDraftPropertyDto): Promise<Property> {
     const tempReferenceCode = `DRAFT-${uuidv4().substring(0, 8)}`;
     const tempTitle = `Borrador - ${tempReferenceCode}`;
+
+    if(createDraftDto.organization_id == null) {
+      createDraftDto.direct_owner = true; 
+    }
 
     const newProperty = this.propertyRepository.create({
       ...createDraftDto,
@@ -300,6 +331,11 @@ export class PropertiesService {
       ...propertyData
     } = createPropertyDto as any;
 
+    // DEBUG: Confirmar si entra realmente a este método
+    console.log('[DEBUG][PropertiesService.create] Entró al método. propertyData:', JSON.stringify(propertyData, null, 2));
+
+
+
     // Verificar que no exista una propiedad con el mismo reference_code
     const existingProperty = await this.propertyRepository.findOne({
       where: { reference_code: propertyData.reference_code },
@@ -311,48 +347,25 @@ export class PropertiesService {
       );
     }
 
-    // Crear la propiedad base y sincronizar tags, videos y multimedia360
+    
+    this.logger.log('[PropertiesService.create] propertyData antes de salvar:', JSON.stringify(propertyData, null, 2));
+    this.logger.log('[PropertiesService.create] images:', JSON.stringify(images, null, 2));
+    this.logger.log('[PropertiesService.create] tags:', JSON.stringify(tags, null, 2));
+    this.logger.log('[PropertiesService.create] videos:', JSON.stringify(videos, null, 2));
+    this.logger.log('[PropertiesService.create] multimedia360:', JSON.stringify(multimedia360, null, 2));
+    this.logger.log('[PropertiesService.create] attached:', JSON.stringify(attached, null, 2));
+
+    // Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
     const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
       { ...propertyData, deleted: false },
-      { tags, videos, multimedia360 },
+      { tags, videos, multimedia360, images, attached },
     );
 
-    // 2. Guardar imágenes si se proporcionan — URL externa queda almacenada; el cron la sube a S3
-    if (images && images.length > 0) {
-      for (const imageData of images) {
-        const isExternal = imageData.url?.startsWith('http');
-        const propertyImage = this.propertyImageRepository.create({
-          ...imageData,
-          url: imageData.url ?? '',
-          original_image: isExternal ? (imageData.url ?? null) : null,
-          property: savedProperty,
-          upload_status: isExternal ? MediaUploadStatus.PENDING : MediaUploadStatus.COMPLETED,
-          retry_count: 0,
-        });
-        await this.propertyImageRepository.save(propertyImage);
-      }
-    }
+    this.logger.log('[PropertiesService.create] property después de salvar:', JSON.stringify(savedProperty, null, 2));
 
-    // 3. Crear archivos adjuntos si se proporcionan — URL externa queda almacenada; el cron la sube a S3
-    if (attached && Array.isArray(attached) && attached.length > 0) {
-      for (const attachedData of attached) {
-        const propertyAttached = this.propertyAttachedRepository.create({
-          ...attachedData,
-          property: savedProperty,
-          upload_status: attachedData.file_url?.startsWith('http')
-            ? MediaUploadStatus.PENDING
-            : MediaUploadStatus.COMPLETED,
-          upload_completed_at: null,
-          retry_count: 0,
-        });
-        await this.propertyAttachedRepository.save(propertyAttached);
-      }
-
-      console.log(`📁 create - Saved ${attached.length} attached files`);
-    }
-
-    // 4. Retornar la propiedad con todas sus relaciones cargadas
+    // Retornar la propiedad con todas sus relaciones cargadas
     const result = await this.findOne(savedProperty.id!);
+    this.logger.log('[PropertiesService.create] Propiedad creada (findOne):', JSON.stringify(result, null, 2));
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
 
@@ -630,8 +643,19 @@ export class PropertiesService {
         };
 
         // 1. Procesar URLs de adjuntos existentes (array de strings)
+        type AttachedInput = string | { file_url: string; original_file?: string; description?: string; order?: number };
         for (let idx = 0; idx < attachedData.length; idx++) {
-          const fileUrl = attachedData[idx];
+          const attachedItem = attachedData[idx] as AttachedInput;
+          // Permitir tanto string como objeto (retrocompatibilidad)
+          let fileUrl: string;
+          let originalUrl: string;
+          if (typeof attachedItem === 'string') {
+            fileUrl = attachedItem;
+            originalUrl = attachedItem;
+          } else {
+            fileUrl = attachedItem.file_url;
+            originalUrl = attachedItem.original_file ?? attachedItem.file_url;
+          }
           const order = idx + 1;
 
           const found = existingAttached.find(att => att.file_url === fileUrl);
@@ -648,6 +672,7 @@ export class PropertiesService {
               order,
               description: `Documento ${order}`,
               file_url: fileUrl,
+              original_file: originalUrl,
               upload_status: MediaUploadStatus.COMPLETED,
               retry_count: 0,
             });
@@ -660,6 +685,7 @@ export class PropertiesService {
               order,
               description: `Documento ${order}`,
               file_url: fileUrl,
+              original_file: originalUrl,
               upload_status: MediaUploadStatus.PENDING,
               retry_count: 0,
             });
@@ -1024,6 +1050,9 @@ export class PropertiesService {
    * Obtener una propiedad por ID
    */
   async findOne(id: number): Promise<Property> {
+    console.log('[´properties.service] ID A BUSCAR', id);
+    this.logger.log('[PropertiesService.findOne] Buscando propiedad con ID:', id);
+        
     const property = await this.propertyRepository.findOne({
       where: {
         id,
@@ -1031,6 +1060,8 @@ export class PropertiesService {
       },
       relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
     });
+
+    this.logger.log('[PropertiesService.findOne] Resultado:', JSON.stringify(property, null, 2));
 
     if (!property) {
       throw new NotFoundException(`Propiedad con ID ${id} no encontrada`);

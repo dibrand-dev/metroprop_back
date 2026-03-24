@@ -7,10 +7,12 @@ import {
   Logger,
 } from '@nestjs/common';
 import { Request, Response } from 'express';
+import { LoggerService } from '../logger.service';
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger('ExceptionFilter');
+  private readonly fileLogger = new LoggerService();
 
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
@@ -182,6 +184,13 @@ export class AllExceptionsFilter implements ExceptionFilter {
       `${request.method} ${request.url}`,
       exception instanceof Error ? exception.stack : String(exception),
     );
+
+    // Log all errors and warnings a archivo
+    if (status >= 500) {
+      this.fileLogger.error(`HTTP ${status} - ${request.method} ${request.url} - ${message}`, exception);
+    } else if (status >= 400) {
+      this.fileLogger.warn(`HTTP ${status} - ${request.method} ${request.url} - ${message}`);
+    }
 
     const errorResponse: any = {
       statusCode: status,

@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository } from 'typeorm';
 
 import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
@@ -17,18 +17,11 @@ import { Partner } from './entities/partner.entity';
 
 import { PropertiesService } from '../properties/properties.service';
 import { PropertyWriteService } from '../properties/property-write.service';
-import { UsersService } from '../users/users.service';
-import { EmailService } from '../../common/email/email.service';
-import { MediaService } from '../../common/media/media.service';
 import { RegistrationService } from '../registration/registration.service';
 
 import { CreateOrganizationRegistrationDto } from '../registration/dto/create-organization-registration.dto';
-import { PartnerCreatePropertyDto } from './dto/partner-create-property.dto';
-import { PartnerUpdatePropertyDto } from './dto/partner-update-property.dto';
-import { PartnerPatchImageDto } from './dto/partner-patch-image.dto';
-import { PartnerPatchAttachedDto } from './dto/partner-patch-attached.dto';
-
-import { MediaUploadStatus, UserRole } from '../../common/enums';
+import { CreatePropertyDto } from '../properties/dto/create-property.dto';
+import { UpdatePropertyDto } from '../properties/dto/update-property.dto';
 
 @Injectable()
 export class PartnerApiService {
@@ -44,16 +37,11 @@ export class PartnerApiService {
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
     @InjectRepository(PropertyImage)
-    private readonly propertyImageRepo: Repository<PropertyImage>,
     @InjectRepository(PropertyAttached)
-    private readonly propertyAttachedRepo: Repository<PropertyAttached>,
     private readonly propertiesService: PropertiesService,
     private readonly propertyWriteService: PropertyWriteService,
-    private readonly usersService: UsersService,
-    private readonly emailService: EmailService,
-    private readonly mediaService: MediaService,
     private readonly registrationService: RegistrationService,
-    private readonly dataSource: DataSource,
+    
   ) {}
 
   // ================================================================
@@ -72,14 +60,26 @@ export class PartnerApiService {
   // ================================================================
 
   async createOrUpsertProperty(
-    dto: PartnerCreatePropertyDto,
+    dto: CreatePropertyDto,
     partner: Partner,
   ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
+
     // 1. Resolve the branch + org from branch_reference_id, scoped to partner
+    this.logger.log(`[createOrUpsertProperty] INICIO - dto: ${JSON.stringify(dto)}`);
+    console.log('[createOrUpsertProperty] INICIO', dto);
+    if (typeof dto.branch_reference_id !== 'number') {
+      this.logger.error('[createOrUpsertProperty] branch_reference_id inválido:', dto.branch_reference_id);
+      console.error('[createOrUpsertProperty] branch_reference_id inválido:', dto.branch_reference_id);
+      throw new BadRequestException('branch_reference_id es obligatorio y debe ser un número');
+    }
+
+    const branchId = dto.branch_reference_id;
     const { organization, branch } = await this.resolveBranchForPartner(
-      dto.branch_reference_id,
+      branchId, // Usamos este campo para que el partner haga referencia a la branch pero es el ID realmente lo que buscamos
       partner,
     );
+    this.logger.log(`[createOrUpsertProperty] Resolved organization ${organization.id}, branch ${branch.id}`);
+    console.log('[createOrUpsertProperty] Resolved organization:', organization.id, 'branch:', branch.id);
 
     // 2. Resolve agent user (falls back to org admin, may produce warnings)
     const orgWithAdmin = await this.organizationRepo.findOne({
@@ -87,52 +87,108 @@ export class PartnerApiService {
       relations: ['admin_user'],
     });
     const adminUserId = orgWithAdmin?.admin_user?.id;
+    this.logger.log(`[createOrUpsertProperty] orgWithAdmin: ${JSON.stringify(orgWithAdmin)}`);
+    console.log('[createOrUpsertProperty] orgWithAdmin:', orgWithAdmin);
     const { userId, agentWarnings } = await this.resolveAgentUser(
       dto.agent_email,
       dto.agent_name,
       organization.id,
       branch.id,
-      adminUserId,
+      adminUserId
     );
+    this.logger.log(`[createOrUpsertProperty] agentUserId: ${userId}, agentWarnings: ${JSON.stringify(agentWarnings)}`);
+    console.log('[createOrUpsertProperty] agentUserId:', userId, 'agentWarnings:', agentWarnings);
 
     // 3. Check if property already exists (upsert by reference_code + org)
     const existing = await this.propertyRepo.findOne({
       where: {
         reference_code: dto.reference_code,
-        organization_id: organization.id,
         deleted: false,
+        organization_id: organization.id ,
       },
       relations: ['images', 'tags', 'videos', 'attached'],
     });
+    this.logger.log(`[createOrUpsertProperty] existing property: ${existing ? existing.id : 'none'}`);
+    console.log('[createOrUpsertProperty] existing property:', existing ? existing.id : 'none');
 
+    dto.organization_id = organization.id;
+    dto.user_id = userId;
+    dto.branch_id = branch.id; 
+
+    // UPDATE EXISTING PROPERTY
     if (existing) {
-      const { branch_reference_id, videos, multimedia360, tags, ...scalarFields } = dto;
-      const updateResult = await this.updatePropertyInternal(
-        existing,
-        { ...scalarFields, tags },
-        organization.id,
-        branch.id,
-        userId,
+      const { branch_reference_id, ...rest } = dto;
+      try {
+        // Extraer datos base y relaciones
+        const { tags, ...propertyData } = rest as any;
+        this.logger.log(`[createOrUpsertProperty] Actualizando propiedad existente ${existing.id}`);
+        console.log('[createOrUpsertProperty] Actualizando propiedad existente', existing.id);
+        const { warnings } = await this.propertyWriteService.updatePropertyCore(
+          existing,
+          propertyData,
+          { tags },
+        );
+
+        const updatedProperty = await this.propertyRepo.findOne({
+          where: {
+            id: existing.id,
+            deleted: false,
+          },
+          relations: ['images', 'tags', 'videos', 'attached'],
+        }); 
+        this.logger.log(`[createOrUpsertProperty] updatedProperty: ${JSON.stringify(updatedProperty)}`);
+        console.log('[createOrUpsertProperty] updatedProperty:', updatedProperty);
+        const allWarnings = [...agentWarnings, ...(warnings ?? [])];
+        return {
+          data: updatedProperty!,
+          created: false,
+          warnings: allWarnings.length > 0 ? allWarnings : undefined,
+        };
+      } catch (err) {
+        this.logger.error('[createOrUpsertProperty] ERROR actualizando propiedad', err);
+        console.error('[createOrUpsertProperty] ERROR actualizando propiedad', err);
+        throw err;
+      }
+    } 
+    
+    // CREA NUEVA PROPIEDAD
+    try {
+      // 1. Extraer las relaciones y multimedia del DTO
+      const {
+        images,
+        tags,
+        videos,
+        multimedia360,
+        attached,
+        ...propertyData
+      } = dto as any;
+
+      // Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
+      const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+        { ...propertyData, deleted: false },
+        { tags, videos, multimedia360, images, attached },
       );
 
-      if (videos && videos.length > 0) {
-        await this.propertyWriteService.syncVideos(existing.id!, videos, false);
-      }
-      if (multimedia360 && multimedia360.length > 0) {
-        await this.propertyWriteService.syncMultimedia360(existing.id!, multimedia360, false);
-      }
+      console.log("ANTES DEL FIND ONE FINAL", savedProperty.id);
+      this.logger.log(`[createOrUpsertProperty] Propiedad creada con ID ${savedProperty.id}, sincronizando relaciones...`);
 
-      const result = await this.propertiesService.findOne(existing.id!);
-      const allWarnings = [...agentWarnings, ...updateResult.warnings];
+      const finalProperty = await this.propertyRepo.findOne({
+        where: { id: savedProperty.id },
+        relations: ['images', 'tags', 'videos', 'attached'],
+      });
+      this.logger.log(`[createOrUpsertProperty] Propiedad final con relaciones cargadas: ${JSON.stringify(finalProperty)}`);
+      console.log('[createOrUpsertProperty] Propiedad final con relaciones cargadas:', finalProperty); 
+
       return {
-        data: result,
-        created: false,
-        warnings: allWarnings.length > 0 ? allWarnings : undefined,
+        data: finalProperty!,
+        created: true,
+        warnings: warnings.length > 0 ?  warnings : undefined,
       };
-    }
 
-    // CREATE new property
-    return this.createPropertyInternal(dto, organization.id, branch.id, userId, agentWarnings);
+    } catch (err) {
+      this.logger.error('[createOrUpsertProperty] ERROR creando propiedad', err);
+      throw err;
+    }
   }
 
   // ================================================================
@@ -141,17 +197,27 @@ export class PartnerApiService {
 
   async updateProperty(
     referenceCode: string,
-    dto: PartnerUpdatePropertyDto,
+    dto: UpdatePropertyDto,
     partner: Partner,
   ): Promise<{ data: Property; warnings?: string[] }> {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
 
-    const updateResult = await this.updatePropertyInternal(property, dto);
+    // Extraer datos base y relaciones
+    const { tags, images, videos, multimedia360, attached, ...propertyData } = dto as any;
+    const { warnings } = await this.propertyWriteService.updatePropertyCore(
+      property,
+      propertyData,
+      { tags, images, videos, multimedia360, attached },
+    );
 
-    const result = await this.propertiesService.findOne(property.id!);
+    const result = await this.propertyRepo.findOne({
+      where: { id: property.id },
+      relations: ['images', 'tags', 'videos', 'attached'],
+    });
+   
     return {
-      data: result,
-      warnings: updateResult.warnings.length > 0 ? updateResult.warnings : undefined,
+      data: result!,
+      warnings: warnings?.length ? warnings : undefined,
     };
   }
 
@@ -191,283 +257,6 @@ export class PartnerApiService {
     return { data: result };
   }
 
-  // ================================================================
-  // UPLOAD IMAGE (multipart file → S3, synchronous)
-  // ================================================================
-
-  async uploadImage(
-    referenceCode: string,
-    file: Express.Multer.File,
-    description: string | undefined,
-    orderPosition: number | undefined,
-    isBlueprint: boolean | undefined,
-    partner: Partner,
-  ): Promise<{ image_reference_id: number; upload_status: string; informacion_adicional: string }> {
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-
-    const { buffer, mimetype, originalname } = file;
-    const ext = (originalname.split('.').pop() || 'jpg').toLowerCase();
-
-    const imageRecord = this.propertyImageRepo.create({
-      url: null,
-      is_blueprint: isBlueprint ?? false,
-      description,
-      order_position: orderPosition,
-      property: { id: property.id } as Property,
-      upload_status: MediaUploadStatus.UPLOADING,
-      retry_count: 0,
-    });
-    const saved = await this.propertyImageRepo.save(imageRecord);
-
-    try {
-      const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/images`, `${Date.now()}-${saved.id}.${ext}`);
-      await this.mediaService.uploadFile(buffer, s3Key, mimetype);
-      await this.propertyImageRepo.update(saved.id!, {
-        url: s3Key,
-        upload_status: MediaUploadStatus.COMPLETED,
-        upload_completed_at: new Date(),
-      });
-      this.logger.log(`Image ${saved.id} uploaded for property ${referenceCode}`);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      await this.propertyImageRepo.update(saved.id!, {
-        upload_status: MediaUploadStatus.FAILED,
-        error_message: errorMsg,
-      });
-      this.logger.error(`Image ${saved.id} upload failed: ${errorMsg}`);
-    }
-
-    return {
-      image_reference_id: saved.id!,
-      upload_status: MediaUploadStatus.PENDING,
-      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar esta imagen en el portal',
-    };
-  }
-
-  // ================================================================
-  // PATCH IMAGE (update metadata only, no file)
-  // ================================================================
-
-  async patchImage(
-    referenceCode: string,
-    imageId: number,
-    dto: PartnerPatchImageDto,
-    partner: Partner,
-    file?: Express.Multer.File,
-  ): Promise<{ image_reference_id: number; upload_status: string | undefined; error_message?: string | null; informacion_adicional: string }> {
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-
-    const image = await this.propertyImageRepo.findOne({
-      where: { id: imageId, property: { id: property.id } },
-    });
-    if (!image) {
-      throw new NotFoundException(`Imagen ${imageId} no encontrada en propiedad ${referenceCode}`);
-    }
-
-    if (dto.is_blueprint !== undefined) image.is_blueprint = dto.is_blueprint;
-    if (dto.description !== undefined) image.description = dto.description;
-    if (dto.order_position !== undefined) image.order_position = dto.order_position;
-
-    if (file) {
-      image.upload_status = MediaUploadStatus.PENDING;
-      image.error_message = null;
-    }
-
-    await this.propertyImageRepo.save(image);
-
-    if (file) {
-      const { buffer, mimetype, originalname } = file;
-      const ext = (originalname.split('.').pop() || 'jpg').toLowerCase();
-      const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/images`, `${Date.now()}-${image.id}.${ext}`);
-      try {
-        await this.mediaService.uploadFile(buffer, s3Key, mimetype);
-        await this.propertyImageRepo.update(image.id!, {
-          url: s3Key,
-          upload_status: MediaUploadStatus.COMPLETED,
-          upload_completed_at: new Date(),
-          error_message: null,
-        });
-        this.logger.log(`Image ${image.id} patched for property ${referenceCode}`);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        await this.propertyImageRepo.update(image.id!, {
-          upload_status: MediaUploadStatus.FAILED,
-          error_message: errorMsg,
-        });
-        this.logger.error(`Image ${image.id} patch upload failed: ${errorMsg}`);
-      }
-    }
-
-    return {
-      image_reference_id: image.id!,
-      upload_status: image.upload_status,
-      error_message: image.error_message,
-      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar esta imagen en el portal',
-    };
-  }
-
-  // ================================================================
-  // REMOVE IMAGE
-  // ================================================================
-
-  async removeImage(
-    referenceCode: string,
-    imageId: number,
-    partner: Partner,
-  ): Promise<{ image_reference_id: number; message: string }> {
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-
-    const image = await this.propertyImageRepo.findOne({
-      where: { id: imageId, property: { id: property.id } },
-    });
-
-    if (!image) {
-      throw new NotFoundException(`Imagen ${imageId} no encontrada en propiedad ${referenceCode}`);
-    }
-
-    await this.propertyImageRepo.remove(image);
-    return { image_reference_id: imageId, message: `Imagen ${imageId} eliminada correctamente` };
-  }
-
-  // ================================================================
-  // UPLOAD ATTACHED (multipart file → S3, synchronous)
-  // ================================================================
-
-  async uploadAttached(
-    referenceCode: string,
-    file: Express.Multer.File,
-    description: string | undefined,
-    order: number | undefined,
-    partner: Partner,
-  ): Promise<{ attached_reference_id: number; upload_status: string; informacion_adicional: string }> {
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-
-    const { buffer, mimetype, originalname } = file;
-    const ext = (originalname.split('.').pop() || 'pdf').toLowerCase();
-
-    const attRecord = this.propertyAttachedRepo.create({
-      file_url: '',
-      description,
-      order,
-      property: { id: property.id } as Property,
-      upload_status: MediaUploadStatus.UPLOADING,
-      retry_count: 0,
-    });
-    const saved = await this.propertyAttachedRepo.save(attRecord);
-
-    try {
-      const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/attached`, `${Date.now()}-${saved.id}.${ext}`);
-      await this.mediaService.uploadFile(buffer, s3Key, mimetype);
-      await this.propertyAttachedRepo.update(saved.id!, {
-        file_url: s3Key,
-        upload_status: MediaUploadStatus.COMPLETED,
-        upload_completed_at: new Date(),
-      });
-      this.logger.log(`Attached ${saved.id} uploaded for property ${referenceCode}`);
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      await this.propertyAttachedRepo.update(saved.id!, {
-        upload_status: MediaUploadStatus.FAILED,
-        error_message: errorMsg,
-      });
-      this.logger.error(`Attached ${saved.id} upload failed: ${errorMsg}`);
-    }
-
-    return {
-      attached_reference_id: saved.id!,
-      upload_status: MediaUploadStatus.PENDING,
-      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar este adjunto en el portal',
-    };
-  }
-
-  // ================================================================
-  // PATCH ATTACHED (update metadata only)
-  // ================================================================
-
-  async patchAttached(
-    referenceCode: string,
-    attachedId: number,
-    dto: PartnerPatchAttachedDto,
-    partner: Partner,
-    file?: Express.Multer.File,
-  ): Promise<{ attached_reference_id: number; upload_status: string | undefined; error_message?: string | null; informacion_adicional: string }> {
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-
-    const att = await this.propertyAttachedRepo.findOne({
-      where: { id: attachedId, property: { id: property.id } },
-    });
-    if (!att) {
-      throw new NotFoundException(`Adjunto ${attachedId} no encontrado en propiedad ${referenceCode}`);
-    }
-
-    if (dto.description !== undefined) att.description = dto.description;
-    if (dto.order !== undefined) att.order = dto.order;
-
-    if (file) {
-      att.upload_status = MediaUploadStatus.PENDING;
-      att.error_message = null;
-    }
-
-    await this.propertyAttachedRepo.save(att);
-
-    if (file) {
-      const { buffer, mimetype, originalname } = file;
-      const ext = (originalname.split('.').pop() || 'pdf').toLowerCase();
-      const s3Key = this.mediaService.buildS3Key(`properties/${property.id}/attached`, `${Date.now()}-${att.id}.${ext}`);
-      try {
-        await this.mediaService.uploadFile(buffer, s3Key, mimetype);
-        await this.propertyAttachedRepo.update(att.id!, {
-          file_url: s3Key,
-          upload_status: MediaUploadStatus.COMPLETED,
-          upload_completed_at: new Date(),
-          error_message: null,
-        });
-        this.logger.log(`Attached ${att.id} patched for property ${referenceCode}`);
-      } catch (err) {
-        const errorMsg = err instanceof Error ? err.message : String(err);
-        await this.propertyAttachedRepo.update(att.id!, {
-          upload_status: MediaUploadStatus.FAILED,
-          error_message: errorMsg,
-        });
-        this.logger.error(`Attached ${att.id} patch upload failed: ${errorMsg}`);
-      }
-    }
-
-    return {
-      attached_reference_id: att.id!,
-      upload_status: att.upload_status,
-      error_message: att.error_message,
-      informacion_adicional: 'Recordá utilizar este ID de referencia para eliminar o modificar este adjunto en el portal',
-    };
-  }
-
-  // ================================================================
-  // REMOVE ATTACHED
-  // ================================================================
-
-  async removeAttached(
-    referenceCode: string,
-    attachedId: number,
-    partner: Partner,
-  ): Promise<{ attached_reference_id: number; message: string }> {
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-
-    const att = await this.propertyAttachedRepo.findOne({
-      where: { id: attachedId, property: { id: property.id } },
-    });
-
-    if (!att) {
-      throw new NotFoundException(`Adjunto ${attachedId} no encontrado en propiedad ${referenceCode}`);
-    }
-
-    await this.propertyAttachedRepo.remove(att);
-    return { attached_reference_id: attachedId, message: `Adjunto ${attachedId} eliminado correctamente` };
-  }
-
-  // ================================================================
-  // GET PROPERTY
-  // ================================================================
-
   async getProperty(
     referenceCode: string,
     partner: Partner,
@@ -475,6 +264,33 @@ export class PartnerApiService {
     const property = await this.findPropertyByRefCode(referenceCode, partner);
     const result = await this.propertiesService.findOne(property.id!);
     return { data: result };
+  }
+
+   /**
+   * Reintentar uploads fallidos para una propiedad del partner
+   */
+  async resetFailedUploadsForPartner(
+    referenceCode: string,
+    partner: Partner,
+  ) {
+    // Primero validar que la propiedad pertenece al partner
+    const property = await this.findPropertyByRefCode(referenceCode, partner);
+    
+    if (!property.id) {
+      throw new BadRequestException(`Propiedad ${referenceCode} no tiene un ID válido`);
+    }
+    
+    // Usar el service de properties para hacer el retry
+    const result = await this.propertiesService.resetFailedUploads(property.id);
+    
+    return {
+      success: true,
+      data: {
+        property_reference: referenceCode,
+        property_id: property.id,
+        retry_results: result
+      }
+    };
   }
 
   // ================================================================
@@ -508,51 +324,6 @@ export class PartnerApiService {
   }
 
   /**
-   * Creates a new property via the shared PropertyWriteService core.
-   */
-  private async createPropertyInternal(
-    dto: PartnerCreatePropertyDto,
-    organizationId: number,
-    branchId: number,
-    userId?: number,
-    extraWarnings: string[] = [],
-  ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
-    const { branch_reference_id, tags, videos, multimedia360, agent_email, agent_name, ...propertyScalars } = dto;
-
-    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
-      { ...propertyScalars, deleted: false },
-      { organizationId, branchId, userId, tags, videos, multimedia360 },
-    );
-
-    const result = await this.propertiesService.findOne(savedProperty.id!);
-    const allWarnings = [...extraWarnings, ...warnings];
-    return {
-      data: result,
-      created: true,
-      warnings: allWarnings.length > 0 ? allWarnings : undefined,
-    };
-  }
-
-  /**
-   * Updates an existing property via the shared PropertyWriteService core.
-   */
-  private async updatePropertyInternal(
-    property: Property,
-    dto: Partial<PartnerUpdatePropertyDto> & { tags?: number[] },
-    organizationId?: number,
-    branchId?: number,
-    userId?: number,
-  ): Promise<{ warnings: string[] }> {
-    const { tags, ...scalarFields } = dto;
-    return this.propertyWriteService.updatePropertyCore(property, scalarFields, {
-      organizationId,
-      branchId,
-      userId,
-      tags,
-    });
-  }
-
-  /**
    * Resolves which user to assign as the property agent.
    *
    * Rules:
@@ -567,7 +338,7 @@ export class PartnerApiService {
     agentName: string | undefined,
     organizationId: number,
     branchId: number,
-    adminUserId: number | undefined,
+    adminUserId: number | undefined
   ): Promise<{ userId: number | undefined; agentWarnings: string[] }> {
     const agentWarnings: string[] = [];
 
@@ -594,7 +365,7 @@ export class PartnerApiService {
         email: agentEmail,
         password: hashedPassword,
         organization: { id: organizationId } as Organization,
-        is_verified: false,
+        is_verified: true,
       });
       const savedUser = await this.userRepo.save(newUser) as unknown as User;
 
@@ -652,33 +423,6 @@ export class PartnerApiService {
     }
 
     return property;
-  }
-
-  /**
-   * Reintentar uploads fallidos para una propiedad del partner
-   */
-  async resetFailedUploadsForPartner(
-    referenceCode: string,
-    partner: Partner,
-  ) {
-    // Primero validar que la propiedad pertenece al partner
-    const property = await this.findPropertyByRefCode(referenceCode, partner);
-    
-    if (!property.id) {
-      throw new BadRequestException(`Propiedad ${referenceCode} no tiene un ID válido`);
-    }
-    
-    // Usar el service de properties para hacer el retry
-    const result = await this.propertiesService.resetFailedUploads(property.id);
-    
-    return {
-      success: true,
-      data: {
-        property_reference: referenceCode,
-        property_id: property.id,
-        retry_results: result
-      }
-    };
   }
 
 }

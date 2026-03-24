@@ -8,11 +8,17 @@ import {
   IsArray,
   ValidateNested,
   IsBoolean,
+  IsEmail,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BasePropertyFieldsDto } from '../../../common/dto/base-property-fields.dto';
 
 export class CreatePropertyDto extends BasePropertyFieldsDto {
+    // ========== ORGANIZATION / BRANCH REFERENCE (para Partner API) ========== 
+    @IsOptional()
+    @IsInt({ message: 'branch_reference_id debe ser un número entero' })
+    @IsPositive()
+    branch_reference_id?: number;
   // ========== RELACIONES OPCIONALES ==========
 
   @IsOptional()
@@ -45,6 +51,16 @@ export class CreatePropertyDto extends BasePropertyFieldsDto {
   @ValidateNested({ each: true })
   @Type(() => CreateAttachedDto)
   attached?: CreateAttachedDto[];
+
+  // ========== CAMPOS PARA PARTNER API ========== 
+  @IsOptional()
+  @IsEmail({}, { message: 'agent_email debe ser un email válido' })
+  @IsString()
+  agent_email?: string;
+
+  @IsOptional()
+  @IsString()
+  agent_name?: string;
 }
 
 // ========== DTOs PARA RELACIONES ==========

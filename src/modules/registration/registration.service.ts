@@ -16,6 +16,7 @@ import { Branch } from '../branches/entities/branch.entity';
 import { User } from '../users/entities/user.entity';
 import { Partner } from '../partners/entities/partner.entity';
 import { UserRole, ProfessionalType } from '../../common/enums';
+import { PASSWORD_DEFAULT } from "@/common/constants";
 
 @Injectable()
 export class RegistrationService {
@@ -23,17 +24,9 @@ export class RegistrationService {
 
   constructor(
     private readonly usersService: UsersService,
-    private readonly organizationsService: OrganizationsService,
-    private readonly branchesService: BranchesService,
     private readonly emailService: EmailService,
     private readonly dataSource: DataSource, // para transacciones
     private readonly jwtService: JwtService,
-    @InjectRepository(Organization)
-    private readonly organizationRepo: Repository<Organization>,
-    @InjectRepository(Branch)
-    private readonly branchRepo: Repository<Branch>,
-    @InjectRepository(User)
-    private readonly userRepo: Repository<User>,
   ) {}
 
   async registerOrLoginWithGoogle(dto: GoogleOAuthDto) {
@@ -159,7 +152,7 @@ export class RegistrationService {
   async resendWelcomeEmail(email: string): Promise<{ success: boolean; message: string }> {
     const user = await this.usersService.findByEmail(email);
     if (!user) {
-      throw new BadRequestException('Usuario no encontrado');
+      throw new BadRequestException('Usuario no encontrado con email: ' + email);
     }
 
     if (user.is_verified) {
@@ -192,6 +185,21 @@ export class RegistrationService {
     }
   }
 
+  /**
+   * Enviar email de bienvenida para usuarios profesionales ya validados (sin token)
+   * Se utiliza para casos donde el usuario ya está verificado pero queremos enviar un email de bienvenida específico para profesionales.
+   */
+  async sendProfessionalWelcomeEmailValidated(email: string, name: string) {
+    try {
+      await this.emailService.sendProfessionalWelcomeEmailValidated(email, name);
+      return { success: true, message: 'Correo de bienvenida enviado correctamente' };
+    } catch (error) {
+      console.error('Error resending welcome email:', error);
+      return { success: false, message: 'Error al enviar el correo de bienvenida' };
+    }
+    
+  }
+
   // ================================================================
   // CREATE ORGANIZATION + BRANCH + ADMIN USER (unified method)
   // ================================================================
@@ -222,9 +230,10 @@ export class RegistrationService {
     const adminUser = {
       name: dto.admin_name,
       email: dto.admin_email,
-      password: dto.admin_name, // Usar admin_name como password por defecto
+      password: PASSWORD_DEFAULT, // Usar "demo" como password por defecto
       phone: dto.admin_phone,
       avatar: dto.admin_avatar,
+      is_verified: dto.admin_is_verified ?? false, // Por defecto no verificado a menos que se indique lo contrario
     };
 
     return this.createOrganizationCore(organizationData, adminUser, partner);
@@ -260,6 +269,7 @@ export class RegistrationService {
       password: string;
       phone?: string;
       avatar?: string;
+      is_verified?: boolean;
     },
     partner: Partner | null
   ): Promise<{ organization_id: number; branch_id: number; admin_user_id: number }> {
@@ -331,7 +341,7 @@ export class RegistrationService {
         avatar: adminUser.avatar,
         role_id: UserRole.USER_ROL_ADMIN,
         organization: { id: savedOrg.id } as Organization,
-        is_verified: false,
+        is_verified: adminUser.is_verified ?? false,
       });
       const savedUser = await manager.save(User, user);
 
@@ -351,11 +361,9 @@ export class RegistrationService {
 
       // 4. Send welcome email (non-blocking)
       try {
-        const verificationToken = await this.usersService.setEmailVerificationToken(savedUser.id);
-        await this.emailService.sendProfessionalWelcomeEmail(
+        await this.emailService.sendProfessionalWelcomeEmailValidated(
           savedUser.email,
-          savedUser.name,
-          verificationToken,
+          savedUser.name
         );
         this.logger.log(`Welcome email sent to ${savedUser.email}`);
       } catch (emailError) {

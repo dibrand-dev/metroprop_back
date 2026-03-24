@@ -254,7 +254,7 @@ export class TokkoHelperService {
       
       // Campos opcionales - mapeos directos
       description: this.combineDescription(tokkoData.description, unmappedTagsDescription),
-      age: tokkoData.age || undefined,
+      age: (tokkoData.age !== null && tokkoData.age !== undefined) ? tokkoData.age : undefined,
       bathroom_amount: tokkoData.bathroom_amount || undefined,
       floor: tokkoData.floor || undefined,
       floors_amount: tokkoData.floors_amount || undefined,
@@ -424,18 +424,18 @@ export class TokkoHelperService {
     let description = '';
 
     if (servicios.length > 0) {
-      description += '\\n\\nOtros servicios:\\n';
-      servicios.forEach(tag => description += `- ${tag.name}\\n`);
+      description += '\n\nOtros servicios:\n';
+      servicios.forEach(tag => description += `- ${tag.name}\n`);
     }
 
     if (ambientes.length > 0) {
-      description += '\\n\\nOtros ambientes:\\n';
-      ambientes.forEach(tag => description += `- ${tag.name}\\n`);
+      description += '\n\nOtros ambientes:\n';
+      ambientes.forEach(tag => description += `- ${tag.name}\n`);
     }
 
     if (otros.length > 0) {
-      description += '\\n\\nCaracterísticas adicionales:\\n';
-      otros.forEach(tag => description += `- ${tag.name}\\n`);
+      description += '\n\nCaracterísticas adicionales:\n';
+      otros.forEach(tag => description += `- ${tag.name}\n`);
     }
 
     return description;
@@ -648,6 +648,7 @@ export class TokkoHelperService {
   private mapTokkoFiles(files: any[]): any[] {
     return files.map(file => ({
       file_url: file.file_url || '',
+      original_file: file.file_url || '',
       description: file.description || undefined,
       order: file.order || 0
     }));

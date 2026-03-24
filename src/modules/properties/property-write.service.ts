@@ -1,9 +1,12 @@
 import { Injectable } from '@nestjs/common';
+import { S3Service } from '../../common/s3.service';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Not } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { PropertyTag } from './entities/property-tag.entity';
 import { PropertyVideo } from './entities/property-video.entity';
+import { find } from 'rxjs';
+import { MediaUploadStatus } from '@/common/enums';
 
 export interface VideoInput {
   url: string;
@@ -28,6 +31,7 @@ export interface PropertyCoreContext {
 
 @Injectable()
 export class PropertyWriteService {
+
   constructor(
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
@@ -36,6 +40,7 @@ export class PropertyWriteService {
     @InjectRepository(PropertyVideo)
     private readonly propertyVideoRepo: Repository<PropertyVideo>,
     private readonly dataSource: DataSource,
+    private readonly s3Service: S3Service,
   ) {}
 
   /**
@@ -45,20 +50,45 @@ export class PropertyWriteService {
    */
   async createPropertyCore(
     scalars: Record<string, any>,
-    context: PropertyCoreContext = {},
+    context: PropertyCoreContext & { images?: any[]; attached?: any[] } = {},
   ): Promise<{ property: Property; warnings: string[] }> {
-    const { organizationId, branchId, userId, tags, videos, multimedia360 } = context;
+    const { organizationId, branchId, userId, tags, videos, multimedia360, images, attached } = context;
     const warnings: string[] = [];
 
-    const newProperty = this.propertyRepo.create({
-      ...scalars,
-      ...(organizationId !== undefined ? { organization_id: organizationId } : {}),
-      ...(branchId !== undefined ? { branch_id: branchId } : {}),
-      ...(userId !== undefined ? { user_id: userId } : {}),
-    } as any);
-
-    const savedProperty = (await this.propertyRepo.save(newProperty)) as unknown as Property;
-    const propertyId = savedProperty.id!;
+    console.log('[createPropertyCore] INICIO', JSON.stringify({ scalars, organizationId, branchId, userId }, null, 2));
+    if (images) console.log('[createPropertyCore] images:', JSON.stringify(images, null, 2));
+    if (attached) console.log('[createPropertyCore] attached:', JSON.stringify(attached, null, 2));
+    if (tags) console.log('[createPropertyCore] tags:', JSON.stringify(tags, null, 2));
+    if (videos) console.log('[createPropertyCore] videos:', JSON.stringify(videos, null, 2));
+    if (multimedia360) console.log('[createPropertyCore] multimedia360:', JSON.stringify(multimedia360, null, 2));
+    let savedProperty: Property | undefined;
+    try {
+      const newProperty = this.propertyRepo.create({
+        ...scalars,
+        ...(organizationId !== undefined ? { organization_id: organizationId } : {}),
+        ...(branchId !== undefined ? { branch_id: branchId } : {}),
+        ...(userId !== undefined ? { user_id: userId } : {}),
+      } as any);
+      console.log('[createPropertyCore] newProperty:', JSON.stringify(newProperty, null, 2));
+      const saved = (await this.propertyRepo.save(newProperty)) as unknown as Property;
+      console.log('[createPropertyCore] savedProperty:', JSON.stringify(saved, null, 2));
+      if (!saved?.id) {
+        console.error('[createPropertyCore] ERROR: savedProperty.id es undefined/null');
+        throw new Error('No se pudo guardar la propiedad, id indefinido');
+      }
+      // Buscar la entidad completa desde la base de datos (con relaciones si es necesario)
+      const found = await this.propertyRepo.findOne({ where: { id: saved.id } });
+      savedProperty = found === null ? undefined : found;
+      console.log('[createPropertyCore] savedProperty (from DB):', JSON.stringify(savedProperty, null, 2));
+    } catch (err) {
+      console.error('[createPropertyCore] ERROR al guardar propiedad:', err);
+      throw err;
+    }
+    if (!savedProperty?.id) {
+      console.error('[createPropertyCore] ERROR: savedProperty.id es undefined/null (post-find)');
+      throw new Error('No se pudo guardar la propiedad, id indefinido (post-find)');
+    }
+    const propertyId = savedProperty.id;
 
     if (tags && tags.length > 0) {
       const tagWarnings = await this.syncTags(propertyId, tags);
@@ -72,8 +102,111 @@ export class PropertyWriteService {
     if (multimedia360 && multimedia360.length > 0) {
       await this.syncMultimedia360(propertyId, multimedia360, false);
     }
+    console.log('[createPropertyCore] Antes de syncImages/syncAttached. propertyId:', propertyId);
+    if (images && images.length > 0) {
+      await this.syncImages(propertyId, images);
+    }
+
+    if (attached && attached.length > 0) {
+      await this.syncAttached(propertyId, attached);
+    }
 
     return { property: savedProperty, warnings };
+  }
+
+  /**
+   * Sincroniza imágenes de una propiedad: crea nuevas y elimina las que ya no están.
+   * Para creación, simplemente inserta todas. Para update, compara y elimina/crea según corresponda.
+   */
+  async syncImages(propertyId: number, images: any[]): Promise<void> {
+    // Obtener imágenes existentes
+    const existing = await this.dataSource.getRepository('PropertyImage').find({ where: { upload_status: Not(MediaUploadStatus.DELETING), property: { id: propertyId } } });
+    // Mapear por original_image
+    const existingMap = new Map(existing.map((img: any) => [img.original_image, img]));
+    const incomingMap = new Map(images.map((img: any) => [img.url, img]));
+    // Crear nuevas
+    const toAdd = images.filter((img: any) => !existingMap.has(img.url));
+    for (const img of toAdd) {
+      const isExternal = img.url?.startsWith('http');
+      const entity = this.dataSource.getRepository('PropertyImage').create({
+        ...img,
+        url: img.url ?? '',
+        original_image: isExternal ? (img.url ?? null) : null,
+        property: { id: propertyId },
+        upload_status: isExternal ? MediaUploadStatus.PENDING : MediaUploadStatus.COMPLETED,
+        retry_count: 0,
+      });
+      await this.dataSource.getRepository('PropertyImage').save(entity);
+    }
+
+    // Marcar como DELETING las que ya no están
+    const toRemove = existing.filter((img: any) => !incomingMap.has(img.url));
+    if (toRemove.length > 0) {
+      const ids = toRemove.map((img: any) => img.id);
+      // Bulk update: set upload_status = 'deleting' for all toRemove
+      await this.dataSource.getRepository('PropertyImage')
+        .createQueryBuilder()
+        .update()
+        .set({ upload_status: MediaUploadStatus.DELETING })
+        .whereInIds(ids)
+        .execute();
+    }
+
+    // Actualizar orden si cambia
+    for (const img of existing) {
+      const incoming = incomingMap.get(img.url);
+      if (incoming && img.order_position !== incoming.order_position) {
+        img.order_position = incoming.order_position;
+        await this.dataSource.getRepository('PropertyImage').save(img);
+      }
+    }
+  }
+
+  /**
+   * Sincroniza archivos adjuntos de una propiedad: crea nuevos y elimina los que ya no están.
+   * Para creación, simplemente inserta todos. Para update, compara y elimina/crea según corresponda.
+   */
+  async syncAttached(propertyId: number, attached: any[]): Promise<void> {
+    // Obtener adjuntos existentes
+    const existing = await this.dataSource.getRepository('PropertyAttached').find({ where: { property: { id: propertyId } } });
+    // Mapear por original_file
+    const existingMap = new Map(existing.map((a: any) => [a.original_file, a]));
+    const incomingMap = new Map(attached.map((a: any) => [a.file_url, a]));
+
+    // Crear nuevos
+    const toAdd = attached.filter((a: any) => !existingMap.has(a.file_url));
+    for (const a of toAdd) {
+      const entity = this.dataSource.getRepository('PropertyAttached').create({
+        ...a,
+        property: { id: propertyId },
+        upload_status: a.file_url?.startsWith('http') ? MediaUploadStatus.PENDING : MediaUploadStatus.COMPLETED,
+        upload_completed_at: null,
+        retry_count: 0,
+        original_file: a.file_url ?? null,
+      });
+      await this.dataSource.getRepository('PropertyAttached').save(entity);
+    }
+
+    // Eliminar los que ya no están
+    const toRemove = existing.filter((a: any) => !incomingMap.has(a.file_url));
+    if (toRemove.length > 0) {
+      const ids = toRemove.map((a: any) => a.id);
+      await this.dataSource.getRepository('PropertyAttached')
+        .createQueryBuilder()
+        .update()
+        .set({ upload_status: MediaUploadStatus.DELETING })
+        .whereInIds(ids)
+        .execute();
+    }
+
+    // Actualizar orden si cambia
+    for (const a of existing) {
+      const incoming = incomingMap.get(a.file_url);
+      if (incoming && a.order_position !== incoming.order_position) {
+        a.order_position = incoming.order_position;
+        await this.dataSource.getRepository('PropertyAttached').save(a);
+      }
+    }
   }
 
   /**
@@ -89,11 +222,17 @@ export class PropertyWriteService {
       branchId?: number;
       userId?: number;
       tags?: number[];
+      videos?: any[];
+      multimedia360?: any[];
+      images?: any[];
+      attached?: any[];
     },
   ): Promise<{ warnings: string[] }> {
     const warnings: string[] = [];
 
-    const updateData: any = { ...scalars };
+    // No permitir actualizar reference_code
+    const { reference_code, ...restScalars } = scalars;
+    const updateData: any = { ...restScalars };
     if (context?.organizationId) updateData.organization_id = context.organizationId;
     if (context?.branchId) updateData.branch_id = context.branchId;
     if (context?.userId) updateData.user_id = context.userId;
@@ -107,6 +246,19 @@ export class PropertyWriteService {
         const tagWarnings = await this.syncTags(property.id!, context.tags);
         warnings.push(...tagWarnings);
       }
+    }
+
+    if (context?.videos) {
+      await this.syncVideos(property.id!, context.videos, true);
+    }
+    if (context?.multimedia360) {
+      await this.syncMultimedia360(property.id!, context.multimedia360, true);
+    }
+    if (context?.images) {
+      await this.syncImages(property.id!, context.images);
+    }
+    if (context?.attached) {
+      await this.syncAttached(property.id!, context.attached);
     }
 
     return { warnings };
@@ -193,4 +345,6 @@ export class PropertyWriteService {
       await this.propertyVideoRepo.save(entity);
     }
   }
+
+
 }

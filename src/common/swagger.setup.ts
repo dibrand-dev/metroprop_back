@@ -20,8 +20,6 @@ export function setupSwagger(app: INestApplication): void {
     )
     .addTag('Organizations', 'Crear organizaciones con sucursal y usuario administrador')
     .addTag('Properties', 'CRUD de propiedades inmobiliarias')
-    .addTag('Images', 'Gestión de imágenes de propiedades')
-    .addTag('Attached', 'Gestión de archivos adjuntos de propiedades')
     .addTag('Locations', 'Países, provincias, localidades y sublocalidades')
     .build();
 

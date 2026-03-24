@@ -13,7 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PropertiesService } from './properties.service';
-import { ImageUploadS3Service } from '../cron-tasks/image-upload-s3/image-upload-s3.service';
+import { UploadS3Service } from '../cron-tasks/upload-s3/upload-s3.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
@@ -34,7 +34,7 @@ import { UserRole } from '../../common/enums';
 export class PropertiesController {
   constructor(
     private readonly propertiesService: PropertiesService,
-    private readonly imageUploadS3Service: ImageUploadS3Service,
+    private readonly uploadS3Service: UploadS3Service,
   ) {}
 
   /**
@@ -130,7 +130,7 @@ export class PropertiesController {
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   @HttpCode(HttpStatus.ACCEPTED)
   async forceUpload(@Param('propertyId', ParseIntPipe) propertyId: number) {
-    return this.imageUploadS3Service.forceUploadForProperty(propertyId);
+    return this.uploadS3Service.forceUploadForProperty(propertyId);
   }
 
   /**

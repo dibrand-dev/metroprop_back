@@ -4,8 +4,11 @@ import {
   S3Client, 
   PutObjectCommand, 
   PutObjectCommandInput,
-  ListObjectsV2Command 
+  ListObjectsV2Command,
+  DeleteObjectCommand,
+  DeleteObjectCommandInput
 } from '@aws-sdk/client-s3';
+  
 import { 
   fromInstanceMetadata, 
   fromEnv,
@@ -95,12 +98,12 @@ export class S3Service {
 
   /**
    * Obtiene el prefijo del path según el ambiente
-   * - Production (EC2 IAM Role): '' (vacío)
+   * - Production (EC2 IAM Role): 'production/' 
    * - Desarrollo (Access Keys): 'localhost/' para separar archivos locales
    */
   getPathPrefix(): string {
     const environment = this.configService.get('NODE_ENV');
-    return environment === 'production' ? '' : 'localhost/';
+    return environment === 'production' ? 'production/' : 'localhost/';
   }
 
   /**
@@ -285,6 +288,30 @@ export class S3Service {
         error: error instanceof Error ? error.message : String(error),
         circuitBreaker: this.getCircuitStatus()
       };
+    }
+  }
+
+  /**
+   * Elimina un archivo de S3 por key
+   */
+  async deleteObject(key: string, bucketName?: string): Promise<void> {
+    if (!this.canExecute()) {
+      throw new Error(`S3 Circuit Breaker is ${this.circuitState}. Service temporarily unavailable.`);
+    }
+    try {
+      const bucket = bucketName || this.configService.get<string>('AWS_S3_BUCKET_NAME')!;
+      const params: DeleteObjectCommandInput = {
+        Bucket: bucket,
+        Key: key,
+      };
+      const command = new DeleteObjectCommand(params);
+      await this.s3Client.send(command);
+      this.logger.log(`🗑️ Deleted object from S3: ${key} in ${bucket}`);
+      this.onSuccess();
+    } catch (error) {
+      this.onFailure(error);
+      this.logger.error(`❌ S3 delete failed for key: ${key}`, error);
+      throw new Error(`S3 delete failed: ${error instanceof Error ? error.message : String(error)}`);
     }
   }
 

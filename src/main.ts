@@ -7,7 +7,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { setupSwagger } from './common/swagger.setup';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['log', 'error', 'warn', 'debug', 'verbose'],
+  });
   const configService = app.get(ConfigService);
 
   // Global validation pipe

@@ -15,6 +15,8 @@ import { ApiExcludeController } from '@nestjs/swagger';
 import { UseGuards } from '@nestjs/common';
 import { PartnersService } from './partners.service';
 import { PartnerApiService } from './partner-api.service';
+import { TokkoSyncService } from '../cron-tasks/tokko-sync/tokko-sync.service';
+import { BadRequestException } from '@nestjs/common';
 import { CreatePartnerDto } from './dto/create-partner.dto';
 import { UpdatePartnerDto } from './dto/update-partner.dto';
 import { TokkoHelperService } from '../../common/helpers/tokko-helper';
@@ -30,6 +32,7 @@ export class PartnersController {
     private readonly partnersService: PartnersService,
     private readonly partnerApiService: PartnerApiService,
     private readonly tokkoHelperService: TokkoHelperService,
+    private readonly tokkoSyncService: TokkoSyncService,
   ) {}
 
   @Get('checkstatus')
@@ -171,6 +174,61 @@ export class PartnersController {
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.partnersService.remove(id);
+  }
+
+
+  // ######################### TOKKO SYNC ACTION HELPERS ######################### //
+
+   /**
+   * POST /partners/tokko-sync/trigger
+   * Manually trigger one sync batch (useful for testing without waiting for cron)
+   */
+  @Post('tokko-sync/trigger')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  triggerTokkoSync() {
+    return this.tokkoSyncService.triggerManualSync();
+  }
+
+  /**
+   * POST /partners/tokko-sync/sync-one
+   * Body: { "publication_id": "12345" }
+   * Fetches and upserts a single property by its Tokko publication_id.
+   */
+  @Post('tokko-sync/sync-one')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  syncOneTokko(@Body() body: { publication_id: string }) {
+    if (!body?.publication_id) {
+      throw new BadRequestException('publication_id is required');
+    }
+    return this.tokkoSyncService.syncSingleProperty(String(body.publication_id));
+  }
+
+  /**
+   * POST /partners/tokko-sync/sync-organization
+   * Body: { "api_key": "xxx", "organization_id": "12345", "limit": 500, "offset": 0 }
+   * Fetches and upserts properties for a given Tokko organization_id.
+   * Returns a summary with processed / total / pending counts.
+   */
+  @Post('tokko-sync/sync-organization')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  syncOrganizationTokko(
+    @Body() body: { api_key: string; organization_id: string; limit?: number; offset?: number },
+  ) {
+    if (!body?.organization_id) {
+      throw new BadRequestException('organization_id is required');
+    }
+    if (!body?.api_key) {
+      throw new BadRequestException('api_key is required');
+    }
+    return this.tokkoSyncService.syncOrganization(
+      body.api_key,
+      String(body.organization_id),
+      body.limit ?? 500,
+      body.offset ?? 0,
+    );
   }
 
 }

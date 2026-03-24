@@ -24,6 +24,9 @@ export class PropertyAttached {
   @Column({ type: 'varchar', length: 255 })
   file_url!: string;
 
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  original_file?: string | null;
+
   @Column({ type: 'int', nullable: true })
   order?: number;
 

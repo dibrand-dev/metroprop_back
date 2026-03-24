@@ -1,5 +1,8 @@
 import { PropertyType, PropertySubtype } from './enums';
 
+
+export const PASSWORD_DEFAULT = 'demo'; // Contraseña por defecto para usuarios creados desde registro profesional. Cambiar a algo más seguro en producción.
+
 /**
  * Mapa de subtipos válidos por tipo de propiedad.
  * Los tipos sin subtipos no aparecen en el mapa (o tienen array vacío).
@@ -37,192 +40,42 @@ export const PROPERTY_SUBTYPES_BY_TYPE: Partial<Record<PropertyType, PropertySub
 /**
  * IDs de tags disponibles por tipo de propiedad.
  * Referencia: database/seed-tags.sql
- *
- * IDs 1-20  → Ambientes  (TagType.AMBIENTES  = 1)
- * IDs 21-28 → Servicios  (TagType.SERVICIOS  = 2)
- * IDs 29-51 → Extras     (TagType.EXTRAS     = 3)
- * IDs 52-61 → Facilidades(TagType.FACILIDADES= 4)
  */
 export const TAGS_BY_PROPERTY_TYPE: Record<PropertyType, number[]> = {
   // ── Casa ────────────────────────────────────────────────────────────────
-  [PropertyType.CASA]: [
-    // Ambientes
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
-    // Servicios
-    21, 23, 24, 26, 27, 28,
-    // Extras
-    29, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42, 46, 47, 48, 50, 51,
-    // Facilidades
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-  ],
+  [PropertyType.CASA]: [ ],
   // ── Departamento ────────────────────────────────────────────────────────
-  [PropertyType.DEPARTAMENTO]: [
-    // Ambientes
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
-    // Servicios (incluye Caja fuerte, Laundry, SUM)
-    21, 22, 23, 24, 25, 26, 27, 28,
-    // Extras
-    29, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42, 46, 47, 48, 49, 50, 51,
-    // Facilidades
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-  ],
+  [PropertyType.DEPARTAMENTO]: [ ],
   // ── Terreno ─────────────────────────────────────────────────────────────
-  [PropertyType.TERRENO]: [
-    // Servicios
-    23,
-    // Extras
-    30, 51,
-    // Facilidades
-    52,
-  ],
+  [PropertyType.TERRENO]: [],
   // ── PH ──────────────────────────────────────────────────────────────────
-  [PropertyType.PH]: [
-    // Ambientes
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras
-    29, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42, 46, 47, 48, 50, 51,
-    // Facilidades
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-  ],
+  [PropertyType.PH]: [ ],
   // ── Galpón / Bodega ─────────────────────────────────────────────────────
-  [PropertyType.GALPON_BODEGA]: [
-    // Ambientes
-    15, 17, 20,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras (industriales)
-    29, 30, 33, 37, 38, 39, 43, 44, 45, 51,
-    // Facilidades
-    52,
-  ],
+  [PropertyType.GALPON_BODEGA]: [ ],
   // ── Bóveda / Nicho / Parcela ─────────────────────────────────────────────
-  [PropertyType.BOVEDA_NICHO_PARCELA]: [
-    // Servicios
-    23,
-    // Extras
-    30, 51,
-    // Facilidades
-    52,
-  ],
+  [PropertyType.BOVEDA_NICHO_PARCELA]: [ ],
   // ── Cama náutica ────────────────────────────────────────────────────────
-  [PropertyType.CAMA_NAUTICA]: [
-    // Servicios
-    23,
-    // Extras
-    30, 51,
-    // Facilidades
-    52,
-  ],
+  [PropertyType.CAMA_NAUTICA]: [ ],
   // ── Campo ───────────────────────────────────────────────────────────────
-  [PropertyType.CAMPO]: [
-    // Ambientes
-    4, 10, 11, 16,
-    // Servicios
-    23, 24,
-    // Extras
-    29, 30, 31, 33, 51,
-    // Facilidades
-    52, 53, 61,
-  ],
+  [PropertyType.CAMPO]: [ ],
   // ── Consultorio ─────────────────────────────────────────────────────────
-  [PropertyType.CONSULTORIO]: [
-    // Ambientes
-    15,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras
-    29, 30, 33, 51,
-    // Facilidades
-    52, 53, 61,
-  ],
+  [PropertyType.CONSULTORIO]: [ ],
   // ── Depósito ────────────────────────────────────────────────────────────
-  [PropertyType.DEPOSITO]: [
-    // Ambientes
-    15, 20,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras
-    29, 30, 33, 51,
-    // Facilidades
-    52,
-  ],
+  [PropertyType.DEPOSITO]: [ ],
   // ── Edificio ────────────────────────────────────────────────────────────
-  [PropertyType.EDIFICIO]: [
-    // Ambientes (todos)
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
-    // Servicios
-    21, 22, 23, 24, 25, 27,
-    // Extras
-    29, 30, 31, 32, 33, 34, 35, 36, 40, 41, 42, 46, 47, 48, 49, 50, 51,
-    // Facilidades
-    52, 53, 54, 55, 56, 57, 58, 59, 60, 61,
-  ],
+  [PropertyType.EDIFICIO]: [ ],
   // ── Fondo de comercio ───────────────────────────────────────────────────
-  [PropertyType.FONDO_DE_COMERCIO]: [
-    // Ambientes
-    15,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras
-    29, 30, 33, 51,
-    // Facilidades
-    52, 53, 61,
-  ],
+  [PropertyType.FONDO_DE_COMERCIO]: [ ],
   // ── Garage ──────────────────────────────────────────────────────────────
-  [PropertyType.GARAGE]: [
-    // Servicios
-    23,
-    // Extras
-    30, 51,
-    // Facilidades
-    52,
-  ],
+  [PropertyType.GARAGE]: [ ],
   // ── Hotel ───────────────────────────────────────────────────────────────
-  [PropertyType.HOTEL]: [
-    // Ambientes
-    2, 4, 5, 8, 9, 10, 11, 13, 14, 16, 17, 18, 19,
-    // Servicios
-    21, 22, 23, 24, 25, 26, 27, 28,
-    // Extras
-    29, 30, 31, 33, 34, 35, 40, 41, 42, 46, 47, 49, 51,
-    // Facilidades
-    52, 54, 55, 56, 57, 58, 59, 60, 61,
-  ],
+  [PropertyType.HOTEL]: [ ],
   // ── Local comercial ─────────────────────────────────────────────────────
-  [PropertyType.LOCAL_COMERCIAL]: [
-    // Ambientes
-    3, 10, 15, 16, 17, 20,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras
-    29, 30, 33, 51,
-    // Facilidades
-    52, 53, 61,
-  ],
+  [PropertyType.LOCAL_COMERCIAL]: [ ],
   // ── Oficina comercial ───────────────────────────────────────────────────
-  [PropertyType.OFICINA_COMERCIAL]: [
-    // Ambientes
-    3, 10, 15, 16, 17, 20,
-    // Servicios
-    21, 23, 24, 27,
-    // Extras
-    29, 30, 33, 51,
-    // Facilidades
-    52, 53, 61,
-  ],
+  [PropertyType.OFICINA_COMERCIAL]: [ ],
   // ── Quinta vacacional ───────────────────────────────────────────────────
-  [PropertyType.QUINTA_VACACIONAL]: [
-    // Ambientes
-    2, 4, 5, 8, 9, 10, 11, 13, 14, 16, 17, 18, 19,
-    // Servicios
-    21, 22, 23, 24, 25, 26, 27, 28,
-    // Extras
-    29, 30, 31, 33, 34, 35, 40, 41, 42, 46, 47, 48, 51,
-    // Facilidades
-    52, 54, 55, 56, 57, 58, 59, 60, 61,
-  ],
+  [PropertyType.QUINTA_VACACIONAL]: [ ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────

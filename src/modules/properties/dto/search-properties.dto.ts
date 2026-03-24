@@ -21,6 +21,7 @@ import { Transform, Type } from 'class-transformer';
  *   ?price_min=50000&price_max=200000
  */
 export class SearchPropertiesDto {
+  
   // ========== Paginación ==========
 
   @IsOptional()
@@ -74,6 +75,22 @@ export class SearchPropertiesDto {
   @Type(() => Number)
   @IsInt()
   sub_location_id?: number;
+
+  @IsOptional()
+  @Type(() => IsString)
+  northWestLat?: string;
+
+  @IsOptional()
+  @Type(() => IsString)
+  northWestLng?: string;
+
+  @IsOptional()
+  @Type(() => IsString)
+  southEastLat?: string;
+
+  @IsOptional()
+  @Type(() => IsString)
+  southEastLng?: string;
 
   // ========== Tipo de propiedad y operación ==========
 
@@ -184,6 +201,9 @@ export class SearchPropertiesDto {
   @IsInt({ each: true })
   disposition?: number[];
 
+  @IsOptional()
+  @IsBoolean()
+  direct_owner?: boolean;
   // ========== Texto libre ==========
 
   @IsOptional()

@@ -36,6 +36,7 @@ import {
 @Index('idx_properties_reference_code', ['reference_code'])
 // @Index('idx_properties_branch', ['branch'])
 export class Property {
+
   @PrimaryGeneratedColumn('increment')
   id?: number;
 
@@ -196,6 +197,9 @@ export class Property {
 
   @Column({ type: 'varchar', length: 100, nullable: true })
   zonification?: string;
+
+  @Column({ type: 'boolean', default: false })
+  direct_owner?: boolean;
 
   // ========== Información Económica ==========
   @Column({ type: 'integer', nullable: true })
