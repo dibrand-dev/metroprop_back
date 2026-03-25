@@ -21,6 +21,7 @@ import { TokkoSyncLoggerService, BatchStats } from './tokko-sync-logger.service'
 import { PASSWORD_DEFAULT } from '@/common/constants';
 import { PropertyWriteService } from '@/modules/properties/property-write.service';
 import { warn } from 'console';
+import e from 'express';
 
 
 
@@ -389,8 +390,8 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		this.fileLogger.info(`STEP original_property pub_id=${publicationId} data=${JSON.stringify(item)}`);
-
 		this.fileLogger.info(`STEP mapping pub_id=${publicationId}`);
+
 		let mapped: any;
 		try {
 			mapped = await this.tokkoHelperService.mapFreePortalPropertyToMetropropFormat(
@@ -429,12 +430,11 @@ export class TokkoSyncService implements OnModuleInit {
 			this.fileLogger.info(`STEP db_update pub_id=${publicationId} property_id=${existing.id}`);
 			// log existing publication complete
 			this.fileLogger.info(`STEP existing_property pub_id=${publicationId} data=${JSON.stringify(existing)}`);
-
 			Object.assign(existing, scalarFields);
 			let saved: any;
 			try {
 				// Extraer datos base y relaciones
-				const { tags, images, videos, multimedia360, attached, ...propertyData } = existing as any;
+				const { tags, images, videos, multimedia360, attached, ...propertyData } = mapped as any;
 				const { warnings } = await this.propertyWriteService.updatePropertyCore(
 					existing,
 					propertyData,
@@ -459,27 +459,33 @@ export class TokkoSyncService implements OnModuleInit {
 			return 'updated';
 		} else {
 			this.fileLogger.info(`STEP db_create pub_id=${publicationId}`);
-			let saved: any;
 			try {
-				const result = await this.propertiesService.create({
-					...scalarFields,
-					deleted: false,
-					tags: mapped.tags,
-					videos: mapped.videos,
-					multimedia360: mapped.multimedia360,
-				});
-				saved = result.data;
+				// Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
+				const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+					{ ...scalarFields, deleted: false },
+					{
+						tags: mapped.tags,
+						videos: mapped.videos,
+						multimedia360: mapped.multimedia360,
+						images: mapped.images,
+						attached: mapped.attached,
+					}
+				);
+
+				this.logger.debug(`[TokkoSync] Created property id=${savedProperty.id} pub=${publicationId}`);
+				this.fileLogger.logItemCreated(publicationId, savedProperty.id!, orgId, branchId);
+				if (warnings && warnings.length > 0) {
+					warnings.forEach((warning: string) => {
+						this.fileLogger.warn(`CREATE_WARNING pub_id=${publicationId} property_id=${savedProperty.id} warning="${warning}"`);
+					});
+				}
+
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
 				this.fileLogger.error(`STEP db_create_failed pub_id=${publicationId} reason="${msg}"`, err);
 				throw err;
 			}
-			this.logger.debug(`[TokkoSync] Created property id=${saved.id} pub=${publicationId}`);
-			this.fileLogger.logItemCreated(publicationId, saved.id!, orgId, branchId);
-			if (newImagesData?.length) {
-				this.fileLogger.info(`STEP images_sync pub_id=${publicationId} property_id=${saved.id} count=${newImagesData.length}`);
-				await this.syncPropertyImages(saved.id!, newImagesData);
-			}
+
 			return 'created';
 		}
 	}
@@ -498,12 +504,22 @@ export class TokkoSyncService implements OnModuleInit {
 
 		this.fileLogger.info(`STEP org_lookup ext_ref=${companyId}`);
 		// Find org by external_reference
+
+		// Validar si existe un usuario con el email antes de crear la organización
+		const existingUser = await this.usersService.findByEmail(seller.email);
 		let org = await this.organizationRepo.findOne({
 			where: { external_reference: companyId, deleted: false } as any,
 			relations: ['admin_user'],
 		});
 
 		if (!org) {
+			// ya existe un usuario con ese mail pero no asociado a la companyId que nos llega de tokko
+			if (existingUser) {
+				throw new Error(
+					`No se puede crear la organización con companyId ${companyId} porque ya existe un usuario registrado con el email ${seller.email} asociado a otra organización. Por favor, utilice un email diferente o contacte al soporte.`
+				);
+			}
+
 			this.fileLogger.info(`STEP org_create ext_ref=${companyId} company="${seller.company_name ?? 'N/A'}"`);
 			try {
 				org = await this.createOrgFromSeller(seller);
@@ -556,11 +572,54 @@ export class TokkoSyncService implements OnModuleInit {
 				`[TokkoSync] Created new branch id=${branch.id} (ext_ref=${branchExtRef})`,
 			);
 			this.fileLogger.logBranchCreated(branchExtRef, branch.id!, org.id!);
+
+			// Asociar el usuario admin con el branch recién creado en users_branches
+			const adminUserId: number | undefined = (org as any).admin_user?.id;
+			if (adminUserId) {
+				await this.usersService.addBranchToUser(adminUserId, branch.id);
+			}
 		} else {
 			this.fileLogger.info(`STEP branch_found ext_ref=${branchExtRef} branch_id=${branch.id} org_id=${org.id}`);
 		}
 
-		const adminUserId: number | undefined = (org as any).admin_user?.id;
+		let adminUserId: number | undefined = (org as any).admin_user?.id;
+		
+		// Si el email del seller es diferente al del admin_user de la organización, y existe un usuario con ese email, 
+		// asociar ese usuario a la organización y branch correspondientes. Si no existe un usuario con ese email, 
+		// crear uno nuevo asociado a la organización y branch. Esto permite que cada vendedor tenga su propio usuario para acceder a Metroprop, 
+		// en lugar de compartir el usuario admin de la organización.
+		if(seller.email !== org.admin_user?.email) {
+			console.log('EL EMAIL ASIGNADo AL USUARIO ADMIN DE LA ORG ES DIFERENTE AL EMAIL DEL VENDEDOR. SE INTENTARÁ ASOCIAR O CREAR UN USUARIO PARA EL VENDEDOR. seller_email=' + seller.email + ' admin_email=' + org.admin_user?.email);
+			this.fileLogger.info(`EL EMAIL ASIGNADo AL USUARIO ADMIN DE LA ORG ES DIFERENTE AL EMAIL DEL VENDEDOR. SE INTENTARÁ ASOCIAR O CREAR UN USUARIO PARA EL VENDEDOR. seller_email=${seller.email} admin_email=${org.admin_user?.email}`);
+			if (existingUser) {
+				this.fileLogger.info(`SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE ASOCIARÁ A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. user_id=${existingUser.id} email=${existingUser.email}`);
+				console.log(`SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE ASOCIARÁ A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. user_id=${existingUser.id} email=${existingUser.email}`);
+				adminUserId = existingUser.id;
+			} else {
+				this.fileLogger.info(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
+				 console.log(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
+				try {
+					const newUser = await this.usersService.create({
+						name: seller.company_name ?? 'Admin',
+						email: seller.email ?? '',
+						password: PASSWORD_DEFAULT,
+						role_id: UserRole.USER_ROL_SELLER,
+						organizationId: org.id,
+					} as any);
+					adminUserId = newUser.id;
+					this.fileLogger.info(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
+					 console.log(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					this.fileLogger.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
+					 console.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
+					this.fileLogger.info(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
+					 console.log(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
+					adminUserId = org.admin_user?.id;
+				}
+			}
+		}
+
 		return { orgId: org.id!, branchId: branch.id!, userId: adminUserId };
 	}
 

@@ -77,20 +77,20 @@ export class SearchPropertiesDto {
   sub_location_id?: number;
 
   @IsOptional()
-  @Type(() => IsString)
-  northWestLat?: string;
+  @Type(() => Object)
+  northWest?: { lat: number; lng: number };
 
   @IsOptional()
-  @Type(() => IsString)
-  northWestLng?: string;
+  @Type(() => Object)
+  northEast?: { lat: number; lng: number };
 
   @IsOptional()
-  @Type(() => IsString)
-  southEastLat?: string;
+  @Type(() => Object)
+  southWest?: { lat: number; lng: number };
 
   @IsOptional()
-  @Type(() => IsString)
-  southEastLng?: string;
+  @Type(() => Object)
+  southEast?: { lat: number; lng: number };
 
   // ========== Tipo de propiedad y operación ==========
 
@@ -99,6 +99,13 @@ export class SearchPropertiesDto {
   @IsArray()
   @IsInt({ each: true })
   property_type?: number[];
+
+
+  @IsOptional()
+  @Transform(({ value }) => parseIntArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  property_subtype?: number[];
 
   @IsOptional()
   @Transform(({ value }) => parseIntArray(value))

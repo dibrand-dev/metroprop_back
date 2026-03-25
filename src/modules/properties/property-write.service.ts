@@ -121,11 +121,16 @@ export class PropertyWriteService {
   async syncImages(propertyId: number, images: any[]): Promise<void> {
     // Obtener imágenes existentes
     const existing = await this.dataSource.getRepository('PropertyImage').find({ where: { upload_status: Not(MediaUploadStatus.DELETING), property: { id: propertyId } } });
+    console.log("[syncImages] existing images from DB:", JSON.stringify(existing, null, 2));
     // Mapear por original_image
     const existingMap = new Map(existing.map((img: any) => [img.original_image, img]));
     const incomingMap = new Map(images.map((img: any) => [img.url, img]));
+    console.log("[syncImages] existingMap:", JSON.stringify(Array.from(existingMap.entries()), null, 2));
+    console.log("[syncImages] incomingMap:", JSON.stringify(Array.from(incomingMap.entries()), null, 2));
+
     // Crear nuevas
     const toAdd = images.filter((img: any) => !existingMap.has(img.url));
+    console.log("[syncImages] images to add:", JSON.stringify(toAdd, null, 2));
     for (const img of toAdd) {
       const isExternal = img.url?.startsWith('http');
       const entity = this.dataSource.getRepository('PropertyImage').create({
@@ -138,10 +143,12 @@ export class PropertyWriteService {
       });
       await this.dataSource.getRepository('PropertyImage').save(entity);
     }
-
+    console.log("%%%%%%%%%%%%%% [syncImages] after adding new images, now checking for removals and order updates...");
     // Marcar como DELETING las que ya no están
-    const toRemove = existing.filter((img: any) => !incomingMap.has(img.url));
+    const toRemove = existing.filter((img: any) => !incomingMap.has(img.original_image ?? img.url)); // Usar original_image para comparación, fallback a url
+    console.log("[syncImages] images to remove:", JSON.stringify(toRemove, null, 2));
     if (toRemove.length > 0) {
+      console.log("############### [syncImages] marking images as DELETING...");
       const ids = toRemove.map((img: any) => img.id);
       // Bulk update: set upload_status = 'deleting' for all toRemove
       await this.dataSource.getRepository('PropertyImage')
@@ -154,7 +161,7 @@ export class PropertyWriteService {
 
     // Actualizar orden si cambia
     for (const img of existing) {
-      const incoming = incomingMap.get(img.url);
+      const incoming = incomingMap.get(img.original_image ?? img.url); // Usar original_image para comparación, fallback a url
       if (incoming && img.order_position !== incoming.order_position) {
         img.order_position = incoming.order_position;
         await this.dataSource.getRepository('PropertyImage').save(img);
@@ -188,7 +195,7 @@ export class PropertyWriteService {
     }
 
     // Eliminar los que ya no están
-    const toRemove = existing.filter((a: any) => !incomingMap.has(a.file_url));
+    const toRemove = existing.filter((a: any) => !incomingMap.has(a.original_file ?? a.file_url)); // Usar original_file para comparación, fallback a file_url
     if (toRemove.length > 0) {
       const ids = toRemove.map((a: any) => a.id);
       await this.dataSource.getRepository('PropertyAttached')
@@ -201,7 +208,7 @@ export class PropertyWriteService {
 
     // Actualizar orden si cambia
     for (const a of existing) {
-      const incoming = incomingMap.get(a.file_url);
+      const incoming = incomingMap.get(a.original_file ?? a.file_url); // Usar original_file para comparación, fallback a file_url
       if (incoming && a.order_position !== incoming.order_position) {
         a.order_position = incoming.order_position;
         await this.dataSource.getRepository('PropertyAttached').save(a);
@@ -238,6 +245,7 @@ export class PropertyWriteService {
     if (context?.userId) updateData.user_id = context.userId;
 
     Object.assign(property, updateData);
+    // Guardar solo la entidad property, sin attached ni relaciones
     await this.propertyRepo.save(property);
 
     if (context?.tags !== undefined) {
@@ -255,6 +263,8 @@ export class PropertyWriteService {
       await this.syncMultimedia360(property.id!, context.multimedia360, true);
     }
     if (context?.images) {
+      console.log("$$$$$$$$$ context.images:", JSON.stringify(context.images, null, 2));
+      //this.logger.log("$$$$$$$$$ context.images:", JSON.stringify(context.images, null, 2);
       await this.syncImages(property.id!, context.images);
     }
     if (context?.attached) {

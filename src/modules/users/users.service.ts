@@ -1,3 +1,4 @@
+
 import { MediaService } from '../../common/media/media.service';
 import { USER_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
@@ -332,4 +333,12 @@ export class UsersService {
       };
     }
   }
+
+    async addBranchToUser(userId: number, branchId: number): Promise<void> {
+      await this.usersRepository
+        .createQueryBuilder()
+        .relation(User, 'branches')
+        .of(userId)
+        .add(branchId);
+    }
 }

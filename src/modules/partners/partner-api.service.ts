@@ -105,8 +105,7 @@ export class PartnerApiService {
         reference_code: dto.reference_code,
         deleted: false,
         organization_id: organization.id ,
-      },
-      relations: ['images', 'tags', 'videos', 'attached'],
+      }
     });
     this.logger.log(`[createOrUpsertProperty] existing property: ${existing ? existing.id : 'none'}`);
     console.log('[createOrUpsertProperty] existing property:', existing ? existing.id : 'none');
@@ -120,13 +119,14 @@ export class PartnerApiService {
       const { branch_reference_id, ...rest } = dto;
       try {
         // Extraer datos base y relaciones
-        const { tags, ...propertyData } = rest as any;
+        const { tags, images, videos, multimedia360, attached, ...propertyData } = rest as any;
+
         this.logger.log(`[createOrUpsertProperty] Actualizando propiedad existente ${existing.id}`);
         console.log('[createOrUpsertProperty] Actualizando propiedad existente', existing.id);
         const { warnings } = await this.propertyWriteService.updatePropertyCore(
           existing,
           propertyData,
-          { tags },
+          { tags, images, videos, multimedia360, attached },
         );
 
         const updatedProperty = await this.propertyRepo.findOne({
@@ -169,15 +169,10 @@ export class PartnerApiService {
         { tags, videos, multimedia360, images, attached },
       );
 
-      console.log("ANTES DEL FIND ONE FINAL", savedProperty.id);
-      this.logger.log(`[createOrUpsertProperty] Propiedad creada con ID ${savedProperty.id}, sincronizando relaciones...`);
-
       const finalProperty = await this.propertyRepo.findOne({
         where: { id: savedProperty.id },
         relations: ['images', 'tags', 'videos', 'attached'],
       });
-      this.logger.log(`[createOrUpsertProperty] Propiedad final con relaciones cargadas: ${JSON.stringify(finalProperty)}`);
-      console.log('[createOrUpsertProperty] Propiedad final con relaciones cargadas:', finalProperty); 
 
       return {
         data: finalProperty!,

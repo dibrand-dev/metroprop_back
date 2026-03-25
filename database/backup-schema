@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	geo_lat numeric(10, 8) NULL,
 	geo_long numeric(11, 8) NULL,
 	property_type int4 NOT NULL,
+	property_subtype int4 NOT NULL,
 	status int4 DEFAULT 2 NOT NULL,
 	suite_amount int4 NULL,
 	room_amount int4 NULL,
@@ -359,6 +360,7 @@ CREATE TABLE IF NOT EXISTS public.tags (
 CREATE TABLE IF NOT EXISTS public.property_attached (
 	id serial4 NOT NULL,
 	file_url varchar(255) NOT NULL,
+	original_file varchar(2000) NULL,
 	"order" int4 NULL,
 	"propertyId" int4 NULL,
 	upload_status public."property_attached_upload_status_enum" DEFAULT 'pending'::property_attached_upload_status_enum NULL,

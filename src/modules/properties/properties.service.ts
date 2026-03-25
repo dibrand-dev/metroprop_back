@@ -179,6 +179,14 @@ export class PropertiesService {
       });
     }
 
+    // property subtype
+    if (filters.property_subtype?.length) {
+      qb.andWhere('p.property_subtype IN (:...property_subtype)', {
+        property_subtype: filters.property_subtype,
+      });
+    }
+
+
     if (filters.operation_type?.length) {
       qb.andWhere('p.operation_type IN (:...operation_type)', {
         operation_type: filters.operation_type,
@@ -263,33 +271,32 @@ export class PropertiesService {
       qb.andWhere('p.direct_owner = :direct_owner', { direct_owner: filters.direct_owner });
     }
 
-    if (
-      filters.northWestLat != null &&
-      filters.northWestLng != null &&
-      filters.southEastLat != null &&
-      filters.southEastLng != null
-    ) {
-      // Bounding box: lat entre southEastLat y northWestLat, lng entre northWestLng y southEastLng
-      qb.andWhere('p.geoLat BETWEEN :southEastLat AND :northWestLat', {
-        southEastLat: filters.southEastLat,
-        northWestLat: filters.northWestLat,
-      });
-      qb.andWhere('p.geoLong BETWEEN :northWestLng AND :southEastLng', {
-        northWestLng: filters.northWestLng,
-        southEastLng: filters.southEastLng,
-      });
+    if (filters.southWest?.lat != null && filters.southWest?.lng != null &&
+      filters.northEast?.lat != null && filters.northEast?.lng != null) {
+    
+      const minLat = Math.min(filters.southWest.lat, filters.northEast.lat);
+      const maxLat = Math.max(filters.southWest.lat, filters.northEast.lat);
+      const minLng = Math.min(filters.southWest.lng, filters.northEast.lng);
+      const maxLng = Math.max(filters.southWest.lng, filters.northEast.lng);
+
+      qb.andWhere('p.geoLat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
+      qb.andWhere('p.geoLong BETWEEN :minLng AND :maxLng', { minLng, maxLng });
+
+    } else if (filters.southWest || filters.northEast) {
+      throw new BadRequestException(
+        'Debes enviar las dos esquinas opuestas del bounding box: southWest y northEast, cada una con lat y lng'
+      );
     }
 
 
-
-
+/*
     if (filters.q) {
       qb.andWhere(
         '(p.publication_title ILIKE :q OR p.street ILIKE :q OR p.reference_code ILIKE :q)',
         { q: `%${filters.q}%` },
       );
     }
-
+*/
     return qb;
   }
 
