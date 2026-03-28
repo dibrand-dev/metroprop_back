@@ -207,8 +207,11 @@ export class PropertiesController {
    * Obtener propiedad por ID
    */
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.propertiesService.findOne(id);
+  findOne(
+    @Param('id', ParseIntPipe) id: number,
+    @Query('format') format?: string
+  ) {
+    return this.propertiesService.findOne(id, format ?? null);
   }
 
   /**

@@ -1,5 +1,5 @@
-import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional } from 'class-validator';
-import { OperationType, PropertyType, PropertySubtype } from '../../../common/enums';
+import { IsBoolean, IsEnum, IsInt, isNotEmpty, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { OperationType, PropertyType, PropertySubtype, PropertyStatus, Currency } from '../../../common/enums';
 
 export class CreateDraftPropertyDto {
   @IsNotEmpty()
@@ -30,4 +30,23 @@ export class CreateDraftPropertyDto {
   @IsInt()
   user_id?: number; 
 
+  @IsOptional()
+  @IsEnum(PropertyStatus)
+  status?: PropertyStatus.DRAFT;
+
+  @IsNotEmpty()
+  @IsString()
+  reference_code: string = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+
+  @IsNotEmpty()
+  @IsString()
+  publication_title: string = 'draft titulo';
+
+  @IsInt()
+  @IsNotEmpty()
+  price: number = 0;
+
+  @IsEnum(Currency)
+  @IsNotEmpty()
+  currency: Currency = Currency.USD;
 }

@@ -1,6 +1,3 @@
-
-import { MediaService } from '../../common/media/media.service';
-import { USER_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Like } from 'typeorm';
@@ -17,8 +14,7 @@ import { UserRole } from '../../common/enums';
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private usersRepository: Repository<User>,
-    private readonly mediaService: MediaService,
+    private usersRepository: Repository<User>
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {

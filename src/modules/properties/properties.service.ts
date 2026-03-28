@@ -11,6 +11,7 @@ import { PropertyImage } from './entities/property-image.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { PropertyWriteService } from './property-write.service';
 import { UpdatePropertyDto } from './dto/update-property.dto';
+import { prependImagePrefixToUrls } from './helpers/properties-helper';
 
 import { MediaService } from '../../common/media/media.service';
 import { PropertyVideo } from './entities/property-video.entity';
@@ -27,6 +28,7 @@ import {
 } from '../../common/enums';
 import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
+import { THUMB_PREFIX } from '@/common/constants';
 
 export interface PropertyCard {
   id: number;
@@ -271,23 +273,25 @@ export class PropertiesService {
       qb.andWhere('p.direct_owner = :direct_owner', { direct_owner: filters.direct_owner });
     }
 
-    if (filters.southWest?.lat != null && filters.southWest?.lng != null &&
-      filters.northEast?.lat != null && filters.northEast?.lng != null) {
-    
-      const minLat = Math.min(filters.southWest.lat, filters.northEast.lat);
-      const maxLat = Math.max(filters.southWest.lat, filters.northEast.lat);
-      const minLng = Math.min(filters.southWest.lng, filters.northEast.lng);
-      const maxLng = Math.max(filters.southWest.lng, filters.northEast.lng);
-
-      qb.andWhere('p.geoLat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
-      qb.andWhere('p.geoLong BETWEEN :minLng AND :maxLng', { minLng, maxLng });
-
-    } else if (filters.southWest || filters.northEast) {
-      throw new BadRequestException(
-        'Debes enviar las dos esquinas opuestas del bounding box: southWest y northEast, cada una con lat y lng'
-      );
-    }
-
+    if (
+      filters.southWestLat != null && filters.southWestLng != null &&
+      filters.northEastLat != null && filters.northEastLng != null
+    ) {
+      // Parsear strings a números
+      const swLat = parseFloat(filters.southWestLat);
+      const swLng = parseFloat(filters.southWestLng);
+      const neLat = parseFloat(filters.northEastLat);
+      const neLng = parseFloat(filters.northEastLng);
+      if ([swLat, swLng, neLat, neLng].some(v => isNaN(v))) {
+        throw new BadRequestException('Las coordenadas del bounding box deben ser números válidos');
+      }
+      const minLat = Math.min(swLat, neLat);
+      const maxLat = Math.max(swLat, neLat);
+      const minLng = Math.min(swLng, neLng);
+      const maxLng = Math.max(swLng, neLng);
+      qb.andWhere('p.geo_lat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
+      qb.andWhere('p.geo_long BETWEEN :minLng AND :maxLng', { minLng, maxLng });
+    } 
 
 /*
     if (filters.q) {
@@ -305,23 +309,22 @@ export class PropertiesService {
    * Rellena los campos obligatorios con valores por defecto.
    */
   async createDraft(createDraftDto: CreateDraftPropertyDto): Promise<Property> {
-    const tempReferenceCode = `DRAFT-${uuidv4().substring(0, 8)}`;
-    const tempTitle = `Borrador - ${tempReferenceCode}`;
 
     if(createDraftDto.organization_id == null) {
       createDraftDto.direct_owner = true; 
     }
+    console.log("[PropertiesService.createDraft] createDraftDto:", JSON.stringify(createDraftDto, null, 2));
+    
+    return this.propertyRepository.save(createDraftDto);
+    /*
+    // Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
+    const { property: savedProperty } = await this.propertyWriteService.createPropertyCore(
+      { ...createDraftDto, deleted: false },
+      {  },
+    );
 
-    const newProperty = this.propertyRepository.create({
-      ...createDraftDto,
-      status: PropertyStatus.DRAFT,
-      reference_code: tempReferenceCode,
-      publication_title: tempTitle,
-      price: 0,
-      currency: Currency.USD,
-    });
-
-    return this.propertyRepository.save(newProperty);
+    return savedProperty;
+    //return this.propertyRepository.save(newProperty);*/
   }
 
   /**
@@ -353,14 +356,6 @@ export class PropertiesService {
         'Una propiedad con este código de referencia ya existe',
       );
     }
-
-    
-    this.logger.log('[PropertiesService.create] propertyData antes de salvar:', JSON.stringify(propertyData, null, 2));
-    this.logger.log('[PropertiesService.create] images:', JSON.stringify(images, null, 2));
-    this.logger.log('[PropertiesService.create] tags:', JSON.stringify(tags, null, 2));
-    this.logger.log('[PropertiesService.create] videos:', JSON.stringify(videos, null, 2));
-    this.logger.log('[PropertiesService.create] multimedia360:', JSON.stringify(multimedia360, null, 2));
-    this.logger.log('[PropertiesService.create] attached:', JSON.stringify(attached, null, 2));
 
     // Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
     const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
@@ -879,7 +874,7 @@ export class PropertiesService {
         currency: p.currency,
         price: p.price,
         price_square_meter: p.price_square_meter,
-        images: p.images,
+        images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
         lat: p.geo_lat,
         long: p.geo_long,
       }));
@@ -997,76 +992,69 @@ export class PropertiesService {
   }
 
   /**
-   * Obtener todas las propiedades (no eliminadas)
-   */
-  async findAll(
-    skip: number = 0,
-    take: number = 10,
-    filters?: {
-      property_type?: number;
-      status?: number;
-      city?: string;
-      min_price?: number;
-      max_price?: number;
-      organization_id?: number;
-    },
-  ): Promise<{ data: Property[]; total: number }> {
-    const query = this.propertyRepository
-      .createQueryBuilder('property')
-      .where('property.deleted = :deleted', { deleted: false });
-
-    // Aplicar filtros opcionales
-    if (filters?.property_type) {
-      query.andWhere('property.property_type = :property_type', {
-        property_type: filters.property_type,
-      });
-    }
-
-    if (filters?.status) {
-      query.andWhere('property.status = :status', { status: filters.status });
-    }
-
-    if (filters?.min_price) {
-      query.andWhere('property.price >= :min_price', {
-        min_price: filters.min_price,
-      });
-    }
-
-    if (filters?.max_price) {
-      query.andWhere('property.price <= :max_price', {
-        max_price: filters.max_price,
-      });
-    }
-
-    if (filters?.organization_id) {
-      query.andWhere('property.organization_id = :organization_id', {
-        organization_id: filters.organization_id,
-      });
-    }
-
-    const [data, total] = await query
-      .orderBy('property.created_at', 'DESC')
-      .skip(skip)
-      .take(take)
-      .getManyAndCount();
-
-    return { data, total };
-  }
-
-  /**
    * Obtener una propiedad por ID
    */
-  async findOne(id: number): Promise<Property> {
+  async findOne(id: number, format: string | null = null): Promise<Property> {
     console.log('[´properties.service] ID A BUSCAR', id);
-    this.logger.log('[PropertiesService.findOne] Buscando propiedad con ID:', id);
-        
-    const property = await this.propertyRepository.findOne({
-      where: {
-        id,
-        deleted: false,
-      },
-      relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
-    });
+    this.logger.log('[PropertiesService.findOne] Buscando propiedad con ID:', id, 'format:', format);
+
+    let property: Property | null = null;
+    console.log("[PropertiesService.findOne] ID recibido:", id, "Format recibido:", format);
+    if (format === 'marker') {
+      // Traer solo los campos requeridos, sin relaciones
+      property = await this.propertyRepository.findOne({
+        where: {
+          id,
+          deleted: false,
+        },
+        select: [
+          'id',
+          'price',
+          'price_square_meter',
+          'bathroom_amount',
+          'street',
+          'room_amount',
+          'surface',
+        ],
+      });
+      // Traer solo la primera imagen (si existe)
+      if (property) {
+        let firstImage = await this.propertyImageRepository.findOne({
+          where: { property: { id } },
+          order: { order_position: 'ASC' },
+        });
+        if(firstImage) {
+          property.images = prependImagePrefixToUrls(THUMB_PREFIX, [firstImage]);
+        }
+
+      }
+      console.log("[PropertiesService.findOne] Resultado para formato 'marker':", JSON.stringify(property, null, 2));
+    } else if (format === 'multimedia') {
+      // Traer id, todas las imágenes, todos los videos y multimedia360
+      property = await this.propertyRepository.findOne({
+        where: {
+          id,
+          deleted: false,
+        },
+        select: ['id'],
+        relations: ['images', 'videos'],
+      });
+      if (property) {
+        // Separar videos y multimedia360
+        const allVideos = property.videos ?? [];
+        property.videos = allVideos.filter(v => !v.is_360);
+        (property as any).multimedia360 = allVideos.filter(v => v.is_360);
+      }
+      console.log("[PropertiesService.findOne] Resultado para formato 'multimedia':", JSON.stringify(property, null, 2));
+    } else {
+      property = await this.propertyRepository.findOne({
+        where: {
+          id,
+          deleted: false,
+        },
+        relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
+      });
+    }
 
     this.logger.log('[PropertiesService.findOne] Resultado:', JSON.stringify(property, null, 2));
 

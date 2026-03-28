@@ -407,11 +407,12 @@ export const API_BASE_URL = IS_PRODUCTION
 // Ejemplo para agregar medium: MEDIUM: { width: 1200, prefix: 'medium_' }
 // =============================================
 export const THUMB_PREFIX = 'thumb_';
+export const MEDIUM_PREFIX = 'medium_';
 
 export const IMAGE_SIZES = {
   FULL:  { width: 2000, prefix: '' },
-  THUMB: { width: 600,  prefix: THUMB_PREFIX },
-  // MEDIUM: { width: 1200, label: 'medium' },
+  THUMB: { width: 300,  prefix: THUMB_PREFIX },
+  MEDIUM: { width: 700, prefix: MEDIUM_PREFIX },
 } as const;
 
 export type ImageSizeKey = keyof typeof IMAGE_SIZES;

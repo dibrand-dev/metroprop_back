@@ -37,6 +37,11 @@ export class SearchPropertiesDto {
   @Min(1)
   page?: number = 1;
 
+
+  @IsOptional()
+  @IsString()
+  order_by?: string; // Ejemplo: "price:asc" o "created_at:desc"
+
   // ========== Identificadores / Organización ==========
 
   @IsOptional()
@@ -77,20 +82,20 @@ export class SearchPropertiesDto {
   sub_location_id?: number;
 
   @IsOptional()
-  @Type(() => Object)
-  northWest?: { lat: number; lng: number };
+  @IsString()
+  northEastLat?: string;
 
   @IsOptional()
-  @Type(() => Object)
-  northEast?: { lat: number; lng: number };
+  @IsString()
+  northEastLng?: string;
 
   @IsOptional()
-  @Type(() => Object)
-  southWest?: { lat: number; lng: number };
+  @IsString()
+  southWestLat?: string;
 
   @IsOptional()
-  @Type(() => Object)
-  southEast?: { lat: number; lng: number };
+  @IsString()
+  southWestLng?: string;
 
   // ========== Tipo de propiedad y operación ==========
 

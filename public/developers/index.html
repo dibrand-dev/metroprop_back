@@ -476,14 +476,14 @@
   </table>
 
   <h3>Ejemplo completo</h3>
-  <div class="code-block"><span class="comment">// Request Body</span>
+  <div class="code-block" id="request-body-block" style="position:relative;">
+    <button id="copy-request-body" style="position:absolute;top:10px;right:10px;padding:4px 12px;font-size:0.85em;border:none;border-radius:4px;background:#2563eb;color:#fff;cursor:pointer;z-index:2;">Copiar</button>
+    <span class="comment">// Request Body</span>
+    <div id="create-org-request-body">
 {
-  <span class="comment">// Administrador</span>
   <span class="key">"admin_name"</span>: <span class="string">"Juan Pérez"</span>,
   <span class="key">"admin_email"</span>: <span class="string">"juan.perez@inmobiliariademo.com"</span>,
   <span class="key">"admin_phone"</span>: <span class="string">"+5411-1234-5678"</span>,
-
-  <span class="comment">// Organización</span>
   <span class="key">"company_name"</span>: <span class="string">"Inmobiliaria Demo S.A."</span>,
   <span class="key">"company_logo"</span>: <span class="string">"https://ejemplo.com/logo-demo.png"</span>,
   <span class="key">"address"</span>: <span class="string">"Av. Corrientes 1234, Piso 5"</span>,
@@ -495,16 +495,14 @@
   <span class="key">"cuit"</span>: <span class="string">"30-71234567-9"</span>,
   <span class="key">"social_reason"</span>: <span class="string">"Inmobiliaria Demo S.A."</span>,
   <span class="key">"fiscal_condition"</span>: <span class="string">"Responsable Inscripto"</span>,
-
-  <span class="comment">// Ubicación</span>
   <span class="key">"country_id"</span>: <span class="number">1</span>,
-  <span class="key">"state_id"</span>: <span class="number">1</span>,
-  <span class="key">"location_id"</span>: <span class="string">"1"</span>,
-  <span class="key">"sublocation_id"</span>: <span class="number">1</span>,
+  <span class="key">"state_id"</span>: <span class="number">146</span>,
+  <span class="key">"location_id"</span>: <span class="string">24728</span>,
+  <span class="key">"sublocation_id"</span>: <span class="number">24731</span>,
   <span class="key">"full_location"</span>: <span class="string">"Buenos Aires, Argentina"</span>,
   <span class="key">"geo_lat"</span>: <span class="number">-34.6037</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.3816</span>
-}</div>
+}</div></div>
   <div class="code-block"><span class="comment">// Response (201 Created)</span>
 {
   <span class="key">"success"</span>: <span class="number">true</span>,
@@ -521,6 +519,26 @@
     <span class="badge badge-post">POST</span>
     <code>/api/partner/v1/properties</code>
   </div>
+
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('copy-request-body');
+    const block = document.getElementById('create-org-request-body');
+    if (btn && block) {
+      btn.addEventListener('click', function() {
+        // Obtener solo el texto plano del bloque, sin etiquetas
+        let text = block.innerText;
+        navigator.clipboard.writeText(text).then(() => {
+          btn.textContent = '¡Copiado!';
+          setTimeout(() => { btn.textContent = 'Copiar'; }, 1200);
+        }).catch(() => {
+          btn.textContent = 'Error';
+          setTimeout(() => { btn.textContent = 'Copiar'; }, 1200);
+        });
+      });
+    }
+  });
+  </script>
   <p>
     Crea una nueva propiedad vinculada a un <code>branch_reference_id</code>. 
     Si ya existe una propiedad con el mismo <code>reference_code</code> en la organización, se actualiza automáticamente (upsert).
@@ -617,30 +635,24 @@
   </table>
 
   <h3>Ejemplo completo</h3>
-  <div class="code-block"><span class="comment">// Request Body</span>
+  <div class="code-block" id="create-prop-request-body-block" style="position:relative;">
+    <button id="copy-create-prop-request-body" style="position:absolute;top:10px;right:10px;padding:4px 12px;font-size:0.85em;border:none;border-radius:4px;background:#2563eb;color:#fff;cursor:pointer;z-index:2;">Copiar</button>
+    <span class="comment">// Request Body</span>
+    <div id="block-copy-property" >
 {
-  <span class="comment">// Identificación</span>
   <span class="key">"branch_reference_id"</span>: <span class="number">7</span>,
   <span class="key">"reference_code"</span>: <span class="string">"PROP-DEMO-001"</span>,
-
-  <span class="comment">// Publicación</span>
   <span class="key">"publication_title"</span>: <span class="string">"Hermoso departamento en Palermo con amenities"</span>,
   <span class="key">"publication_title_en"</span>: <span class="string">"Beautiful apartment in Palermo with amenities"</span>,
   <span class="key">"description"</span>: <span class="string">"Luminoso departamento de 3 ambientes a estrenar, con cocina integrada, balcón corrido y vista al verde."</span>,
-
-  <span class="comment">// Precio &amp; Operación</span>
   <span class="key">"operation_type"</span>: <span class="number">1</span>,
   <span class="key">"price"</span>: <span class="number">130000</span>,
   <span class="key">"currency"</span>: <span class="string">"USD"</span>,
   <span class="key">"expenses"</span>: <span class="number">45000</span>,
   <span class="key">"currency_expenses"</span>: <span class="string">"ARS"</span>,
-
-  <span class="comment">// Tipo y Estado</span>
   <span class="key">"property_type"</span>: <span class="number">2</span>,
   <span class="key">"property_subtype"</span>: <span class="number">13</span>,
   <span class="key">"status"</span>: <span class="number">2</span>,
-
-  <span class="comment">// Ubicación</span>
   <span class="key">"street"</span>: <span class="string">"Av. Santa Fe"</span>,
   <span class="key">"number"</span>: <span class="string">"3456"</span>,
   <span class="key">"floor"</span>: <span class="string">"8"</span>,
@@ -653,21 +665,15 @@
   <span class="key">"geo_lat"</span>: <span class="number">-34.5921</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.4089</span>,
   <span class="key">"show_exact_location"</span>: <span class="number">true</span>,
-
-  <span class="comment">// Características</span>
   <span class="key">"room_amount"</span>: <span class="number">3</span>,
   <span class="key">"suite_amount"</span>: <span class="number">2</span>,
   <span class="key">"bathroom_amount"</span>: <span class="number">1</span>,
   <span class="key">"toilet_amount"</span>: <span class="number">1</span>,
   <span class="key">"parking_lot_amount"</span>: <span class="number">1</span>,
-
-  <span class="comment">// Superficies</span>
   <span class="key">"surface"</span>: <span class="number">85</span>,
   <span class="key">"roofed_surface"</span>: <span class="number">75</span>,
   <span class="key">"unroofed_surface"</span>: <span class="number">10</span>,
   <span class="key">"surface_measurement"</span>: <span class="string">"M2"</span>,
-
-  <span class="comment">// Inmueble</span>
   <span class="key">"age"</span>: <span class="number">0</span>,
   <span class="key">"property_condition"</span>: <span class="string">"A estrenar"</span>,
   <span class="key">"orientation"</span>: <span class="string">"2"</span>,
@@ -676,8 +682,6 @@
   <span class="key">"credit_eligible"</span>: <span class="number">true</span>,
   <span class="key">"floors_amount"</span>: <span class="number">12</span>,
   <span class="key">"apartments_per_floor"</span>: <span class="number">4</span>,
-
-  <span class="comment">// Multimedia</span>
   <span class="key">"images"</span>: [
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/foto1.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Living comedor"</span> },
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/foto2.jpg"</span> }
@@ -690,11 +694,31 @@
   ],
   <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">3</span>]
 }</div>
+</div>
     <h2 id="ep-retry-uploads">POST Retry Uploads</h2>
     <div class="endpoint-box">
       <span class="badge badge-post">POST</span>
       <code>/api/partner/v1/properties/{referenceCode}/retry-uploads</code>
     </div>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const btn2 = document.getElementById('copy-create-prop-request-body');
+      const block2 = document.getElementById('block-copy-property');
+      if (btn2 && block2) {
+        btn2.addEventListener('click', function() {
+          let text = block2.innerText;
+          navigator.clipboard.writeText(text).then(() => {
+            btn2.textContent = '¡Copiado!';
+            setTimeout(() => { btn2.textContent = 'Copiar'; }, 1200);
+          }).catch(() => {
+            btn2.textContent = 'Error';
+            setTimeout(() => { btn2.textContent = 'Copiar'; }, 1200);
+          });
+        });
+      }
+    });
+    </script>
     <p>
       Reintenta subir a S3 todos los archivos (imágenes y adjuntos) que fallaron previamente para una propiedad específica del partner.
       Útil si hubo errores de red o problemas temporales con S3.
@@ -1005,9 +1029,9 @@
 
   <span class="comment">// Ubicación</span>
   <span class="key">"country_id"</span>: <span class="number">1</span>,
-  <span class="key">"state_id"</span>: <span class="number">1</span>,
-  <span class="key">"location_id"</span>: <span class="number">1</span>,
-  <span class="key">"sublocation_id"</span>: <span class="number">1</span>
+  <span class="key">"state_id"</span>: <span class="number">146</span>,
+  <span class="key">"location_id"</span>: <span class="number">24728</span>,
+  <span class="key">"sublocation_id"</span>: <span class="number">24731</span>
 }</div>
   <div class="code-block"><span class="comment">// Response (201 Created)</span>
 {
