@@ -1,4 +1,5 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { LocationsService } from './locations.service';
 import { TokkoMigratorService } from '../cron-tasks/tokko-migrator/tokko-migrator.service';
 
@@ -10,7 +11,7 @@ export class LocationsController {
     private readonly migrator: TokkoMigratorService,
   ) {}
   // --- ENDPOINTS DE NORMALIZACIÓN ---
-
+/*
   @Get('normalize-states')
   async normalizeStatesByCountry(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
@@ -31,7 +32,7 @@ export class LocationsController {
     await this.migrator.normalizeSubLocationsByCountry(Number(countryId), locationId ? Number(locationId) : undefined);
     return { ok: true };
   }
-
+*/
   @Get('migrate-missing-full-locations')
   async migrateMissingFullLocations(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
@@ -60,7 +61,9 @@ export class LocationsController {
   }
 
   @Get('getAllLocations')
-  getAllLocations(@Query('country_id') countryId?: number) {
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(86400) // 1 día en segundos
+  getAllLocations(@Query('country_id') countryId?: string | number) {
     return this.locationsService.getAllLocations(countryId);
   }
 }

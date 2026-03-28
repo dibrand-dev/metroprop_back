@@ -31,10 +31,17 @@ export class LocationsService {
     return this.locationRepository.findOne({ where: { id } });
   }
 
-  async getAllLocations(countryId?: number): Promise<Location[]> {
+  async getAllLocations(countryId?: string | number): Promise<Location[]> {
     const where: any = { type: Not('country') };
     if (countryId) {
-      where.parent_id = countryId;
+      if (typeof countryId === 'string' && countryId.includes(',')) {
+        // String separado por coma: usar IN
+        const ids = countryId.split(',').map((id: string) => Number(id.trim())).filter(Boolean);
+        where.country_id = ids.length > 0 ? ids : undefined;
+      } else {
+        // Número o string simple
+        where.country_id = Number(countryId);
+      }
     }
     return this.locationRepository.find({ where, order: { name: 'ASC' } });
   }
