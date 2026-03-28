@@ -21,14 +21,6 @@ import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.modu
 import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.module';
 
 
-
-if (process.env.NODE_ENV === 'production') {
-  // Mostrar el valor de NODE_ENV en consola antes de cualquier error
-  // Esto se ejecuta apenas carga el módulo
-  // eslint-disable-next-line no-console
-  console.log('NODE_ENV en producción:', process.env.NODE_ENV);
-}
-
 @Module({
   imports: [
     S3Module,
@@ -65,10 +57,11 @@ if (process.env.NODE_ENV === 'production') {
         migrations: [__dirname + '/database/migrations/**/*{.ts,.js}'],
         synchronize: configService.get<boolean>('DATABASE_SYNCHRONIZE') ?? true,
         logging: configService.get<boolean>('DATABASE_LOGGING') ?? false,
-        ssl:
+      /*  ssl:
           process.env.NODE_ENV === 'production'
             ? { rejectUnauthorized: false }
-            : false,
+            : false, */ // Configurar ssl como corresponde luego
+        ssl: process.env.NODE_ENV === 'production' ? false : false,
       };
       },
     }),
