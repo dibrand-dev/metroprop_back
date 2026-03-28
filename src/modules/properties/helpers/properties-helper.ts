@@ -2,6 +2,7 @@ import { Repository } from 'typeorm';
 import { Property } from '../entities/property.entity';
 import { PropertyImage } from '../entities/property-image.entity';
 
+const S3_BUCKET_URL = process.env.AWS_S3_BUCKET_URL || '';
 /**
  * Devuelve un nuevo array de PropertyImage con el prefijo insertado en el nombre del archivo.
  * Si el prefijo es vacío, retorna la url original.
@@ -11,14 +12,24 @@ import { PropertyImage } from '../entities/property-image.entity';
  */
 export function prependImagePrefixToUrls(prefix: string, images: PropertyImage[]): PropertyImage[] {
   return images.map(img => {
-    if (!img.url) return img;
+    if (!img.url || img.url.startsWith('http')) return img;
+
     const lastSlash = img.url.lastIndexOf('/');
     if (lastSlash === -1) return img;
     const base = img.url.substring(0, lastSlash + 1);
     const filename = img.url.substring(lastSlash + 1);
+    let newUrl = prefix ? `${base}${prefix}${filename}` : img.url;
+    // Anteponer S3_BUCKET_URL si no está presente
+    if (S3_BUCKET_URL && !newUrl.startsWith('http')) {
+      if (newUrl.startsWith('/')) {
+        newUrl = S3_BUCKET_URL + newUrl;
+      } else {
+        newUrl = S3_BUCKET_URL + '/' + newUrl;
+      }
+    }
     return {
       ...img,
-      url: prefix ? `${base}${prefix}${filename}` : img.url,
+      url: newUrl,
     };
   });
 }
