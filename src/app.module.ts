@@ -19,6 +19,7 @@ import { TagsModule } from './modules/tags/tags.module';
 import { DevelopersModule } from './modules/developers/developers.module';
 import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.module';
 import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.module';
+import { TokkoMigratorModule } from './modules/cron-tasks/tokko-migrator/tokko-migrator.module';
 
 
 @Module({
@@ -60,7 +61,7 @@ import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.mod
       /*  ssl:
           process.env.NODE_ENV === 'production'
             ? { rejectUnauthorized: false }
-            : false, */ // Configurar ssl como corresponde luego
+            : false, */ // Configurar ssl como corresponde luego, por ahora lo dejo en false para evitar problemas de conexión en desarrollo
         ssl: process.env.NODE_ENV === 'production' ? false : false,
       };
       },
@@ -78,6 +79,7 @@ import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.mod
     DevelopersModule,
     TokkoSyncModule,
     UploadS3CronModule,
+    TokkoMigratorModule,
   ],
   controllers: [AppController],
   providers: [AppService],

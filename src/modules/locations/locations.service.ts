@@ -31,7 +31,11 @@ export class LocationsService {
     return this.locationRepository.findOne({ where: { id } });
   }
 
-  async getAllLocations(): Promise<Location[]> {
-    return this.locationRepository.find({ where: { type: Not('country') }, order: { name: 'ASC' } });
+  async getAllLocations(countryId?: number): Promise<Location[]> {
+    const where: any = { type: Not('country') };
+    if (countryId) {
+      where.parent_id = countryId;
+    }
+    return this.locationRepository.find({ where, order: { name: 'ASC' } });
   }
 }

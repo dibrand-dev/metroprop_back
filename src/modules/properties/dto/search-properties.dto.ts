@@ -225,9 +225,15 @@ export class SearchPropertiesDto {
   // ========== Modo de respuesta ==========
 
   @IsOptional()
-  @Transform(({ value }) => value === 'true' || value === true || value === '1' || value === 1)
+  @Transform(({ value }) => value === undefined ? true : (value === 'true' || value === true || value === '1' || value === 1))
   @IsBoolean()
-  card?: boolean = false;
+  card?: boolean = true;
+
+
+  @IsOptional()
+  @Transform(({ value }) => value === undefined ? false : (value === 'true' || value === true || value === '1' || value === 1))
+  @IsBoolean()
+  full?: boolean = false;
 }
 
 /**

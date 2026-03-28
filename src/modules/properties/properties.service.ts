@@ -26,7 +26,6 @@ import {
   MediaUploadStatus,
   Currency,
 } from '../../common/enums';
-import { v4 as uuidv4 } from 'uuid';
 import { DataSource } from 'typeorm';
 import { THUMB_PREFIX } from '@/common/constants';
 
@@ -54,8 +53,6 @@ export class PropertiesService {
     private propertyRepository: Repository<Property>,
     @InjectRepository(PropertyImage)
     private propertyImageRepository: Repository<PropertyImage>,
-    @InjectRepository(PropertyVideo)
-    private propertyVideoRepository: Repository<PropertyVideo>,
     @InjectRepository(PropertyAttached)
     private propertyAttachedRepository: Repository<PropertyAttached>,
     private readonly mediaService: MediaService,
@@ -120,6 +117,7 @@ export class PropertiesService {
       includeStatusFilter?: boolean;
     },
   ) {
+
     const qb = this.propertyRepository
       .createQueryBuilder('p')
       .leftJoin('organizations', 'org', 'p.organization_id = org.id')
@@ -835,10 +833,37 @@ export class PropertiesService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * limit;
 
-    let data: Property[] | PropertyCard[];
-    let total: number;
+    let data: Property[] | PropertyCard[] = [];
+    let total = 0;
 
-    if (filters.card) {
+    if (filters.location_id != null) {
+      const locationRepo = this.dataSource.getRepository('locations');
+      const location = await locationRepo.findOne({ where: { id: filters.location_id } });
+      filters.location_id = undefined; // reset filtro para evitar una busqueda equivocada
+      if (location) {
+        if (location.type === 'country') {
+          filters.country_id = location.id;
+        } else if (location.type === 'state') {
+          filters.state_id = location.id;
+        } else if (location.type === 'location') {
+          filters.location_id = location.id;
+        } else if (location.type === 'sub_location') {
+          filters.sub_location_id = location.id;
+        }
+      }
+    }
+
+    if (filters.full) {
+      // Modo full: query completa con todas las relaciones
+      const qb = this.buildAdvancedSearchQuery(filters);
+      qb.leftJoinAndSelect('p.images', 'img')
+        .orderBy('p.created_at', 'DESC')
+        .addOrderBy('img.order_position', 'ASC')
+        .skip(offset)
+        .take(limit);
+      [data, total] = await qb.getManyAndCount();
+      // FALTA PONER ARMADO DE PATH COMPLETO DE FOTO ACA FULL osea tal cual viene pero con dominio S3
+    } else if (filters.card) {
       // Modo card: SELECT solo las columnas necesarias + join de imágenes
       // No se cargan relaciones eager (attributes, tags, videos, attached)
       const cardQb = this.buildAdvancedSearchQuery(filters)
@@ -863,7 +888,6 @@ export class PropertiesService {
 
       const [partialProps, cardTotal] = await cardQb.getManyAndCount();
       total = cardTotal;
-
       data = partialProps.map((p) => ({
         id: p.id as number,
         publication_title: p.publication_title,
@@ -878,15 +902,6 @@ export class PropertiesService {
         lat: p.geo_lat,
         long: p.geo_long,
       }));
-    } else {
-      // Modo full: query completa con todas las relaciones
-      const qb = this.buildAdvancedSearchQuery(filters);
-      qb.leftJoinAndSelect('p.images', 'img')
-        .orderBy('p.created_at', 'DESC')
-        .addOrderBy('img.order_position', 'ASC')
-        .skip(offset)
-        .take(limit);
-      [data, total] = await qb.getManyAndCount();
     }
 
     // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
