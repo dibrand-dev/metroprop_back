@@ -19,6 +19,16 @@ import { TagsModule } from './modules/tags/tags.module';
 import { DevelopersModule } from './modules/developers/developers.module';
 import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.module';
 import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.module';
+
+
+
+if (process.env.NODE_ENV === 'production') {
+  // Mostrar el valor de NODE_ENV en consola antes de cualquier error
+  // Esto se ejecuta apenas carga el módulo
+  // eslint-disable-next-line no-console
+  console.log('NODE_ENV en producción:', process.env.NODE_ENV);
+}
+
 @Module({
   imports: [
     S3Module,
