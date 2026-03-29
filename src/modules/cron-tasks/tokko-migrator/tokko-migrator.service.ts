@@ -41,8 +41,9 @@ export class TokkoMigratorService {
       // Luego ejecutar periódicamente la normalización de sublocations para mantener actualizada la info. 
       // Una vez todas las locations esten migradas y las sublocations tengan su nuevo type y full location podemos ejecutar 
       // una ultima normalizacion para todos los campos q no tengan full location guardado por algun motivo 
-      // migrateMissingFullLocationsByCountry(1)
       await this.normalizeSubLocationsByCountry(1);
+      await this.migrateMissingFullLocationsByCountry(1);
+      
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
     } catch (e) {
       this.logger.error('Error en normalización de sublocations', e);
