@@ -26,8 +26,7 @@ export class TokkoMigratorService {
   private readonly logger = new Logger(TokkoMigratorService.name);
 
   constructor(private readonly dataSource: DataSource) {}
-
-  @Cron(CronExpression.EVERY_10_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleMigration() {
     this.logger.log('Iniciando migración automática de locations desde Tokko...');
 /*
