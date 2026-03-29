@@ -227,7 +227,7 @@ export class PartnersController {
       body.api_key,
       String(body.organization_id),
       body.limit ?? 500,
-      body.offset ?? 0,
+      body.offset ?? 0, 
     );
   }
 
