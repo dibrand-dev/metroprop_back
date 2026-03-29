@@ -152,11 +152,12 @@ export class PartnersController {
     };
   }
 
+
   /**
-   * GET /partners/:id/disable
+   * PATCH /partners/:id/disable
    * Deshabilita un partner cambiando su status a inactivo
    */
-  @Get(':id/disable')
+  @Patch(':id/disable')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   async disablePartner(@Param('id', ParseIntPipe) id: number) {
@@ -164,6 +165,22 @@ export class PartnersController {
     return {
       success: true,
       message: 'Partner disabled successfully',
+      data: updatedPartner,
+    };
+  }
+
+  /**
+   * PATCH /partners/:id/enable
+   * Habilita un partner cambiando su status a activo
+   */
+  @Patch(':id/enable')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  async enablePartner(@Param('id', ParseIntPipe) id: number) {
+    const updatedPartner = await this.partnersService.enable(id);
+    return {
+      success: true,
+      message: 'Partner enabled successfully',
       data: updatedPartner,
     };
   }

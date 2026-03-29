@@ -108,7 +108,9 @@ export class PartnersService {
     }
 
     Object.assign(partner, updatePartnerDto);
-    return await this.partnersRepository.save(partner);
+    const updatedPartner = await this.partnersRepository.save(partner);
+    this.logger.log(`Updated partner ${id}.`);
+    return updatedPartner;
   }
 
   async remove(id: number): Promise<void> {
@@ -154,6 +156,19 @@ export class PartnersService {
     
     this.logger.log(`Disabled partner ${id}. Status set to: ${updatedPartner.status}`);
     
+    return updatedPartner;
+  }
+
+  /**
+   * Habilita un partner cambiando su status a activo
+   * @param id ID del partner
+   * @returns Partner actualizado con status habilitado
+   */
+  async enable(id: number): Promise<Partner> {
+    const partner = await this.findById(id);
+    partner.status = 1;
+    const updatedPartner = await this.partnersRepository.save(partner);
+    this.logger.log(`Enabled partner ${id}. Status set to: ${updatedPartner.status}`);
     return updatedPartner;
   }
 
