@@ -57,6 +57,7 @@ export class PartnersService {
         'name',
         'description',
         'app_key',
+        'app_secret',
         'status',
         'created_at',
         'updated_at',
