@@ -1,6 +1,9 @@
+import 'dotenv/config';
 import { Repository } from 'typeorm';
 import { Property } from '../entities/property.entity';
 import { PropertyImage } from '../entities/property-image.entity';
+
+
 
 const S3_BUCKET_URL = process.env.AWS_S3_BUCKET_URL || '';
 /**
@@ -18,7 +21,8 @@ export function prependImagePrefixToUrls(prefix: string, images: PropertyImage[]
     if (lastSlash === -1) return img;
     const base = img.url.substring(0, lastSlash + 1);
     const filename = img.url.substring(lastSlash + 1);
-    let newUrl = prefix ? `${base}${prefix}${filename}` : img.url;
+    let newUrl = `${base}${prefix}${filename}`;
+    console.log("Original URL:", img.url, "New URL:", newUrl);
     // Anteponer S3_BUCKET_URL si no está presente
     if (S3_BUCKET_URL && !newUrl.startsWith('http')) {
       if (newUrl.startsWith('/')) {

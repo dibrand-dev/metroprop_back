@@ -1095,6 +1095,10 @@ export class PropertiesService {
         },
         relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
       });
+
+      if (property?.images) {
+          property.images = prependImagePrefixToUrls('', property.images);
+      }
     }
 
     this.logger.log('[PropertiesService.findOne] Resultado:', JSON.stringify(property, null, 2));
