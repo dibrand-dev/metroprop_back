@@ -3,6 +3,8 @@ import { Cron, CronExpression } from '@nestjs/schedule';
 import axios from 'axios';
 import { DataSource } from 'typeorm';
 import { Location } from '../../locations/entities/location.entity';
+import { ConfigService } from '@nestjs/config';
+
 
 interface LocationDb {
   id: number;
@@ -24,11 +26,17 @@ const API_LOCATION = `${TOKKO_DOMAIN}/api/v1/location/`;
 @Injectable()
 export class TokkoMigratorService {
   private readonly logger = new Logger(TokkoMigratorService.name);
+  
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource, private readonly configService: ConfigService) {}
   @Cron(CronExpression.EVERY_MINUTE)
   async handleMigration() {
     this.logger.log('Iniciando migración automática de locations desde Tokko...');
+    const enabled = this.configService.get<string>('FEATURE_FLAG_TOKKO_SYNC');
+		if (enabled === 'false') {
+			this.logger.debug('[TokkoSync] Sync disabled via FEATURE_FLAG_TOKKO_SYNC=false');
+			return;
+		}
 /*
     await this.migrateCountries();
     await this.migrateStates();

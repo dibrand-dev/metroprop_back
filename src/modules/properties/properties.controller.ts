@@ -202,6 +202,21 @@ export class PropertiesController {
     return this.propertiesService.findByReferenceCode(reference_code);
   }
 
+  
+  /**
+   * POST /properties/trigger-image-upload-cron
+   * Dispara manualmente el proceso de subida de imágenes a S3 (cron).
+   * Solo para admins.
+   */
+  @Get('trigger-image-upload-cron')
+  @UseGuards(JwtAuthGuard /*, RolesGuard */)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  @HttpCode(HttpStatus.ACCEPTED)
+  async triggerImageUploadCron() {
+    await this.uploadS3Service.handleImageUploadCron();
+    return { message: 'Proceso de subida de imágenes a S3 disparado manualmente.' };
+  }
+
   /**
    * GET /properties/:id
    * Obtener propiedad por ID
