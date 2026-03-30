@@ -195,17 +195,10 @@ export class SearchPropertiesDto {
 
   // ========== Otros filtros ==========
 
+  
   @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  age_min?: number;
-
-  @IsOptional()
-  @Type(() => Number)
-  @IsInt()
-  @Min(0)
-  age_max?: number;
+  @IsString()
+  age?: string;
 
   @IsOptional()
   @Transform(({ value }) => parseIntArray(value))
@@ -213,9 +206,27 @@ export class SearchPropertiesDto {
   @IsInt({ each: true })
   disposition?: number[];
 
+  
+  @IsOptional()
+  @IsBoolean()
+  inmobiliaria?: boolean;
+
   @IsOptional()
   @IsBoolean()
   direct_owner?: boolean;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  orientation?: number;
+
+
+  @IsOptional()
+  @Transform(({ value }) => parseIntArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  tags?: number[];
+
   // ========== Texto libre ==========
 
   @IsOptional()

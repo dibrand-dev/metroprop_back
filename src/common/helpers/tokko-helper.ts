@@ -1444,7 +1444,7 @@ export class TokkoHelperService {
         unmappedTagsDescription,
       ),
 
-      age: item.age || undefined,
+      age: item.age !== undefined ? item.age : undefined,
       bathroom_amount: item.bathroom_amount || undefined,
       floor: item.floor || undefined,
       floors_amount: item.floors_amount || undefined,

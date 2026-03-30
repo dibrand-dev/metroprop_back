@@ -253,12 +253,20 @@ export class PropertiesService {
       });
     }
 
-    if (filters.age_min != null) {
-      qb.andWhere('p.antiquity >= :age_min', { age_min: filters.age_min });
+    if (filters.age) {
+      const ageRange = filters.age.split('-').map((v) => parseInt(v.trim(), 10));
+      if (ageRange.length === 2 && !isNaN(ageRange[0]) && !isNaN(ageRange[1])) {
+        qb.andWhere('p.age BETWEEN :age_min AND :age_max', { age_min: ageRange[0], age_max: ageRange[1] });
+      } else {
+        const age = parseInt(filters.age, 10);
+        if (!isNaN(age)) {
+          qb.andWhere('p.age = :age', { age });
+        }
+      }
     }
 
-    if (filters.age_max != null) {
-      qb.andWhere('p.antiquity <= :age_max', { age_max: filters.age_max });
+    if (filters.orientation) {
+      qb.andWhere('p.orientation = :orientation', { orientation: filters.orientation });
     }
 
     if (filters.disposition?.length) {
@@ -267,8 +275,18 @@ export class PropertiesService {
       });
     }
 
-    if (filters.direct_owner !== undefined) {
-      qb.andWhere('p.direct_owner = :direct_owner', { direct_owner: filters.direct_owner });
+    // ESTO ATENDER , TIENE Q TRAER EXACTAMENTE LAS QUE MARCAS..ESTO NO ESTARIA FUNCIONANDO ASI Y ENCIMA TIRA ERROR 
+    if (filters.tags?.length) {
+      qb.leftJoin('property_tags', 'pt', 'pt.propertyId = p.id')
+        .andWhere('pt.tag_id IN (:...tags)', { tags: filters.tags });
+    }
+
+    if (filters.direct_owner !== undefined || filters.inmobiliaria !== undefined) {
+      if (filters.direct_owner !== undefined && filters.inmobiliaria === undefined) {
+        qb.andWhere('p.direct_owner = true');
+      } else if (filters.inmobiliaria !== undefined && filters.direct_owner === undefined) {       
+        qb.andWhere('p.direct_owner = false');
+      }
     }
 
     if (
