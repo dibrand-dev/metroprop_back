@@ -836,19 +836,27 @@ export class PropertiesService {
     let data: Property[] | PropertyCard[] = [];
     let total = 0;
 
+    // Si se recibe location_id, buscar su tipo y asignar el filtro correcto (country_id, state_id, location_id o sub_location_id)
     if (filters.location_id != null) {
-      const locationRepo = this.dataSource.getRepository('locations');
-      const location = await locationRepo.findOne({ where: { id: filters.location_id } });
-      filters.location_id = undefined; // reset filtro para evitar una busqueda equivocada
-      if (location) {
-        if (location.type === 'country') {
-          filters.country_id = location.id;
-        } else if (location.type === 'state') {
-          filters.state_id = location.id;
-        } else if (location.type === 'location') {
-          filters.location_id = location.id;
-        } else if (location.type === 'sub_location') {
-          filters.sub_location_id = location.id;
+
+      // Si no vienen coordenadas especificas, obtenemos el tipo de locationId a filtrar en base al id que nos llega en el filtrado
+      if (
+      filters.southWestLat == null && filters.southWestLng == null &&
+      filters.northEastLat == null && filters.northEastLng == null
+      ) {
+        const locationRepo = this.dataSource.getRepository('locations');
+        const location = await locationRepo.findOne({ where: { id: filters.location_id } });
+        filters.location_id = undefined; // reset filtro para evitar una busqueda equivocada
+        if (location) {
+          if (location.type === 'country') {
+            filters.country_id = location.id;
+          } else if (location.type === 'state') {
+            filters.state_id = location.id;
+          } else if (location.type === 'location') {
+            filters.location_id = location.id;
+          } else if (location.type === 'sub_location') {
+            filters.sub_location_id = location.id;
+          }
         }
       }
     }
