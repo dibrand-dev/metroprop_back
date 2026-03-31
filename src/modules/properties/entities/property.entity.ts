@@ -6,6 +6,8 @@ import {
   UpdateDateColumn,
   OneToMany,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { PropertyImage } from './property-image.entity';
 import { PropertyAttribute } from './property-attribute.entity';
@@ -23,8 +25,10 @@ import {
   TemporalRentPeriod,
   Brightness,
   GarageCoverage,
-  PublicationPlan
+  PublicationPlan,
+  PropertySubtype
 } from '../../../common/enums';
+import { Organization } from '@/modules/organizations/entities/organization.entity';
 
 @Entity('properties')
 @Index('idx_properties_status', ['status'])
@@ -101,6 +105,9 @@ export class Property {
   // ========== Tipo de Propiedad y Negocio ==========
   @Column({ type: 'integer', nullable: false })
   property_type!: PropertyType;
+
+  @Column({ type: 'integer', nullable: true })
+  property_subtype!: PropertySubtype;
 
   @Column({ type: 'integer', nullable: false, default: PropertyStatus.DISPONIBLE })
   status!: PropertyStatus;
@@ -333,7 +340,11 @@ export class Property {
   })
   attached?: PropertyAttached[];
 
-  // Otros
-  @Column({ type: 'integer', nullable: true })
-  antiquity?: number;
+  
+  // Relación con Organization
+  @ManyToOne(() => Organization, { nullable: true, eager: false })
+  @JoinColumn({ name: 'organization_id' })
+  organization?: Organization;
+
+
 }

@@ -22,15 +22,6 @@ export function prependImagePrefixToUrls(prefix: string, images: PropertyImage[]
     const base = img.url.substring(0, lastSlash + 1);
     const filename = img.url.substring(lastSlash + 1);
     let newUrl = `${base}${prefix}${filename}`;
-    console.log("Original URL:", img.url, "New URL:", newUrl);
-    // Anteponer S3_BUCKET_URL si no está presente
-    if (S3_BUCKET_URL && !newUrl.startsWith('http')) {
-      if (newUrl.startsWith('/')) {
-        newUrl = S3_BUCKET_URL + newUrl;
-      } else {
-        newUrl = S3_BUCKET_URL + '/' + newUrl;
-      }
-    }
     return {
       ...img,
       url: newUrl,

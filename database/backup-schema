@@ -313,7 +313,8 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	tokko_id varchar(100) NULL,
 	publication_id varchar(100) NULL,
 	CONSTRAINT pk_properties PRIMARY KEY (id),
-	CONSTRAINT uk_properties_reference_code UNIQUE (reference_code)
+	CONSTRAINT uk_properties_reference_code UNIQUE (reference_code),
+	CONSTRAINT fk_properties_organization FOREIGN KEY (organization_id) REFERENCES organizations(id)
 );
 CREATE INDEX IF NOT EXISTS idx_properties_country_id ON public.properties USING btree (country_id);
 CREATE INDEX IF NOT EXISTS idx_properties_location_id ON public.properties USING btree (location_id);

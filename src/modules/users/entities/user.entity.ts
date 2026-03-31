@@ -47,6 +47,9 @@ export class User {
   @Column({ type: 'smallint', default: 0 })
   avatar_retry_count!: number;
 
+  @Column({ type: 'integer', nullable: true })
+  organization_id?: number;
+
   @Column({ type: 'boolean', default: false })
   is_verified!: boolean;
 
@@ -102,4 +105,5 @@ export class User {
     },
   })
   branches?: Branch[];
+
 }

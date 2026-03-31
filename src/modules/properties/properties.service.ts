@@ -28,6 +28,8 @@ import {
 } from '../../common/enums';
 import { DataSource } from 'typeorm';
 import { THUMB_PREFIX } from '@/common/constants';
+import { accessSync } from 'fs';
+import { filter } from 'rxjs';
 
 export interface PropertyCard {
   id: number;
@@ -120,10 +122,14 @@ export class PropertiesService {
 
     const qb = this.propertyRepository
       .createQueryBuilder('p')
-      .leftJoin('organizations', 'org', 'p.organization_id = org.id')
-      .where('p.deleted = :deleted', { deleted: false })
-      .andWhere('org.status = :orgStatus', { orgStatus: true })
-      .andWhere('org.deleted = :orgDeleted', { orgDeleted: false });
+      .leftJoin('organizations', 'org', 'p.organization_id = org.id');
+
+    // Traer propiedades de inmobiliarias activas Y propiedades de dueño directo
+    qb.where('p.deleted = :deleted', { deleted: false })
+      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.direct_owner = true))', {
+        orgStatus: true,
+        orgDeleted: false,
+      });
 
     const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
 
@@ -173,21 +179,21 @@ export class PropertiesService {
       });
     }
 
-    if (filters.property_type?.length) {
+    if (Array.isArray(filters.property_type) && filters.property_type.length > 0) {
       qb.andWhere('p.property_type IN (:...property_type)', {
         property_type: filters.property_type,
       });
     }
 
     // property subtype
-    if (filters.property_subtype?.length) {
+    if (Array.isArray(filters.property_subtype) && filters.property_subtype.length > 0) {
       qb.andWhere('p.property_subtype IN (:...property_subtype)', {
         property_subtype: filters.property_subtype,
       });
     }
 
 
-    if (filters.operation_type?.length) {
+    if (Array.isArray(filters.operation_type) && filters.operation_type.length > 0) {
       qb.andWhere('p.operation_type IN (:...operation_type)', {
         operation_type: filters.operation_type,
       });
@@ -229,25 +235,25 @@ export class PropertiesService {
       });
     }
 
-    if (filters.bathroom_amount?.length) {
+    if (Array.isArray(filters.bathroom_amount) && filters.bathroom_amount.length > 0) {
       qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
         bathroom_amount: filters.bathroom_amount,
       });
     }
 
-    if (filters.room_amount?.length) {
+    if (Array.isArray(filters.room_amount) && filters.room_amount.length > 0) {
       qb.andWhere('p.room_amount IN (:...room_amount)', {
         room_amount: filters.room_amount,
       });
     }
 
-    if (filters.suite_amount?.length) {
+    if (Array.isArray(filters.suite_amount) && filters.suite_amount.length > 0) {
       qb.andWhere('p.suite_amount IN (:...suite_amount)', {
         suite_amount: filters.suite_amount,
       });
     }
 
-    if (filters.parking_lot_amount?.length) {
+    if (Array.isArray(filters.parking_lot_amount) && filters.parking_lot_amount.length > 0) {
       qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
         parking_lot_amount: filters.parking_lot_amount,
       });
@@ -269,14 +275,15 @@ export class PropertiesService {
       qb.andWhere('p.orientation = :orientation', { orientation: filters.orientation });
     }
 
-    if (filters.disposition?.length) {
+   
+    if (Array.isArray(filters.disposition) && filters.disposition.length > 0) {
       qb.andWhere('p.dispositions IN (:...disposition)', {
         disposition: filters.disposition,
       });
     }
 
-    // ESTO ATENDER , TIENE Q TRAER EXACTAMENTE LAS QUE MARCAS..ESTO NO ESTARIA FUNCIONANDO ASI Y ENCIMA TIRA ERROR 
-    if (filters.tags?.length) {
+    // ESTO ATENDER , TIENE Q TRAER EXACTAMENTE LAS QUE MARCAS..AHORA ESTA COMO UN "SI TIENE ALGUNO DE LOS MARCADOS TRAE"
+    if (Array.isArray(filters.tags) && filters.tags.length > 0) {
       qb.leftJoin('property_tags', 'pt', 'pt.propertyId = p.id')
         .andWhere('pt.tag_id IN (:...tags)', { tags: filters.tags });
     }
@@ -851,6 +858,30 @@ export class PropertiesService {
     const page = filters.page ?? 1;
     const offset = (page - 1) * limit;
 
+    let orderBy = 'p.created_at';
+    let orderDirection: 'ASC' | 'DESC' = 'ASC';
+    if (filters.order_by) {
+      // Soporta "columna:direccion" o "columna direccion"
+      let by: string | undefined, dir: string | undefined;
+      if (filters.order_by.includes(':')) {
+        [by, dir] = filters.order_by.split(':');
+      } else if (filters.order_by.includes(' ')) {
+        [by, dir] = filters.order_by.split(' ');
+      } else {
+        by = filters.order_by;
+      }
+      if (by) orderBy = by.startsWith('p.') ? by : `p.${by}`;
+      if (dir) {
+        const dirUpper = dir.toUpperCase();
+        if (dirUpper === 'ASC' || dirUpper === 'DESC') {
+          orderDirection = dirUpper;
+        } else {
+          orderDirection = 'ASC';
+        }
+      }
+    }
+
+
     let data: Property[] | PropertyCard[] = [];
     let total = 0;
 
@@ -882,15 +913,17 @@ export class PropertiesService {
     if (filters.full) {
       // Modo full: query completa con todas las relaciones
       const qb = this.buildAdvancedSearchQuery(filters);
+
+
       qb.leftJoinAndSelect('p.images', 'img')
-        .orderBy('p.created_at', 'DESC')
+        .leftJoinAndSelect('p.organization', 'p_org')
         .addOrderBy('img.order_position', 'ASC')
         .skip(offset)
-        .take(limit);
+        .take(limit)
+        .orderBy(orderBy, orderDirection);
       [data, total] = await qb.getManyAndCount();
-      // FALTA PONER ARMADO DE PATH COMPLETO DE FOTO ACA FULL osea tal cual viene pero con dominio S3
-    } else if (filters.card) {
-      // Modo card: SELECT solo las columnas necesarias + join de imágenes
+    } else {
+      // Modo card: SELECT solo las columnas necesarias + join de imágenes y organización
       // No se cargan relaciones eager (attributes, tags, videos, attached)
       const cardQb = this.buildAdvancedSearchQuery(filters)
         .select([
@@ -906,9 +939,13 @@ export class PropertiesService {
           'p.geo_lat',
           'p.geo_long',
           'p.created_at',
+          'p_org.id',
+          'p_org.company_name',
+          'p_org.company_logo',
         ])
         .leftJoinAndSelect('p.images', 'img')
-        .orderBy('p.created_at', 'DESC')
+        .leftJoinAndSelect('p.organization', 'p_org')
+        .orderBy(orderBy, orderDirection)
         .skip(offset)
         .take(limit);
 
@@ -927,6 +964,11 @@ export class PropertiesService {
         images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
         lat: p.geo_lat,
         long: p.geo_long,
+        organization: p.organization ? {
+          id: p.organization.id,
+          company_name: p.organization.company_name,
+          company_logo: p.organization.company_logo,
+        } : undefined,
       }));
     }
 
@@ -1041,23 +1083,25 @@ export class PropertiesService {
 
     let property: Property | null = null;
     console.log("[PropertiesService.findOne] ID recibido:", id, "Format recibido:", format);
-    if (format === 'marker') {
-      // Traer solo los campos requeridos, sin relaciones
-      property = await this.propertyRepository.findOne({
-        where: {
-          id,
-          deleted: false,
-        },
-        select: [
-          'id',
-          'price',
-          'price_square_meter',
-          'bathroom_amount',
-          'street',
-          'room_amount',
-          'surface',
-        ],
-      });
+    if (format === 'card') {
+      // Usar QueryBuilder para traer campos seleccionados y la relación organization
+      property = await this.propertyRepository.createQueryBuilder('property')
+        .leftJoinAndSelect('property.organization', 'organization')
+        .where('property.id = :id', { id })
+        .andWhere('property.deleted = false')
+        .select([
+          'property.id',
+          'property.price',
+          'property.price_square_meter',
+          'property.bathroom_amount',
+          'property.street',
+          'property.room_amount',
+          'property.surface',
+          'organization.company_name',
+          'organization.company_logo',
+        ])
+        .getOne();
+
       // Traer solo la primera imagen (si existe)
       if (property) {
         let firstImage = await this.propertyImageRepository.findOne({
@@ -1067,7 +1111,6 @@ export class PropertiesService {
         if(firstImage) {
           property.images = prependImagePrefixToUrls(THUMB_PREFIX, [firstImage]);
         }
-
       }
       console.log("[PropertiesService.findOne] Resultado para formato 'marker':", JSON.stringify(property, null, 2));
     } else if (format === 'multimedia') {
@@ -1087,17 +1130,52 @@ export class PropertiesService {
         (property as any).multimedia360 = allVideos.filter(v => v.is_360);
       }
       console.log("[PropertiesService.findOne] Resultado para formato 'multimedia':", JSON.stringify(property, null, 2));
+
     } else {
-      property = await this.propertyRepository.findOne({
-        where: {
-          id,
-          deleted: false,
-        },
-        relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
-      });
+      // DETALLE MAS COMPLETO DE LA PROPIEDAD
+      property = await this.propertyRepository.createQueryBuilder('property')
+        .leftJoinAndSelect('property.images', 'images')
+        .leftJoinAndSelect('property.attributes', 'attributes')
+        .leftJoinAndSelect('property.tags', 'tags')
+        .leftJoinAndSelect('property.videos', 'videos')
+        .leftJoinAndSelect('property.attached', 'attached')
+        .leftJoinAndSelect('property.organization', 'organization')
+        .where('property.id = :id', { id })
+        .andWhere('property.deleted = false')
+        .select([
+          'property',
+          'images',
+          'attributes',
+          'tags',
+          'videos',
+          'attached',
+          'organization',
+        ])
+        .getOne();
 
       if (property?.images) {
-          property.images = prependImagePrefixToUrls('', property.images);
+        property.images = prependImagePrefixToUrls('', property.images);
+      }
+
+      // Buscar usuario relacionado si existe user_id
+      if (property?.user_id && property.organization_id) {
+        const userRepo = this.dataSource.getRepository('users');
+        const user = await userRepo.findOne({
+          where: {
+            id: property.user_id,
+            organization_id: property.organization_id,
+            deleted: false,
+          },
+          select: ['id', 'name', 'email', 'phone'],
+        });
+        if (user) {
+          (property as any).user = {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            phone: user.phone,
+          };
+        }
       }
     }
 
