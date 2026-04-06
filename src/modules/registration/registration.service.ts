@@ -361,10 +361,20 @@ export class RegistrationService {
 
       // 4. Send welcome email (non-blocking)
       try {
-        await this.emailService.sendProfessionalWelcomeEmailValidated(
-          savedUser.email,
-          savedUser.name
-        );
+        if(adminUser.is_verified) {
+          await this.emailService.sendProfessionalWelcomeEmailValidated(
+            savedUser.email,
+            savedUser.name
+          );
+        } else {
+          const verificationToken = await this.usersService.setEmailVerificationToken(savedUser.id);
+          await this.emailService.sendProfessionalWelcomeEmail(
+            savedUser.email,
+            savedUser.name,
+            verificationToken
+          );
+        }
+
         this.logger.log(`Welcome email sent to ${savedUser.email}`);
       } catch (emailError) {
         this.logger.error(`Error sending welcome email to ${savedUser.email}: ${emailError}`);
