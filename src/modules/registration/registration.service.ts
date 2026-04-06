@@ -367,7 +367,7 @@ export class RegistrationService {
             savedUser.name
           );
         } else {
-          const verificationToken = await this.usersService.setEmailVerificationToken(savedUser.id);
+          const verificationToken = await this.usersService.setEmailVerificationToken(savedUser.id, manager);
           await this.emailService.sendProfessionalWelcomeEmail(
             savedUser.email,
             savedUser.name,

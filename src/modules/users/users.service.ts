@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, EntityManager } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
@@ -189,13 +189,18 @@ export class UsersService {
   /**
    * Establece el token de verificación de email (sin expiración)
    */
-  async setEmailVerificationToken(userId: number): Promise<string> {
-    const user = await this.findById(userId);
+  async setEmailVerificationToken(userId: number, manager?: EntityManager): Promise<string> {
+    const repository = manager ? manager.getRepository(User) : this.usersRepository;
+    
+    const user = await repository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new NotFoundException('User not found with id: ' + userId);
+    }
+    
     const token = this.generateEmailVerificationToken();
-
     user.email_verification_token = token;
 
-    await this.usersRepository.save(user);
+    await repository.save(user);
     return token;
   }
 
