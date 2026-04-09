@@ -37,20 +37,21 @@ export class TokkoMigratorService {
 			this.logger.debug('[TokkoSync] Sync disabled via FEATURE_FLAG_TOKKO_SYNC=false');
 			return;
 		}
-/*
-    await this.migrateCountries();
-    await this.migrateStates();
-    await this.migrateLocations();
-    await this.migrateDivisions();
-*/
+
     try {
-      //ejecutar una unica vez la normalización de states y locations para countryId=1 (Argentina) O EL COUNTRY QUE SE REQUIERA
+
+      // Ejecutar una unica vez la normalización de states y locations para countryId=1 (Argentina) O EL COUNTRY QUE SE REQUIERA
       // Luego ejecutar periódicamente la normalización de sublocations para mantener actualizada la info. 
       // Una vez todas las locations esten migradas y las sublocations tengan su nuevo type y full location podemos ejecutar 
       // una ultima normalizacion para todos los campos q no tengan full location guardado por algun motivo 
-      await this.normalizeSubLocationsByCountry(1);
-      await this.migrateMissingFullLocationsByCountry(1);
-      
+      // normalizeFullLocationsByCountry 
+
+
+      //await this.normalizeStatesByCountry(1);
+      //await this.normalizeLocationsByCountry(1);
+      //await this.normalizeSubLocationsByCountry(1);
+      await this.normalizeFullLocationsByCountry(1);
+
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
     } catch (e) {
       this.logger.error('Error en normalización de sublocations', e);
@@ -58,6 +59,249 @@ export class TokkoMigratorService {
     this.logger.log('Migración automática finalizada.');
   }
 
+  /**
+   * Normaliza los states de un país: actualiza country_id, parent_id, full_location y short_location
+   */
+  async normalizeStatesByCountry(countryId: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      // Obtener states desde Tokko
+      const response = await axios.get(`${API_COUNTRY}${countryId}/?lang=es_ar&format=json`);
+      const detail = response.data;
+      if (Array.isArray(detail.states)) {
+        for (const state of detail.states) {
+          // Crear o actualizar el state en la DB
+          const dbState = await queryRunner.manager.findOne('locations', { where: { id: state.id } }) as LocationDb | null;
+          const updateData: any = {
+            name: state.name,
+            type: 'state',
+            country_id: countryId,
+            parent_id: countryId,
+          };
+          updateData.full_location = state.name;
+          if (!dbState || !dbState.short_location) {
+            if (state.short_location) updateData.short_location = state.short_location;
+          }
+
+          if (dbState) {
+            await queryRunner.manager.update('locations', { id: state.id }, updateData);
+            this.logger.log(`[normalizeStatesByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
+          } else {
+            await queryRunner.manager.insert('locations', {
+              id: state.id,
+              migrated: false,
+              ...updateData,
+            });
+            this.logger.log(`[normalizeStatesByCountry] State insertado: ${state.name} (ID: ${state.id})`);
+          }
+        }
+      }
+    } catch (e) {
+      this.logger.error(`[normalizeStatesByCountry] Error para country ${countryId}`, e);
+    }
+    await queryRunner.release();
+  }
+
+  /**
+   * Normaliza locations de un país (o de un state específico): country_id, migrated, full_location, short_location
+   */
+  async normalizeLocationsByCountry(countryId: number, stateId?: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      // Buscar states a procesar
+      let states: Location[] = [];
+      if (stateId) {
+        const state = await queryRunner.manager.getRepository(Location).findOne({ where: { id: stateId, type: 'state' } });
+        if (state) states = [state];
+      } else {
+        states = await queryRunner.manager.getRepository(Location).find({
+          where: { type: 'state', country_id: countryId },
+          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
+        });
+      }
+      for (const state of states) {
+        // Actualizar state en DB
+        const updateState: any = { migrated: false };
+        // Obtener info de Tokko
+        const response = await axios.get(`${API_STATE}${state.id}/?lang=es_ar&format=json`);
+        const detail = response.data;
+        await queryRunner.manager.update('locations', { id: state.id }, updateState);
+        this.logger.log(`[normalizeLocationsByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
+
+        // Obtener locations desde Tokko
+        if (Array.isArray(detail.divisions)) {
+          for (const location of detail.divisions) {
+            const dbLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: location.id } });
+            const updateLoc: any = {
+              name: location.name,
+              type: 'location',
+              parent_id: state.id,
+              country_id: countryId,
+              migrated: false,
+            };
+            updateLoc.full_location = location.name + ', ' + state.name;
+            if (location.short_location) updateLoc.short_location = location.short_location;
+
+            if (dbLocation) {
+              await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+              this.logger.log(`[normalizeLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
+            } else {
+              await queryRunner.manager.insert('locations', {
+                id: location.id,
+                ...updateLoc,
+              });
+              this.logger.log(`[normalizeLocationsByCountry] Location insertado: ${location.name} (ID: ${location.id})`);
+            }
+          }
+        }
+        // Al terminar, marcar el state como migrado
+        await queryRunner.manager.update('locations', { id: state.id }, { migrated: true });
+      }
+    } catch (e) {
+      this.logger.error(`[normalizeLocationsByCountry] Error para country ${countryId}`, e);
+    }
+    await queryRunner.release();
+  }
+
+  /**
+   * Normaliza sublocations (divisions) de un país o de una location específica
+   */
+  async normalizeSubLocationsByCountry(countryId: number, locationId?: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      // Buscar locations a procesar
+      let locations: Location[] = [];
+      if (locationId) {
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: locationId, type: 'location' } });
+        if (loc) locations = [loc];
+      } else {
+        locations = await queryRunner.manager.getRepository(Location).find({
+          where: { type: 'location', country_id: countryId, migrated: false },
+          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
+        });
+      }
+      for (const location of locations) {
+        // Obtener info de Tokko
+        const response = await axios.get(`${API_LOCATION}${location.id}/?lang=es_ar&format=json`);
+        const detail = response.data;
+        // Actualizar location en DB
+        const updateLoc: any = {};
+        if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
+          updateLoc.migrated = false;
+        } else {
+          updateLoc.migrated = true;
+        }
+        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+        this.logger.log(`[normalizeSubLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
+
+        // Procesar divisions
+        if (Array.isArray(detail.divisions)) {
+          let allDivisionsOk = true;
+          for (const division of detail.divisions) {
+            const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
+            const updateDiv: any = {
+              name: division.name,
+              type: 'sub_location',
+              parent_id: location.id,
+              country_id: countryId,
+              migrated: true,
+              full_location: division.name + ', ' + location.name,
+            };
+            if (division.short_location) updateDiv.short_location = division.short_location;
+            try {
+              if (dbDivision) {
+                await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                this.logger.log(`[normalizeSubLocationsByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
+              } else {
+                await queryRunner.manager.insert('locations', {
+                  id: division.id,
+                  ...updateDiv,
+                });
+                this.logger.log(`[normalizeSubLocationsByCountry] Division insertada: ${division.name} (ID: ${division.id})`);
+              }
+            } catch (err) {
+              allDivisionsOk = false;
+              this.logger.error(`[normalizeSubLocationsByCountry] Error actualizando division ${division.id}`, err);
+            }
+          }
+          // Si todas las divisions OK, marcar location como migrada
+          if (allDivisionsOk) {
+            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+          }
+        }
+      }
+    } catch (e) {
+      this.logger.error(`[normalizeSubLocationsByCountry] Error para country ${countryId}`, e);
+    }
+    await queryRunner.release();
+  }
+
+  /**
+   * Migra y completa el campo full_location para cualquier location (state, location, sub_location)
+   * que tenga full_location vacío, para un country dado.
+   * Consulta la API correspondiente según el tipo.
+   */
+  async normalizeFullLocationsByCountry(countryId: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      // Buscar todas las locations del país con full_location vacío
+      // Buscar los que tienen full_location NULL o string vacío
+      const locations: Location[] = await queryRunner.manager.getRepository(Location)
+        .createQueryBuilder('location')
+        .where('location.country_id = :countryId', { countryId })
+        .andWhere('(location.full_location IS NULL OR location.full_location = \'\')')
+        .select(['location.id', 'location.type', 'location.country_id', 'location.parent_id', 'location.full_location', 'location.short_location'])
+        .limit(80)
+        .getMany();
+      for (const loc of locations) {
+        let apiUrl = '';
+        if (loc.type === 'state') {
+          apiUrl = `${API_STATE}${loc.id}/?lang=es_ar&format=json`;
+        } else if (loc.type === 'location' || loc.type === 'sub_location') {
+          apiUrl = `${API_LOCATION}${loc.id}/?lang=es_ar&format=json`;
+        } else {
+          continue; // ignorar otros tipos
+        }
+        try {
+          const response = await axios.get(apiUrl);
+          const detail = response.data;
+          const updateData: any = {};
+
+          if (loc.type === 'state') {
+            updateData.full_location = detail.name || loc.name || '';
+          } else if (loc.type === 'location') {
+            const parentState = await queryRunner.manager.getRepository(Location).findOne({ where: { id: loc.parent_id } });
+            const stateName = parentState?.name || '';
+            updateData.full_location = detail.name ? `${detail.name}, ${stateName}` : (loc.name ? `${loc.name}, ${stateName}` : '');
+          } else if (loc.type === 'sub_location') {
+            const parentLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: loc.parent_id } });
+            const locationName = parentLocation?.name || '';
+            const parentState = parentLocation ? await queryRunner.manager.getRepository(Location).findOne({ where: { id: parentLocation.parent_id } }) : null;
+            const stateName = parentState?.name || '';
+            updateData.full_location = detail.name ? `${detail.name}, ${locationName}, ${stateName}` : (loc.name ? `${loc.name}, ${locationName}, ${stateName}` : '');
+          }
+
+          if (detail.short_location) updateData.short_location = detail.short_location;
+          if (Object.keys(updateData).length > 0) {
+            await queryRunner.manager.update('locations', { id: loc.id }, updateData);
+            this.logger.log(`[normalizeFullLocationsByCountry] Location actualizada: ${loc.id} (${loc.type})`);
+          }
+        } catch (err) {
+          this.logger.error(`[normalizeFullLocationsByCountry] Error actualizando location ${loc.id} (${loc.type})`, err);
+        }
+      }
+    } catch (e) {
+      this.logger.error(`[normalizeFullLocationsByCountry] Error general para country ${countryId}`, e);
+    }
+    await queryRunner.release();
+  }
+
+  /************** Migracion basica, reemplazada por la migracion avanzada con normalizacion completa **************/
+  
   async migrateCountries() {
     try {
       const response = await axios.get(API_COUNTRIES);
@@ -215,202 +459,4 @@ export class TokkoMigratorService {
     await queryRunner.release();
   }
 
-    /**
-   * Normaliza los states de un país: actualiza country_id, parent_id, full_location y short_location
-   */
-  async normalizeStatesByCountry(countryId: number) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    try {
-      // Obtener states desde Tokko
-      const response = await axios.get(`${API_COUNTRY}${countryId}/?lang=es_ar&format=json`);
-      const detail = response.data;
-      if (Array.isArray(detail.states)) {
-        for (const state of detail.states) {
-          // Actualizar el state en la DB
-          const dbState = await queryRunner.manager.findOne('locations', { where: { id: state.id } }) as LocationDb | null;
-          if (!dbState) continue;
-          const updateData: any = {
-            country_id: countryId,
-            parent_id: countryId,
-          };
-          if (dbState && !dbState.full_location && state.full_location) updateData.full_location = state.full_location;
-          if (dbState && !dbState.short_location && state.short_location) updateData.short_location = state.short_location;
-          await queryRunner.manager.update('locations', { id: state.id }, updateData);
-          this.logger.log(`[normalizeStatesByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
-        }
-      }
-    } catch (e) {
-      this.logger.error(`[normalizeStatesByCountry] Error para country ${countryId}`, e);
-    }
-    await queryRunner.release();
-  }
-
-  /**
-   * Normaliza locations de un país (o de un state específico): country_id, migrated, full_location, short_location
-   */
-  async normalizeLocationsByCountry(countryId: number, stateId?: number) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    try {
-      // Buscar states a procesar
-      let states: Location[] = [];
-      if (stateId) {
-        const state = await queryRunner.manager.getRepository(Location).findOne({ where: { id: stateId, type: 'state' } });
-        if (state) states = [state];
-      } else {
-        states = await queryRunner.manager.getRepository(Location).find({
-          where: { type: 'state', country_id: countryId },
-          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
-        });
-      }
-      for (const state of states) {
-        // Actualizar state en DB
-        const updateState: any = { country_id: countryId, migrated: false };
-        // Obtener info de Tokko
-        const response = await axios.get(`${API_STATE}${state.id}/?lang=es_ar&format=json`);
-        const detail = response.data;
-        if (detail.full_location) updateState.full_location = detail.full_location;
-        if (detail.short_location) updateState.short_location = detail.short_location;
-        await queryRunner.manager.update('locations', { id: state.id }, updateState);
-        this.logger.log(`[normalizeLocationsByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
-
-        // Obtener locations desde Tokko
-        if (Array.isArray(detail.divisions)) {
-          for (const location of detail.divisions) {
-            const dbLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: location.id } });
-            if (!dbLocation) continue;
-            const updateLoc: any = {
-              parent_id: state.id,
-              country_id: countryId,
-              migrated: false,
-            };
-            if (location.full_location) updateLoc.full_location = location.full_location;
-            if (location.short_location) updateLoc.short_location = location.short_location;
-            await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
-            this.logger.log(`[normalizeLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
-          }
-        }
-        // Al terminar, marcar el state como migrado
-        await queryRunner.manager.update('locations', { id: state.id }, { migrated: true });
-      }
-    } catch (e) {
-      this.logger.error(`[normalizeLocationsByCountry] Error para country ${countryId}`, e);
-    }
-    await queryRunner.release();
-  }
-
-  /**
-   * Normaliza sublocations (divisions) de un país o de una location específica
-   */
-  async normalizeSubLocationsByCountry(countryId: number, locationId?: number) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    try {
-      // Buscar locations a procesar
-      let locations: Location[] = [];
-      if (locationId) {
-        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: locationId, type: 'location' } });
-        if (loc) locations = [loc];
-      } else {
-        locations = await queryRunner.manager.getRepository(Location).find({
-          where: { type: 'location', country_id: countryId, migrated: false },
-          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
-        });
-      }
-      for (const location of locations) {
-        // Obtener info de Tokko
-        const response = await axios.get(`${API_LOCATION}${location.id}/?lang=es_ar&format=json`);
-        const detail = response.data;
-        // Actualizar location en DB
-        const updateLoc: any = {};
-        if (detail.full_location) updateLoc.full_location = detail.full_location;
-        if (detail.short_location) updateLoc.short_location = detail.short_location;
-        if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
-          updateLoc.migrated = false;
-        } else {
-          updateLoc.migrated = true;
-        }
-        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
-        this.logger.log(`[normalizeSubLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
-
-        // Procesar divisions
-        if (Array.isArray(detail.divisions)) {
-          let allDivisionsOk = true;
-          for (const division of detail.divisions) {
-            const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
-            if (!dbDivision) continue;
-            const updateDiv: any = {
-              type: 'sub_location',
-              country_id: countryId,
-              migrated: true,
-            };
-            if (division.full_location) updateDiv.full_location = division.full_location;
-            if (division.short_location) updateDiv.short_location = division.short_location;
-            try {
-              await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
-              this.logger.log(`[normalizeSubLocationsByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
-            } catch (err) {
-              allDivisionsOk = false;
-              this.logger.error(`[normalizeSubLocationsByCountry] Error actualizando division ${division.id}`, err);
-            }
-          }
-          // Si todas las divisions OK, marcar location como migrada
-          if (allDivisionsOk) {
-            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
-          }
-        }
-      }
-    } catch (e) {
-      this.logger.error(`[normalizeSubLocationsByCountry] Error para country ${countryId}`, e);
-    }
-    await queryRunner.release();
-  }
-
-  /**
-   * Migra y completa el campo full_location para cualquier location (state, location, sub_location)
-   * que tenga full_location vacío, para un country dado.
-   * Consulta la API correspondiente según el tipo.
-   */
-  async migrateMissingFullLocationsByCountry(countryId: number) {
-    const queryRunner = this.dataSource.createQueryRunner();
-    await queryRunner.connect();
-    try {
-      // Buscar todas las locations del país con full_location vacío
-      // Buscar los que tienen full_location NULL o string vacío
-      const locations: Location[] = await queryRunner.manager.getRepository(Location)
-        .createQueryBuilder('location')
-        .where('location.country_id = :countryId', { countryId })
-        .andWhere('(location.full_location IS NULL OR location.full_location = \'\')')
-        .select(['location.id', 'location.type', 'location.country_id', 'location.parent_id', 'location.full_location', 'location.short_location'])
-        .limit(80)
-        .getMany();
-      for (const loc of locations) {
-        let apiUrl = '';
-        if (loc.type === 'state') {
-          apiUrl = `${API_STATE}${loc.id}/?lang=es_ar&format=json`;
-        } else if (loc.type === 'location' || loc.type === 'sub_location') {
-          apiUrl = `${API_LOCATION}${loc.id}/?lang=es_ar&format=json`;
-        } else {
-          continue; // ignorar otros tipos
-        }
-        try {
-          const response = await axios.get(apiUrl);
-          const detail = response.data;
-          const updateData: any = {};
-          if (detail.full_location) updateData.full_location = detail.full_location;
-          if (detail.short_location) updateData.short_location = detail.short_location;
-          if (Object.keys(updateData).length > 0) {
-            await queryRunner.manager.update('locations', { id: loc.id }, updateData);
-            this.logger.log(`[migrateMissingFullLocationsByCountry] Location actualizada: ${loc.id} (${loc.type})`);
-          }
-        } catch (err) {
-          this.logger.error(`[migrateMissingFullLocationsByCountry] Error actualizando location ${loc.id} (${loc.type})`, err);
-        }
-      }
-    } catch (e) {
-      this.logger.error(`[migrateMissingFullLocationsByCountry] Error general para country ${countryId}`, e);
-    }
-    await queryRunner.release();
-  }
 }

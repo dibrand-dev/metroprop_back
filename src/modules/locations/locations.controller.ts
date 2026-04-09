@@ -33,10 +33,10 @@ export class LocationsController {
     return { ok: true };
   }
 */
-  @Get('migrate-missing-full-locations')
-  async migrateMissingFullLocations(@Query('countryId') countryId: number) {
+  @Get('normalize-full-locations')
+  async normalizeFullLocationsByCountry(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
-    await this.migrator.migrateMissingFullLocationsByCountry(Number(countryId));
+    await this.migrator.normalizeFullLocationsByCountry(Number(countryId));
     return { ok: true };
   }
 

@@ -975,7 +975,7 @@ export class PropertiesService {
     // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
     const mapQb = this.buildAdvancedSearchQuery(filters);
     const mapData = await mapQb
-      .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.reference_code'])
+      .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.price_square_meter', 'p.reference_code'])
       .andWhere('p.geo_lat IS NOT NULL')
       .andWhere('p.geo_long IS NOT NULL')
       .getRawMany()
