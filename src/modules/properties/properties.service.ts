@@ -985,6 +985,7 @@ export class PropertiesService {
           lat: parseFloat(r.p_geo_lat),
           lng: parseFloat(r.p_geo_long),
           price: r.p_price,
+          price_square_meter: r.p_price_square_meter,
           reference_code: r.p_reference_code,
         }))
       );
