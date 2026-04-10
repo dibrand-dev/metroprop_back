@@ -25,7 +25,10 @@ import {
   PropertyStatus,
   MediaUploadStatus,
   Currency,
+  PropertyType,
 } from '../../common/enums';
+import { CreateDevelopmentDto } from './dto/create-development.dto';
+import { UpdateDevelopmentDto } from './dto/update-development.dto';
 import { DataSource } from 'typeorm';
 import { THUMB_PREFIX } from '@/common/constants';
 import { accessSync } from 'fs';
@@ -399,6 +402,76 @@ export class PropertiesService {
     // Retornar la propiedad con todas sus relaciones cargadas
     const result = await this.findOne(savedProperty.id!);
     this.logger.log('[PropertiesService.create] Propiedad creada (findOne):', JSON.stringify(result, null, 2));
+    return warnings.length > 0 ? { data: result, warnings } : { data: result };
+  }
+
+  /**
+   * Crea un emprendimiento (propiedad de tipo EMPRENDIMIENTO).
+   * Toda la gestión de imágenes, tags, videos y adjuntos funciona igual que en create().
+   */
+  async createDevelopment(
+    createDevelopmentDto: CreateDevelopmentDto,
+  ): Promise<{ data: Property; warnings?: string[] }> {
+    const { images, tags, videos, multimedia360, attached, ...propertyData } = createDevelopmentDto as any;
+
+    const existingProperty = await this.propertyRepository.findOne({
+      where: { reference_code: propertyData.reference_code },
+    });
+    if (existingProperty) {
+      throw new BadRequestException('Una propiedad con este código de referencia ya existe');
+    }
+
+    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+      {
+        ...propertyData,
+        is_development: true,
+        property_type: PropertyType.EMPRENDIMIENTO,
+        operation_type: propertyData.operation_type ?? 1,
+        price: propertyData.price ?? 0,
+        currency: propertyData.currency ?? Currency.USD,
+        status: propertyData.status ?? PropertyStatus.DRAFT,
+        deleted: false,
+      },
+      { tags, videos, multimedia360, images, attached },
+    );
+
+    const result = await this.findOne(savedProperty.id!);
+    return warnings.length > 0 ? { data: result, warnings } : { data: result };
+  }
+
+  /**
+   * Actualiza un emprendimiento existente.
+   */
+  async updateDevelopment(
+    id: number,
+    updateDevelopmentDto: UpdateDevelopmentDto,
+  ): Promise<{ data: Property; warnings?: string[] }> {
+    const { tags, ...propertyData } = updateDevelopmentDto;
+    const property = await this.findOne(id);
+
+    if (!property.is_development) {
+      throw new BadRequestException('La propiedad especificada no es un emprendimiento');
+    }
+
+    if (
+      updateDevelopmentDto.reference_code &&
+      updateDevelopmentDto.reference_code !== property.reference_code
+    ) {
+      const existingProperty = await this.propertyRepository.findOne({
+        where: { reference_code: updateDevelopmentDto.reference_code },
+      });
+      if (existingProperty) {
+        throw new BadRequestException('Una propiedad con este código de referencia ya existe');
+      }
+    }
+
+    const { warnings } = await this.propertyWriteService.updatePropertyCore(
+      property,
+      propertyData,
+      { tags },
+    );
+
+    const result = await this.findOne(id);
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
 

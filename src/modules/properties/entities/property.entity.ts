@@ -289,6 +289,34 @@ export class Property {
   @Column({ type: 'varchar', length: 255, nullable: true })
   development?: string;
 
+  // ========== Emprendimiento ==========
+  @Column({ type: 'boolean', default: false, nullable: true })
+  is_development?: boolean;
+
+  @Column({ type: 'integer', nullable: true })
+  development_id?: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  development_type?: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  development_logo?: string;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  development_logo_status?: string;
+
+  @Column({ type: 'integer', nullable: true, default: 0 })
+  development_logo_retry_count?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  development_units_total?: number;
+
+  @Column({ type: 'date', nullable: true })
+  development_delivery_date?: Date;
+
+  @Column({ type: 'integer', nullable: true })
+  development_available_unit_count?: number;
+
   // ========== Información de Red ==========
   @Column({ type: 'text', nullable: true })
   network_information?: string;

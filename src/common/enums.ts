@@ -28,6 +28,7 @@ export enum PropertyType {
   LOCAL_COMERCIAL = 15,       // Local comercial
   OFICINA_COMERCIAL = 16,     // Oficina comercial
   QUINTA_VACACIONAL = 17,     // Quinta vacacional
+  EMPRENDIMIENTO = 18,          // Emprendimiento
 }
 
 /**
