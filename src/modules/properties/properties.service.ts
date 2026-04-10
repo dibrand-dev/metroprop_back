@@ -46,6 +46,11 @@ export interface PropertyCard {
   long?: number;
 }
 
+type PolygonPoint = {
+  lat: number;
+  lng: number;
+};
+
 @Injectable()
 export class PropertiesService {
   private readonly logger = new Logger(PropertiesService.name);
@@ -109,6 +114,79 @@ export class PropertiesService {
     if (errors.length > 0) {
       throw new BadRequestException(`Errores de validación de archivos: ${errors.join('; ')}`);
     }
+  }
+
+  private parsePolygon(polygon: string): PolygonPoint[] {
+    const rawValue = typeof polygon === 'string' ? polygon.trim() : '';
+    if (!rawValue) {
+      throw new BadRequestException('El polígono no puede estar vacío');
+    }
+
+    let normalizedPolygon = rawValue;
+    try {
+      normalizedPolygon = decodeURIComponent(rawValue);
+    } catch {
+      normalizedPolygon = rawValue;
+    }
+
+    const points: PolygonPoint[] = [];
+    const pointRegex = /LatLng\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = pointRegex.exec(normalizedPolygon)) !== null) {
+      const lat = Number.parseFloat(match[1]);
+      const lng = Number.parseFloat(match[2]);
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new BadRequestException('El polígono contiene coordenadas inválidas');
+      }
+
+      points.push({ lat, lng });
+    }
+
+    if (points.length < 3) {
+      throw new BadRequestException('El polígono debe tener al menos 3 puntos válidos');
+    }
+
+    return points;
+  }
+
+  private applyPolygonFilter(qb: any, polygonPoints: PolygonPoint[]) {
+    const latitudes = polygonPoints.map((point) => point.lat);
+    const longitudes = polygonPoints.map((point) => point.lng);
+
+    qb.andWhere('p.geo_lat IS NOT NULL')
+      .andWhere('p.geo_long IS NOT NULL')
+      .andWhere('p.geo_lat BETWEEN :polygonMinLat AND :polygonMaxLat', {
+        polygonMinLat: Math.min(...latitudes),
+        polygonMaxLat: Math.max(...latitudes),
+      })
+      .andWhere('p.geo_long BETWEEN :polygonMinLng AND :polygonMaxLng', {
+        polygonMinLng: Math.min(...longitudes),
+        polygonMaxLng: Math.max(...longitudes),
+      });
+
+    const edgeChecks: string[] = [];
+    const parameters: Record<string, number> = {};
+
+    for (let index = 0; index < polygonPoints.length; index++) {
+      const currentPoint = polygonPoints[index];
+      const nextPoint = polygonPoints[(index + 1) % polygonPoints.length];
+      const currentLatKey = `polygonLat${index}`;
+      const currentLngKey = `polygonLng${index}`;
+      const nextLatKey = `polygonNextLat${index}`;
+      const nextLngKey = `polygonNextLng${index}`;
+
+      parameters[currentLatKey] = currentPoint.lat;
+      parameters[currentLngKey] = currentPoint.lng;
+      parameters[nextLatKey] = nextPoint.lat;
+      parameters[nextLngKey] = nextPoint.lng;
+
+      // PostgreSQL: use != for not equal, cast to float, and avoid NULLs
+      edgeChecks.push(`CASE WHEN (((CAST(:${currentLatKey} AS float) > CAST(p.geo_lat AS float)) != (CAST(:${nextLatKey} AS float) > CAST(p.geo_lat AS float))) AND (CAST(p.geo_long AS float) < ((CAST(:${nextLngKey} AS float) - CAST(:${currentLngKey} AS float)) * (CAST(p.geo_lat AS float) - CAST(:${currentLatKey} AS float)) / NULLIF((CAST(:${nextLatKey} AS float) - CAST(:${currentLatKey} AS float)), 0) + CAST(:${currentLngKey} AS float)))) THEN 1 ELSE 0 END`);
+    }
+
+    qb.andWhere(`((${edgeChecks.join(' + ')}) % 2) = 1`, parameters);
   }
 
 
@@ -304,7 +382,10 @@ export class PropertiesService {
       }
     }
 
-    if (
+    if (filters.polygon) {
+      const polygonPoints = this.parsePolygon(filters.polygon);
+      this.applyPolygonFilter(qb, polygonPoints);
+    } else if (
       filters.southWestLat != null && filters.southWestLng != null &&
       filters.northEastLat != null && filters.northEastLng != null
     ) {
@@ -322,7 +403,7 @@ export class PropertiesService {
       const maxLng = Math.max(swLng, neLng);
       qb.andWhere('p.geo_lat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
       qb.andWhere('p.geo_long BETWEEN :minLng AND :maxLng', { minLng, maxLng });
-    } 
+    }
 
 /*
     if (filters.q) {

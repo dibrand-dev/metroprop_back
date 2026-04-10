@@ -258,6 +258,10 @@ export class SearchPropertiesDto {
   @Transform(({ value }) => value === undefined ? false : (value === 'true' || value === true || value === '1' || value === 1))
   @IsBoolean()
   full?: boolean = false;
+
+  @IsOptional()
+  @IsString()
+  polygon?: string;
 }
 
 /**
