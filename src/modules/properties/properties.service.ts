@@ -212,11 +212,11 @@ export class PropertiesService {
     }
 
     if (filters.price_m2_min != null) {
-      qb.andWhere('p.price_m2 >= :price_m2_min', { price_m2_min: filters.price_m2_min });
+      qb.andWhere('p.price_square_meter >= :price_m2_min', { price_m2_min: filters.price_m2_min });
     }
 
     if (filters.price_m2_max != null) {
-      qb.andWhere('p.price_m2 <= :price_m2_max', { price_m2_max: filters.price_m2_max });
+      qb.andWhere('p.price_square_meter <= :price_m2_max', { price_m2_max: filters.price_m2_max });
     }
 
     if (filters.roofed_surface_min != null) {
