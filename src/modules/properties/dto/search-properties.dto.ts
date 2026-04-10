@@ -141,6 +141,19 @@ export class SearchPropertiesDto {
   @Min(0)
   price_max?: number;
 
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  price_m2_max?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsNumber()
+  @Min(0)
+  price_m2_min?: number;
+
   // ========== Superficies ==========
 
   @IsOptional()
