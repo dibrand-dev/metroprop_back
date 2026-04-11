@@ -193,6 +193,7 @@ CREATE TABLE IF NOT EXISTS public.locations (
 	short_location varchar NULL,
 	parent_id int4 NULL,
 	country_id int4 null,
+    state_id integer NULL,
 	"type" varchar NOT NULL,
 	migrated bool DEFAULT false NOT NULL,
 	status varchar NULL,
