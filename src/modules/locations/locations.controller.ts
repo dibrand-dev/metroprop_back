@@ -61,8 +61,8 @@ export class LocationsController {
   }
 
   @Get('getAllLocations')
-  @UseInterceptors(CacheInterceptor)
-  @CacheTTL(86400) // 1 día en segundos
+  //@UseInterceptors(CacheInterceptor)
+  //@CacheTTL(86400) // 1 día en segundos
   getAllLocations(@Query('country_id') countryId?: string | number) {
     return this.locationsService.getAllLocations(countryId);
   }
