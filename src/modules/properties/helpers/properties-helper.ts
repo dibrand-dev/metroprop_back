@@ -1,11 +1,7 @@
 import 'dotenv/config';
-import { Repository } from 'typeorm';
 import { Property } from '../entities/property.entity';
 import { PropertyImage } from '../entities/property-image.entity';
 
-
-
-const S3_BUCKET_URL = process.env.AWS_S3_BUCKET_URL || '';
 /**
  * Devuelve un nuevo array de PropertyImage con el prefijo insertado en el nombre del archivo.
  * Si el prefijo es vacío, retorna la url original.
@@ -30,28 +26,48 @@ export function prependImagePrefixToUrls(prefix: string, images: PropertyImage[]
 }
 
 /**
- * Calcula el precio por metro cuadrado.
- * Si se proveen surface y price, usa esos valores.
- * Si solo se provee id, busca la propiedad y usa sus valores.
- * Devuelve undefined si no se puede calcular.
+ * Calcula el precio por metro cuadrado de una propiedad.
+ * Si recibe un id (number), busca la property en la base y calcula.
+ * Si recibe un objeto, usa sus datos (surface, total_surface, roofed_surface, price).
+ * Prioridad de superficie: surface > total_surface > roofed_surface
+ * @param input id de property o datos de property
+ * @param propertyRepo Repositorio de Property (inyectado por el service)
+ * @returns number | undefined
  */
+import { Repository } from 'typeorm';
 export async function calculateSquareMetterPrice(
-  params: { id?: number; surface?: number; price?: number },
+  input: number | Record<string, any>,
   propertyRepo: Repository<Property>
 ): Promise<number | undefined> {
-  let surface = params.surface;
-  let price = params.price;
-  if ((surface === undefined || price === undefined) && params.id !== undefined) {
-    // Buscar la propiedad solo por los campos necesarios
+  let surface: number | undefined;
+  let price: number | undefined;
+  let data: any = input;
+  if (typeof input === 'number') {
+    // Buscar property por id
     const prop = await propertyRepo.findOne({
-      where: { id: params.id },
-      select: ['surface', 'price'],
+      where: { id: input },
+      select: ['surface', 'total_surface', 'roofed_surface', 'price'],
     });
     if (!prop) return undefined;
-    if (surface === undefined) surface = prop.surface;
-    if (price === undefined) price = prop.price;
+    data = prop;
   }
-  if (surface !== undefined && price !== undefined && surface > 0) {
+  // Obtener surface por prioridad
+  surface =
+    data.surface !== undefined && data.surface !== null
+      ? data.surface
+      : data.total_surface !== undefined && data.total_surface !== null
+      ? data.total_surface
+      : data.roofed_surface !== undefined && data.roofed_surface !== null
+      ? data.roofed_surface
+      : undefined;
+  price = data.price !== undefined && data.price !== null ? data.price : undefined;
+  if (
+    typeof surface === 'number' &&
+    !isNaN(surface) &&
+    surface > 0 &&
+    typeof price === 'number' &&
+    !isNaN(price)
+  ) {
     return Number(price) / Number(surface);
   }
   return undefined;
