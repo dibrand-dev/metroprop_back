@@ -357,11 +357,10 @@ export class PropertiesService {
       }
     }
 
-    if (filters.orientation) {
-      qb.andWhere('p.orientation = :orientation', { orientation: filters.orientation });
+    if (Array.isArray(filters.orientation) && filters.orientation.length > 0) {
+      qb.andWhere('p.orientation IN (:...orientation)', { orientation: filters.orientation });
     }
 
-   
     if (Array.isArray(filters.disposition) && filters.disposition.length > 0) {
       qb.andWhere('p.dispositions IN (:...disposition)', {
         disposition: filters.disposition,
@@ -980,7 +979,8 @@ export class PropertiesService {
       // Si no vienen coordenadas especificas, obtenemos el tipo de locationId a filtrar en base al id que nos llega en el filtrado
       if (
       filters.southWestLat == null && filters.southWestLng == null &&
-      filters.northEastLat == null && filters.northEastLng == null
+      filters.northEastLat == null && filters.northEastLng == null && 
+      filters.polygon == null
       ) {
         const locationRepo = this.dataSource.getRepository('locations');
         const location = await locationRepo.findOne({ where: { id: filters.location_id } });

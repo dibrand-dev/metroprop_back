@@ -229,8 +229,9 @@ export class SearchPropertiesDto {
   direct_owner?: boolean;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
+  @Transform(({ value }) => parseIntArray(value))
+  @IsArray()
+  @IsInt({ each: true })
   orientation?: number;
 
 
