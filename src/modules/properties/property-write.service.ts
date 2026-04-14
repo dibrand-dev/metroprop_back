@@ -65,8 +65,9 @@ export class PropertyWriteService {
     try {
       // Calcular price_square_meter antes de crear la entidad
       let price_square_meter: number | undefined = undefined;
-      if (scalars.surface !== undefined && scalars.price !== undefined) {
-        price_square_meter = await calculateSquareMetterPrice({ surface: scalars.surface, price: scalars.price }, this.propertyRepo);
+      if ( ( scalars.surface !== undefined || scalars.total_surface !== undefined || scalars.roofed_surface !== undefined ) && scalars.price !== undefined ) {
+        const meters = scalars.surface ?? scalars.total_surface ?? scalars.roofed_surface;
+        price_square_meter = await calculateSquareMetterPrice({ surface: meters, price: scalars.price }, this.propertyRepo);
       }
       const newProperty: Property = this.propertyRepo.create({
         ...scalars,
