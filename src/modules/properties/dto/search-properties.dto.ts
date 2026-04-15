@@ -232,7 +232,7 @@ export class SearchPropertiesDto {
   @Transform(({ value }) => parseIntArray(value))
   @IsArray()
   @IsInt({ each: true })
-  orientation?: number;
+  orientation?: number[];
 
 
   @IsOptional()
