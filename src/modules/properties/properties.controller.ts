@@ -7,6 +7,7 @@ import {
   Delete,
   Param,
   Query,
+  Req,
   HttpCode,
   HttpStatus,
   ParseIntPipe,
@@ -29,6 +30,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
+import { Request } from 'express';
 
 @Controller('properties')
 export class PropertiesController {
@@ -88,7 +90,7 @@ export class PropertiesController {
 
     // Validación personalizada archivo por archivo
     this.propertiesService.validateUploadedFiles(safeFiles);
-    
+
     return this.propertiesService.saveMultimedia(
       propertyId,
       saveMultimediaDto,
@@ -134,17 +136,6 @@ export class PropertiesController {
   }
 
   /**
-   * GET /properties/service-status
-   * Obtener estado del servicio S3 y circuit breaker
-   * Nota: DEBE estar antes de GET :id para evitar conflicto
-   */
-  @Get('service-status')
-  @UseGuards(JwtAuthGuard)
-  async getServiceStatus() {
-    return this.propertiesService.getS3ServiceStatus();
-  }
-
-  /**
    * POST /properties
    * Crear nueva propiedad (con o sin relaciones)
    * 
@@ -182,15 +173,22 @@ export class PropertiesController {
 
   /**
    * GET /properties/mis-propiedades
-   * Listado privado por organization_id
+   * Listado privado de propiedades de la organización del usuario autenticado, con filtros y paginación
    */
   @Get('mis-propiedades')
   @UseGuards(JwtAuthGuard)
-  myProperties(@Query() searchDto: SearchPropertiesDto) {
-    if (!searchDto.organization_id) {
-      throw new BadRequestException('organization_id es obligatorio en mis-propiedades');
+  myProperties(
+    @Query() searchDto: SearchPropertiesDto,
+    @Req() request: Request,
+  ) {
+    const user = (request as any).user;
+    const organizationId = user?.organization_id ?? user?.organization?.id;
+
+    if (!organizationId) {
+      throw new BadRequestException('El usuario autenticado no tiene organization_id asociado');
     }
-    return this.propertiesService.searchPanelProperties(searchDto, searchDto.organization_id);
+
+    return this.propertiesService.searchPanelProperties(searchDto, organizationId);
   }
 
   /**
