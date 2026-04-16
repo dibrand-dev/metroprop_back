@@ -207,7 +207,7 @@ export class PropertiesController {
    * Solo para admins.
    */
   @Get('trigger-image-upload-cron')
-  @UseGuards(JwtAuthGuard /*, RolesGuard */)
+  @UseGuards(JwtAuthGuard , RolesGuard )
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   @HttpCode(HttpStatus.ACCEPTED)
   async triggerImageUploadCron() {
