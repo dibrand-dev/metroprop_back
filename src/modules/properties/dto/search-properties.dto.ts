@@ -229,9 +229,10 @@ export class SearchPropertiesDto {
   direct_owner?: boolean;
 
   @IsOptional()
-  @Type(() => Number)
-  @IsNumber()
-  orientation?: number;
+  @Transform(({ value }) => parseIntArray(value))
+  @IsArray()
+  @IsInt({ each: true })
+  orientation?: number[];
 
 
   @IsOptional()
@@ -258,6 +259,10 @@ export class SearchPropertiesDto {
   @Transform(({ value }) => value === undefined ? false : (value === 'true' || value === true || value === '1' || value === 1))
   @IsBoolean()
   full?: boolean = false;
+
+  @IsOptional()
+  @IsString()
+  polygon?: string;
 }
 
 /**

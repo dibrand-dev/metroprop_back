@@ -10,8 +10,6 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
-  UploadedFile,
-  UseInterceptors,
   UseGuards,
 } from '@nestjs/common';
 import { OrganizationsService } from './organizations.service';

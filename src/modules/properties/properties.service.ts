@@ -49,6 +49,11 @@ export interface PropertyCard {
   long?: number;
 }
 
+type PolygonPoint = {
+  lat: number;
+  lng: number;
+};
+
 @Injectable()
 export class PropertiesService {
   private readonly logger = new Logger(PropertiesService.name);
@@ -67,278 +72,6 @@ export class PropertiesService {
 
 
   /**
-   * Valida cada archivo individualmente para dar mensajes de error específicos
-   */
-  validateUploadedFiles(files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] }) {
-    const maxSize = 25 * 1024 * 1024; // 25MB
-    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
-    const errors: string[] = [];
-
-    // Validar imágenes
-    if (files.images?.length) {
-      files.images.forEach((file, index) => {
-        // Validar tamaño
-        if (file.size > maxSize) {
-          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-          errors.push(`Imagen "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
-        }
-        
-        // Validar tipo
-        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-          errors.push(`Imagen "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
-        }
-      });
-    }
-
-    // Validar archivos adjuntos
-    if (files.attached?.length) {
-      files.attached.forEach((file, index) => {
-        // Validar tamaño
-        if (file.size > maxSize) {
-          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-          errors.push(`Archivo "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
-        }
-        
-        // Validar tipo
-        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
-        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
-          errors.push(`Archivo "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
-        }
-      });
-    }
-
-    // Si hay errores, lanzar excepción con detalles
-    if (errors.length > 0) {
-      throw new BadRequestException(`Errores de validación de archivos: ${errors.join('; ')}`);
-    }
-  }
-
-
-  private buildAdvancedSearchQuery(
-    filters: SearchPropertiesDto,
-    options?: {
-      organizationId?: number;  
-      includeStatusFilter?: boolean;
-    },
-  ) {
-
-    const qb = this.propertyRepository
-      .createQueryBuilder('p')
-      .leftJoin('organizations', 'org', 'p.organization_id = org.id');
-
-    // Traer propiedades de inmobiliarias activas Y propiedades de dueño directo
-    qb.where('p.deleted = :deleted', { deleted: false })
-      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.direct_owner = true))', {
-        orgStatus: true,
-        orgDeleted: false,
-      });
-
-    const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
-
-    if (scopedOrganizationId != null) {
-      qb.andWhere('p.organization_id = :organization_id', {
-        organization_id: scopedOrganizationId,
-      });
-    }
-
-    if (filters.branch_id != null) {
-      qb.andWhere('p.branch_id = :branch_id', {
-        branch_id: filters.branch_id,
-      });
-    }
-
-    if (filters.user_id != null) {
-      qb.andWhere('p.user_id = :user_id', {
-        user_id: filters.user_id,
-      });
-    }
-
-    if (options?.includeStatusFilter !== false && filters.status != null) {
-      qb.andWhere('p.status = :status', { status: filters.status });
-    } else {
-      qb.andWhere('p.status = :status', { status: PropertyStatus.DISPONIBLE });
-    }
-
-    if (filters.country_id != null) {
-      qb.andWhere('p.country_id = :country_id', {
-        country_id: filters.country_id,
-      });
-    }
-
-    if (filters.state_id != null) {
-      qb.andWhere('p.state_id = :state_id', { state_id: filters.state_id });
-    }
-
-    if (filters.location_id != null) {
-      qb.andWhere('p.location_id = :location_id', {
-        location_id: filters.location_id,
-      });
-    }
-
-    if (filters.sub_location_id != null) {
-      qb.andWhere('p.sub_location_id = :sub_location_id', {
-        sub_location_id: filters.sub_location_id,
-      });
-    }
-
-    if (Array.isArray(filters.property_type) && filters.property_type.length > 0) {
-      qb.andWhere('p.property_type IN (:...property_type)', {
-        property_type: filters.property_type,
-      });
-    }
-
-    // property subtype
-    if (Array.isArray(filters.property_subtype) && filters.property_subtype.length > 0) {
-      qb.andWhere('p.property_subtype IN (:...property_subtype)', {
-        property_subtype: filters.property_subtype,
-      });
-    }
-
-
-    if (Array.isArray(filters.operation_type) && filters.operation_type.length > 0) {
-      qb.andWhere('p.operation_type IN (:...operation_type)', {
-        operation_type: filters.operation_type,
-      });
-    }
-
-    if (filters.currency) {
-      qb.andWhere('p.currency = :currency', { currency: filters.currency });
-    }
-
-    if (filters.price_min != null) {
-      qb.andWhere('p.price >= :price_min', { price_min: filters.price_min });
-    }
-
-    if (filters.price_max != null) {
-      qb.andWhere('p.price <= :price_max', { price_max: filters.price_max });
-    }
-
-    if (filters.price_m2_min != null) {
-      qb.andWhere('p.price_square_meter >= :price_m2_min', { price_m2_min: filters.price_m2_min });
-    }
-
-    if (filters.price_m2_max != null) {
-      qb.andWhere('p.price_square_meter <= :price_m2_max', { price_m2_max: filters.price_m2_max });
-    }
-
-    if (filters.roofed_surface_min != null) {
-      qb.andWhere('p.roofed_surface >= :roofed_surface_min', {
-        roofed_surface_min: filters.roofed_surface_min,
-      });
-    }
-
-    if (filters.roofed_surface_max != null) {
-      qb.andWhere('p.roofed_surface <= :roofed_surface_max', {
-        roofed_surface_max: filters.roofed_surface_max,
-      });
-    }
-
-    if (filters.total_surface_min != null) {
-      qb.andWhere('p.total_surface >= :total_surface_min', {
-        total_surface_min: filters.total_surface_min,
-      });
-    }
-
-    if (filters.total_surface_max != null) {
-      qb.andWhere('p.total_surface <= :total_surface_max', {
-        total_surface_max: filters.total_surface_max,
-      });
-    }
-
-    if (Array.isArray(filters.bathroom_amount) && filters.bathroom_amount.length > 0) {
-      qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
-        bathroom_amount: filters.bathroom_amount,
-      });
-    }
-
-    if (Array.isArray(filters.room_amount) && filters.room_amount.length > 0) {
-      qb.andWhere('p.room_amount IN (:...room_amount)', {
-        room_amount: filters.room_amount,
-      });
-    }
-
-    if (Array.isArray(filters.suite_amount) && filters.suite_amount.length > 0) {
-      qb.andWhere('p.suite_amount IN (:...suite_amount)', {
-        suite_amount: filters.suite_amount,
-      });
-    }
-
-    if (Array.isArray(filters.parking_lot_amount) && filters.parking_lot_amount.length > 0) {
-      qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
-        parking_lot_amount: filters.parking_lot_amount,
-      });
-    }
-
-    if (filters.age) {
-      const ageRange = filters.age.split('-').map((v) => parseInt(v.trim(), 10));
-      if (ageRange.length === 2 && !isNaN(ageRange[0]) && !isNaN(ageRange[1])) {
-        qb.andWhere('p.age BETWEEN :age_min AND :age_max', { age_min: ageRange[0], age_max: ageRange[1] });
-      } else {
-        const age = parseInt(filters.age, 10);
-        if (!isNaN(age)) {
-          qb.andWhere('p.age = :age', { age });
-        }
-      }
-    }
-
-    if (filters.orientation) {
-      qb.andWhere('p.orientation = :orientation', { orientation: filters.orientation });
-    }
-
-   
-    if (Array.isArray(filters.disposition) && filters.disposition.length > 0) {
-      qb.andWhere('p.dispositions IN (:...disposition)', {
-        disposition: filters.disposition,
-      });
-    }
-
-    // ESTO ATENDER , TIENE Q TRAER EXACTAMENTE LAS QUE MARCAS..AHORA ESTA COMO UN "SI TIENE ALGUNO DE LOS MARCADOS TRAE"
-    if (Array.isArray(filters.tags) && filters.tags.length > 0) {
-      qb.leftJoin('property_tags', 'pt', 'pt.propertyId = p.id')
-        .andWhere('pt.tag_id IN (:...tags)', { tags: filters.tags });
-    }
-
-    if (filters.direct_owner !== undefined || filters.inmobiliaria !== undefined) {
-      if (filters.direct_owner !== undefined && filters.inmobiliaria === undefined) {
-        qb.andWhere('p.direct_owner = true');
-      } else if (filters.inmobiliaria !== undefined && filters.direct_owner === undefined) {       
-        qb.andWhere('p.direct_owner = false');
-      }
-    }
-
-    if (
-      filters.southWestLat != null && filters.southWestLng != null &&
-      filters.northEastLat != null && filters.northEastLng != null
-    ) {
-      // Parsear strings a números
-      const swLat = parseFloat(filters.southWestLat);
-      const swLng = parseFloat(filters.southWestLng);
-      const neLat = parseFloat(filters.northEastLat);
-      const neLng = parseFloat(filters.northEastLng);
-      if ([swLat, swLng, neLat, neLng].some(v => isNaN(v))) {
-        throw new BadRequestException('Las coordenadas del bounding box deben ser números válidos');
-      }
-      const minLat = Math.min(swLat, neLat);
-      const maxLat = Math.max(swLat, neLat);
-      const minLng = Math.min(swLng, neLng);
-      const maxLng = Math.max(swLng, neLng);
-      qb.andWhere('p.geo_lat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
-      qb.andWhere('p.geo_long BETWEEN :minLng AND :maxLng', { minLng, maxLng });
-    } 
-
-/*
-    if (filters.q) {
-      qb.andWhere(
-        '(p.publication_title ILIKE :q OR p.street ILIKE :q OR p.reference_code ILIKE :q)',
-        { q: `%${filters.q}%` },
-      );
-    }
-*/
-    return qb;
-  }
-
-  /**
    * Crea una propiedad en estado borrador.
    * Rellena los campos obligatorios con valores por defecto.
    */
@@ -348,17 +81,9 @@ export class PropertiesService {
       createDraftDto.direct_owner = true; 
     }
     console.log("[PropertiesService.createDraft] createDraftDto:", JSON.stringify(createDraftDto, null, 2));
-    
-    return this.propertyRepository.save(createDraftDto);
-    /*
-    // Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
-    const { property: savedProperty } = await this.propertyWriteService.createPropertyCore(
-      { ...createDraftDto, deleted: false },
-      {  },
-    );
 
-    return savedProperty;
-    //return this.propertyRepository.save(newProperty);*/
+    return this.propertyRepository.save(createDraftDto);
+
   }
 
   /**
@@ -869,293 +594,6 @@ export class PropertiesService {
     });
   }
 
-  private async processAndUploadAttachedFiles(
-    savedAttached: PropertyAttached[],
-    files: Express.Multer.File[],
-    propertyId: number,
-  ) {
-    const uploadPromises: Promise<void>[] = [];
-
-    for (let i = 0; i < savedAttached.length; i++) {
-        const attached = savedAttached[i];
-        const file = files[i];
-
-        if (!file) continue;
-
-        const uploadPromise = (async () => {
-          try {
-              await this.propertyAttachedRepository.update(attached.id, { 
-                upload_status: MediaUploadStatus.UPLOADING 
-              });
-
-              const cleanFilename = this.cleanFilenameForUrl(file.originalname, attached.id);
-              const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
-
-              await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
-              await this.propertyAttachedRepository.update(attached.id, {
-                file_url: s3Key,
-                upload_status: MediaUploadStatus.COMPLETED,
-                upload_completed_at: new Date(),
-                error_message: null,
-              });
-
-              console.log(`Successfully uploaded attached file: ${attached.id}`);
-          } catch (error) {
-              await this.handleUploadError(
-                this.propertyAttachedRepository,
-                attached.id,
-                error,
-                'Failed to upload attached file'
-              );
-          }
-        })();
-
-        uploadPromises.push(uploadPromise);
-    }
-
-    await Promise.all(uploadPromises);
-  }
-
-  /**
-   * Búsqueda avanzada de propiedades con múltiples filtros.
-   * Usa QueryBuilder con parámetros parametrizados para máxima performance.
-   */
-  async searchProperties(
-    filters: SearchPropertiesDto,
-  ): Promise<{
-    data: Property[] | PropertyCard[];
-    total: number;
-    page: number;
-    limit: number;
-    mapData: Array<{ id: number; lat: number; lng: number; price?: number; reference_code: string }>;
-    filterStats: {
-      priceRanges: Array<{ min: number; max: number; count: number }>;
-      totalProperties: number;
-      minPrice: number;
-      maxPrice: number;
-    };
-  }> {
-    const limit = filters.limit ?? 20;
-    const page = filters.page ?? 1;
-    const offset = (page - 1) * limit;
-
-    let orderBy = 'p.created_at';
-    let orderDirection: 'ASC' | 'DESC' = 'ASC';
-    if (filters.order_by) {
-      // Soporta "columna:direccion" o "columna direccion"
-      let by: string | undefined, dir: string | undefined;
-      if (filters.order_by.includes(':')) {
-        [by, dir] = filters.order_by.split(':');
-      } else if (filters.order_by.includes(' ')) {
-        [by, dir] = filters.order_by.split(' ');
-      } else {
-        by = filters.order_by;
-      }
-      if (by) orderBy = by.startsWith('p.') ? by : `p.${by}`;
-      if (dir) {
-        const dirUpper = dir.toUpperCase();
-        if (dirUpper === 'ASC' || dirUpper === 'DESC') {
-          orderDirection = dirUpper;
-        } else {
-          orderDirection = 'ASC';
-        }
-      }
-    }
-
-
-    let data: Property[] | PropertyCard[] = [];
-    let total = 0;
-
-    // Si se recibe location_id, buscar su tipo y asignar el filtro correcto (country_id, state_id, location_id o sub_location_id)
-    if (filters.location_id != null) {
-
-      // Si no vienen coordenadas especificas, obtenemos el tipo de locationId a filtrar en base al id que nos llega en el filtrado
-      if (
-      filters.southWestLat == null && filters.southWestLng == null &&
-      filters.northEastLat == null && filters.northEastLng == null
-      ) {
-        const locationRepo = this.dataSource.getRepository('locations');
-        const location = await locationRepo.findOne({ where: { id: filters.location_id } });
-        filters.location_id = undefined; // reset filtro para evitar una busqueda equivocada
-        if (location) {
-          if (location.type === 'country') {
-            filters.country_id = location.id;
-          } else if (location.type === 'state') {
-            filters.state_id = location.id;
-          } else if (location.type === 'location') {
-            filters.location_id = location.id;
-          } else if (location.type === 'sub_location') {
-            filters.sub_location_id = location.id;
-          }
-        }
-      }
-    }
-
-    if (filters.full) {
-      // Modo full: query completa con todas las relaciones
-      const qb = this.buildAdvancedSearchQuery(filters);
-
-
-      qb.leftJoinAndSelect('p.images', 'img')
-        .leftJoinAndSelect('p.organization', 'p_org')
-        .addOrderBy('img.order_position', 'ASC')
-        .skip(offset)
-        .take(limit)
-        .orderBy(orderBy, orderDirection);
-      [data, total] = await qb.getManyAndCount();
-    } else {
-      // Modo card: SELECT solo las columnas necesarias + join de imágenes y organización
-      // No se cargan relaciones eager (attributes, tags, videos, attached)
-      const cardQb = this.buildAdvancedSearchQuery(filters)
-        .select([
-          'p.id',
-          'p.publication_title',
-          'p.street',
-          'p.total_surface',
-          'p.room_amount',
-          'p.bathroom_amount',
-          'p.currency',
-          'p.price',
-          'p.price_square_meter',
-          'p.geo_lat',
-          'p.geo_long',
-          'p.created_at',
-          'p_org.id',
-          'p_org.company_name',
-          'p_org.company_logo',
-        ])
-        .leftJoinAndSelect('p.images', 'img')
-        .leftJoinAndSelect('p.organization', 'p_org')
-        .orderBy(orderBy, orderDirection)
-        .skip(offset)
-        .take(limit);
-
-      const [partialProps, cardTotal] = await cardQb.getManyAndCount();
-      total = cardTotal;
-      data = partialProps.map((p) => ({
-        id: p.id as number,
-        publication_title: p.publication_title,
-        street: p.street,
-        total_surface: p.total_surface,
-        room_amount: p.room_amount,
-        bathroom_amount: p.bathroom_amount,
-        currency: p.currency,
-        price: p.price,
-        price_square_meter: p.price_square_meter,
-        images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
-        lat: p.geo_lat,
-        long: p.geo_long,
-        organization: p.organization ? {
-          id: p.organization.id,
-          company_name: p.organization.company_name,
-          company_logo: p.organization.company_logo,
-        } : undefined,
-      }));
-    }
-
-    // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
-    const mapQb = this.buildAdvancedSearchQuery(filters);
-    const mapData = await mapQb
-      .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.price_square_meter', 'p.reference_code'])
-      .andWhere('p.geo_lat IS NOT NULL')
-      .andWhere('p.geo_long IS NOT NULL')
-      .getRawMany()
-      .then(results =>
-        results.map(r => ({
-          id: r.p_id,
-          lat: parseFloat(r.p_geo_lat),
-          lng: parseFloat(r.p_geo_long),
-          price: r.p_price,
-          price_square_meter: r.p_price_square_meter,
-          reference_code: r.p_reference_code,
-        }))
-      );
-
-    // Estadísticas para filtros
-    const filterStats = await this.generateFilterStats(filters);
-
-    return {
-      data,
-      total,
-      page,
-      limit,
-      mapData,
-      filterStats,
-    };
-  }
-
-  async searchPanelProperties(
-    filters: SearchPropertiesDto,
-    organizationId: number,
-  ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
-    const limit = filters.limit ?? 20;
-    const page = filters.page ?? 1;
-    const offset = (page - 1) * limit;
-
-    const qb = this.buildAdvancedSearchQuery(filters, {
-      organizationId,
-      includeStatusFilter: true,
-    });
-
-    qb.orderBy('p.created_at', 'DESC').skip(offset).take(limit);
-
-    const [data, total] = await qb.getManyAndCount();
-
-    return { data, total, page, limit };
-  }
-
-  /**
-   * Genera estadísticas para filtros (rangos de precios, conteos, etc.)
-   */
-  private async generateFilterStats(filters: SearchPropertiesDto) {
-    const baseQb = this.buildAdvancedSearchQuery(filters);
-    
-    // Obtener min y max precios de todas las propiedades que coinciden
-    const priceStats = await baseQb
-      .select([
-        'MIN(p.price) as minPrice',
-        'MAX(p.price) as maxPrice',
-        'COUNT(*) as totalProperties'
-      ])
-      .andWhere('p.price IS NOT NULL')
-      .andWhere('p.price > 0')
-      .getRawOne();
-
-    const minPrice = parseFloat(priceStats.minPrice) || 0;
-    const maxPrice = parseFloat(priceStats.maxPrice) || 0;
-    const totalProperties = parseInt(priceStats.totalProperties) || 0;
-
-    // Generar rangos de precios dinámicos
-    const priceRanges = [];
-    if (maxPrice > 0) {
-      const rangeSize = (maxPrice - minPrice) / 10; // 10 rangos
-      
-      for (let i = 0; i < 10; i++) {
-        const rangeMin = minPrice + (i * rangeSize);
-        const rangeMax = i === 9 ? maxPrice : minPrice + ((i + 1) * rangeSize);
-        
-        const rangeQb = this.buildAdvancedSearchQuery(filters);
-        const count = await rangeQb
-          .andWhere('p.price >= :rangeMin', { rangeMin })
-          .andWhere('p.price < :rangeMax', { rangeMax })
-          .getCount();
-
-        priceRanges.push({
-          min: Math.round(rangeMin),
-          max: Math.round(rangeMax),
-          count
-        });
-      }
-    }
-
-    return {
-      priceRanges,
-      totalProperties,
-      minPrice: Math.round(minPrice),
-      maxPrice: Math.round(maxPrice)
-    };
-  }
-
   /**
    * Obtener una propiedad por ID
    */
@@ -1342,22 +780,6 @@ export class PropertiesService {
   }
 
   /**
-   * Buscar propiedades por criterios
-   */
-  async search(query: string): Promise<Property[]> {
-    return this.propertyRepository
-      .createQueryBuilder('property')
-      .where('property.deleted = :deleted', { deleted: false })
-      .andWhere(
-        '(property.publication_title ILIKE :query OR property.street ILIKE :query OR property.reference_code ILIKE :query)',
-        { query: `%${query}%` },
-      )
-      .orderBy('property.created_at', 'DESC')
-      .take(20)
-      .getMany();
-  }
-
-  /**
    * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
   async getMultimedia(propertyId: number) {
@@ -1416,45 +838,599 @@ export class PropertiesService {
     };
   }
 
+  // =============================================
+  // SEARCH PROPERTIES
+  // =============================================
+  
+  
   /**
-   * Obtener estado del servicio S3 y circuit breaker
+   * Búsqueda avanzada de propiedades con múltiples filtros.
+   * Usa QueryBuilder con parámetros parametrizados para máxima performance.
    */
-  async getS3ServiceStatus() {
-    const healthCheck = await this.mediaService.getS3Status();
+  async searchProperties(
+    filters: SearchPropertiesDto,
+  ): Promise<{
+    data: Property[] | PropertyCard[];
+    total: number;
+    page: number;
+    limit: number;
+    mapData: Array<{ id: number; lat: number; lng: number; price?: number; reference_code: string }>;
+    /*filterStats: {
+      priceRanges: Array<{ min: number; max: number; count: number }>;
+      totalProperties: number;
+      minPrice: number;
+      maxPrice: number;
+    };*/
+  }> {
+    const limit = filters.limit ?? 20;
+    const page = filters.page ?? 1;
+    const offset = (page - 1) * limit;
+
+    let data: Property[] | PropertyCard[] = [];
+    let total = 0;
+
+    const { qb: baseQb, orderBy, orderDirection } = await this.buildAdvancedSearchQuery(filters);
+
+    if (filters.full) {
+      // Modo full: query completa con todas las relaciones
+      const qb = baseQb.clone();
+
+
+      qb.leftJoinAndSelect('p.images', 'img')
+        .leftJoinAndSelect('p.organization', 'p_org')
+        .addOrderBy('img.order_position', 'ASC')
+        .skip(offset)
+        .take(limit)
+        .orderBy(orderBy, orderDirection);
+      [data, total] = await qb.getManyAndCount();
+    } else {
+      // Modo card: SELECT solo las columnas necesarias + join de imágenes y organización
+      // No se cargan relaciones eager (attributes, tags, videos, attached)
+      const cardQb = baseQb.clone()
+        .select([
+          'p.id',
+          'p.publication_title',
+          'p.street',
+          'p.total_surface',
+          'p.room_amount',
+          'p.bathroom_amount',
+          'p.currency',
+          'p.price',
+          'p.price_square_meter',
+          'p.geo_lat',
+          'p.geo_long',
+          'p.created_at',
+          'p_org.id',
+          'p_org.company_name',
+          'p_org.company_logo',
+        ])
+        .leftJoinAndSelect('p.images', 'img')
+        .leftJoinAndSelect('p.organization', 'p_org')
+        .orderBy(orderBy, orderDirection)
+        .skip(offset)
+        .take(limit);
+
+      const [partialProps, cardTotal] = await cardQb.getManyAndCount();
+      total = cardTotal;
+      data = partialProps.map((p) => ({
+        id: p.id as number,
+        publication_title: p.publication_title,
+        street: p.street,
+        total_surface: p.total_surface,
+        room_amount: p.room_amount,
+        bathroom_amount: p.bathroom_amount,
+        currency: p.currency,
+        price: p.price,
+        price_square_meter: p.price_square_meter,
+        images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
+        lat: p.geo_lat,
+        long: p.geo_long,
+        organization: p.organization ? {
+          id: p.organization.id,
+          company_name: p.organization.company_name,
+          company_logo: p.organization.company_logo,
+        } : undefined,
+      }));
+    }
+
+    // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
+    const mapData = await baseQb
+      .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.price_square_meter', 'p.reference_code'])
+      .andWhere('p.geo_lat IS NOT NULL')
+      .andWhere('p.geo_long IS NOT NULL')
+      .getRawMany()
+      .then(results =>
+        results.map(r => ({
+          id: r.p_id,
+          lat: parseFloat(r.p_geo_lat),
+          lng: parseFloat(r.p_geo_long),
+          price: r.p_price,
+          price_square_meter: r.p_price_square_meter,
+          reference_code: r.p_reference_code,
+        }))
+      );
+
+    // Estadísticas para filtros
+    //const filterStats = await this.generateFilterStats(filters);
+
     return {
-      ...healthCheck,
-      timestamp: new Date(),
-      recommendations: this.getServiceRecommendations(healthCheck)
+      data,
+      total,
+      page,
+      limit,
+      mapData,
+    //  filterStats,
     };
   }
 
-  /**
-   * Helper para generar recomendaciones basadas en el estado del servicio
-   */
-  private getServiceRecommendations(healthCheck: any) {
-    const recommendations = [];
-    
-    if (healthCheck.status === 'unhealthy') {
-      recommendations.push('Verificar conectividad de red y credenciales AWS');
-    }
-    
-    const circuitState = healthCheck.circuitBreaker?.state;
-    if (circuitState === 'open') {
-      recommendations.push('Circuit breaker abierto: S3 temporalmente no disponible, los uploads se reintentarán automáticamente');
-    } else if (circuitState === 'half-open') {
-      recommendations.push('Circuit breaker probando recuperación del servicio S3');
-    }
-    
-    if (healthCheck.circuitBreaker?.failureCount > 0) {
-      recommendations.push(`${healthCheck.circuitBreaker.failureCount} fallas recientes detectadas en S3`);
-    }
-    
-    return recommendations;
+  async searchPanelProperties(
+    filters: SearchPropertiesDto,
+    organizationId: number,
+  ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
+    filters.limit = filters.limit ?? 20;
+    filters.page = filters.page ?? 1; 
+
+    const { qb } = await this.buildAdvancedSearchQuery(filters, {
+      organizationId,
+      includeStatusFilter: true,
+    });
+
+    const [data, total] = await qb.getManyAndCount();
+
+    return { data, total, page: filters.page, limit: filters.limit };
   }
+
+  
+  private async buildAdvancedSearchQuery(
+    filters: SearchPropertiesDto,
+    options?: {
+      organizationId?: number;
+      includeStatusFilter?: boolean;
+    },
+  ) {
+    // Parse orderBy / orderDirection desde filters
+    let orderBy = 'p.created_at';
+    let orderDirection: 'ASC' | 'DESC' = 'ASC';
+    if (filters.order_by) {
+      let by: string | undefined, dir: string | undefined;
+      if (filters.order_by.includes(':')) {
+        [by, dir] = filters.order_by.split(':');
+      } else if (filters.order_by.includes(' ')) {
+        [by, dir] = filters.order_by.split(' ');
+      } else {
+        by = filters.order_by;
+      }
+      if (by) orderBy = by.startsWith('p.') ? by : `p.${by}`;
+      if (dir) {
+        const dirUpper = dir.toUpperCase();
+        orderDirection = (dirUpper === 'ASC' || dirUpper === 'DESC') ? dirUpper : 'ASC';
+      }
+    }
+
+    // Si se recibe location_id, buscar su tipo y asignar el filtro correcto
+    if (filters.location_id != null) {
+      if (
+        filters.southWestLat == null && filters.southWestLng == null &&
+        filters.northEastLat == null && filters.northEastLng == null &&
+        filters.polygon == null
+      ) {
+        const locationRepo = this.dataSource.getRepository('locations');
+        const location = await locationRepo.findOne({ where: { id: filters.location_id } });
+        filters.location_id = undefined; // reset filtro para evitar una busqueda equivocada
+        if (location) {
+          if (location.type === 'country') {
+            filters.country_id = location.id;
+          } else if (location.type === 'state') {
+            filters.state_id = location.id;
+          } else if (location.type === 'location') {
+            filters.location_id = location.id;
+          } else if (location.type === 'sub_location') {
+            filters.sub_location_id = location.id;
+          }
+        }
+      }
+    }
+
+    const qb = this.propertyRepository
+      .createQueryBuilder('p')
+      .leftJoin('organizations', 'org', 'p.organization_id = org.id');
+
+    // Traer propiedades de inmobiliarias activas Y propiedades de dueño directo
+    qb.where('p.deleted = :deleted', { deleted: false })
+      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.direct_owner = true))', {
+        orgStatus: true,
+        orgDeleted: false,
+      });
+
+    const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
+
+    if (scopedOrganizationId != null) {
+      qb.andWhere('p.organization_id = :organization_id', {
+        organization_id: scopedOrganizationId,
+      });
+    }
+
+    if (filters.branch_id != null) {
+      qb.andWhere('p.branch_id = :branch_id', {
+        branch_id: filters.branch_id,
+      });
+    }
+
+    if (filters.user_id != null) {
+      qb.andWhere('p.user_id = :user_id', {
+        user_id: filters.user_id,
+      });
+    }
+
+    if (options?.includeStatusFilter !== false) {
+      // si incluye el filtro de status, aplicar el filtro recibido si existe sino traer todos los statuses (
+      if (filters.status != null) {
+        qb.andWhere('p.status = :status', { status: filters.status });
+      }
+    } else {
+      qb.andWhere('p.status = :status', { status: PropertyStatus.DISPONIBLE });
+    }
+
+    if (filters.country_id != null) {
+      qb.andWhere('p.country_id = :country_id', {
+        country_id: filters.country_id,
+      });
+    }
+
+    if (filters.state_id != null) {
+      qb.andWhere('p.state_id = :state_id', { state_id: filters.state_id });
+    }
+
+    if (filters.location_id != null) {
+      qb.andWhere('p.location_id = :location_id', {
+        location_id: filters.location_id,
+      });
+    }
+
+    if (filters.sub_location_id != null) {
+      qb.andWhere('p.sub_location_id = :sub_location_id', {
+        sub_location_id: filters.sub_location_id,
+      });
+    }
+
+    if (Array.isArray(filters.property_type) && filters.property_type.length > 0) {
+      qb.andWhere('p.property_type IN (:...property_type)', {
+        property_type: filters.property_type,
+      });
+    }
+
+    // property subtype
+    if (Array.isArray(filters.property_subtype) && filters.property_subtype.length > 0) {
+      qb.andWhere('p.property_subtype IN (:...property_subtype)', {
+        property_subtype: filters.property_subtype,
+      });
+    }
+
+
+    if (Array.isArray(filters.operation_type) && filters.operation_type.length > 0) {
+      qb.andWhere('p.operation_type IN (:...operation_type)', {
+        operation_type: filters.operation_type,
+      });
+    }
+
+    if (filters.currency) {
+      qb.andWhere('p.currency = :currency', { currency: filters.currency });
+    }
+
+    if (filters.price_min != null) {
+      qb.andWhere('p.price >= :price_min', { price_min: filters.price_min });
+    }
+
+    if (filters.price_max != null) {
+      qb.andWhere('p.price <= :price_max', { price_max: filters.price_max });
+    }
+
+    if (filters.price_m2_min != null) {
+      qb.andWhere('p.price_square_meter >= :price_m2_min', { price_m2_min: filters.price_m2_min });
+    }
+
+    if (filters.price_m2_max != null) {
+      qb.andWhere('p.price_square_meter <= :price_m2_max', { price_m2_max: filters.price_m2_max });
+    }
+
+    if (filters.roofed_surface_min != null) {
+      qb.andWhere('p.roofed_surface >= :roofed_surface_min', {
+        roofed_surface_min: filters.roofed_surface_min,
+      });
+    }
+
+    if (filters.roofed_surface_max != null) {
+      qb.andWhere('p.roofed_surface <= :roofed_surface_max', {
+        roofed_surface_max: filters.roofed_surface_max,
+      });
+    }
+
+    if (filters.total_surface_min != null) {
+      qb.andWhere('p.total_surface >= :total_surface_min', {
+        total_surface_min: filters.total_surface_min,
+      });
+    }
+
+    if (filters.total_surface_max != null) {
+      qb.andWhere('p.total_surface <= :total_surface_max', {
+        total_surface_max: filters.total_surface_max,
+      });
+    }
+
+    if (Array.isArray(filters.bathroom_amount) && filters.bathroom_amount.length > 0) {
+      qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
+        bathroom_amount: filters.bathroom_amount,
+      });
+    }
+
+    if (Array.isArray(filters.room_amount) && filters.room_amount.length > 0) {
+      qb.andWhere('p.room_amount IN (:...room_amount)', {
+        room_amount: filters.room_amount,
+      });
+    }
+
+    if (Array.isArray(filters.suite_amount) && filters.suite_amount.length > 0) {
+      qb.andWhere('p.suite_amount IN (:...suite_amount)', {
+        suite_amount: filters.suite_amount,
+      });
+    }
+
+    if (Array.isArray(filters.parking_lot_amount) && filters.parking_lot_amount.length > 0) {
+      qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
+        parking_lot_amount: filters.parking_lot_amount,
+      });
+    }
+
+    if (filters.age) {
+      const ageRange = filters.age.split('-').map((v) => parseInt(v.trim(), 10));
+      if (ageRange.length === 2 && !isNaN(ageRange[0]) && !isNaN(ageRange[1])) {
+        qb.andWhere('p.age BETWEEN :age_min AND :age_max', { age_min: ageRange[0], age_max: ageRange[1] });
+      } else {
+        const age = parseInt(filters.age, 10);
+        if (!isNaN(age)) {
+          qb.andWhere('p.age = :age', { age });
+        }
+      }
+    }
+
+    if (Array.isArray(filters.orientation) && filters.orientation.length > 0) {
+      qb.andWhere('p.orientation IN (:...orientation)', { orientation: filters.orientation });
+    }
+
+    if (Array.isArray(filters.disposition) && filters.disposition.length > 0) {
+      qb.andWhere('p.dispositions IN (:...disposition)', {
+        disposition: filters.disposition,
+      });
+    }
+
+    // ESTO ATENDER , TIENE Q TRAER EXACTAMENTE LAS QUE MARCAS..AHORA ESTA COMO UN "SI TIENE ALGUNO DE LOS MARCADOS TRAE"
+    if (Array.isArray(filters.tags) && filters.tags.length > 0) {
+      qb.leftJoin('property_tags', 'pt', 'pt.propertyId = p.id')
+        .andWhere('pt.tag_id IN (:...tags)', { tags: filters.tags });
+    }
+
+    if (filters.direct_owner !== undefined || filters.inmobiliaria !== undefined) {
+      if (filters.direct_owner !== undefined && filters.inmobiliaria === undefined) {
+        qb.andWhere('p.direct_owner = true');
+      } else if (filters.inmobiliaria !== undefined && filters.direct_owner === undefined) {       
+        qb.andWhere('p.direct_owner = false');
+      }
+    }
+
+    if (filters.polygon) {
+      const polygonPoints = this.parsePolygon(filters.polygon);
+      this.applyPolygonFilter(qb, polygonPoints);
+    } else if (
+      filters.southWestLat != null && filters.southWestLng != null &&
+      filters.northEastLat != null && filters.northEastLng != null
+    ) {
+      // Parsear strings a números
+      const swLat = parseFloat(filters.southWestLat);
+      const swLng = parseFloat(filters.southWestLng);
+      const neLat = parseFloat(filters.northEastLat);
+      const neLng = parseFloat(filters.northEastLng);
+      if ([swLat, swLng, neLat, neLng].some(v => isNaN(v))) {
+        throw new BadRequestException('Las coordenadas del bounding box deben ser números válidos');
+      }
+      const minLat = Math.min(swLat, neLat);
+      const maxLat = Math.max(swLat, neLat);
+      const minLng = Math.min(swLng, neLng);
+      const maxLng = Math.max(swLng, neLng);
+      qb.andWhere('p.geo_lat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
+      qb.andWhere('p.geo_long BETWEEN :minLng AND :maxLng', { minLng, maxLng });
+    }
+
+/*
+    if (filters.q) {
+      qb.andWhere(
+        '(p.publication_title ILIKE :q OR p.street ILIKE :q OR p.reference_code ILIKE :q)',
+        { q: `%${filters.q}%` },
+      );
+    }
+*/
+    return { qb, orderBy, orderDirection };
+  }
+
+  private parsePolygon(polygon: string): PolygonPoint[] {
+    const rawValue = typeof polygon === 'string' ? polygon.trim() : '';
+    if (!rawValue) {
+      throw new BadRequestException('El polígono no puede estar vacío');
+    }
+
+    let normalizedPolygon = rawValue;
+    try {
+      normalizedPolygon = decodeURIComponent(rawValue);
+    } catch {
+      normalizedPolygon = rawValue;
+    }
+
+    const points: PolygonPoint[] = [];
+    const pointRegex = /LatLng\(\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*\)/g;
+    let match: RegExpExecArray | null;
+
+    while ((match = pointRegex.exec(normalizedPolygon)) !== null) {
+      const lat = Number.parseFloat(match[1]);
+      const lng = Number.parseFloat(match[2]);
+
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+        throw new BadRequestException('El polígono contiene coordenadas inválidas');
+      }
+
+      points.push({ lat, lng });
+    }
+
+    if (points.length < 3) {
+      throw new BadRequestException('El polígono debe tener al menos 3 puntos válidos');
+    }
+
+    return points;
+  }
+
+  private applyPolygonFilter(qb: any, polygonPoints: PolygonPoint[]) {
+    const latitudes = polygonPoints.map((point) => point.lat);
+    const longitudes = polygonPoints.map((point) => point.lng);
+
+    qb.andWhere('p.geo_lat IS NOT NULL')
+      .andWhere('p.geo_long IS NOT NULL')
+      .andWhere('p.geo_lat BETWEEN :polygonMinLat AND :polygonMaxLat', {
+        polygonMinLat: Math.min(...latitudes),
+        polygonMaxLat: Math.max(...latitudes),
+      })
+      .andWhere('p.geo_long BETWEEN :polygonMinLng AND :polygonMaxLng', {
+        polygonMinLng: Math.min(...longitudes),
+        polygonMaxLng: Math.max(...longitudes),
+      });
+
+    const edgeChecks: string[] = [];
+    const parameters: Record<string, number> = {};
+
+    for (let index = 0; index < polygonPoints.length; index++) {
+      const currentPoint = polygonPoints[index];
+      const nextPoint = polygonPoints[(index + 1) % polygonPoints.length];
+      const currentLatKey = `polygonLat${index}`;
+      const currentLngKey = `polygonLng${index}`;
+      const nextLatKey = `polygonNextLat${index}`;
+      const nextLngKey = `polygonNextLng${index}`;
+
+      parameters[currentLatKey] = currentPoint.lat;
+      parameters[currentLngKey] = currentPoint.lng;
+      parameters[nextLatKey] = nextPoint.lat;
+      parameters[nextLngKey] = nextPoint.lng;
+
+      // PostgreSQL: use != for not equal, cast to float, and avoid NULLs
+      edgeChecks.push(`CASE WHEN (((CAST(:${currentLatKey} AS float) > CAST(p.geo_lat AS float)) != (CAST(:${nextLatKey} AS float) > CAST(p.geo_lat AS float))) AND (CAST(p.geo_long AS float) < ((CAST(:${nextLngKey} AS float) - CAST(:${currentLngKey} AS float)) * (CAST(p.geo_lat AS float) - CAST(:${currentLatKey} AS float)) / NULLIF((CAST(:${nextLatKey} AS float) - CAST(:${currentLatKey} AS float)), 0) + CAST(:${currentLngKey} AS float)))) THEN 1 ELSE 0 END`);
+    }
+
+    qb.andWhere(`((${edgeChecks.join(' + ')}) % 2) = 1`, parameters);
+  }
+
+  /**
+   * Genera estadísticas para filtros (rangos de precios, conteos, etc.)
+   */
+  /*private async generateFilterStats(filters: SearchPropertiesDto) {
+    const baseQb = this.buildAdvancedSearchQuery(filters);
+    
+    // Obtener min y max precios de todas las propiedades que coinciden
+    const priceStats = await baseQb
+      .select([
+        'MIN(p.price) as minPrice',
+        'MAX(p.price) as maxPrice',
+        'COUNT(*) as totalProperties'
+      ])
+      .andWhere('p.price IS NOT NULL')
+      .andWhere('p.price > 0')
+      .getRawOne();
+
+    const minPrice = parseFloat(priceStats.minPrice) || 0;
+    const maxPrice = parseFloat(priceStats.maxPrice) || 0;
+    const totalProperties = parseInt(priceStats.totalProperties) || 0;
+
+    // Generar rangos de precios dinámicos
+    const priceRanges = [];
+    if (maxPrice > 0) {
+      const rangeSize = (maxPrice - minPrice) / 10; // 10 rangos
+      
+      for (let i = 0; i < 10; i++) {
+        const rangeMin = minPrice + (i * rangeSize);
+        const rangeMax = i === 9 ? maxPrice : minPrice + ((i + 1) * rangeSize);
+        
+        const rangeQb = this.buildAdvancedSearchQuery(filters);
+        const count = await rangeQb
+          .andWhere('p.price >= :rangeMin', { rangeMin })
+          .andWhere('p.price < :rangeMax', { rangeMax })
+          .getCount();
+
+        priceRanges.push({
+          min: Math.round(rangeMin),
+          max: Math.round(rangeMax),
+          count
+        });
+      }
+    }
+
+    return {
+      priceRanges,
+      totalProperties,
+      minPrice: Math.round(minPrice),
+      maxPrice: Math.round(maxPrice)
+    };
+  } */
+
+  
+  // =============================================
+  // END SEARCH PROPERTIES
+  // =============================================
 
   // =============================================
   // MULTIMEDIA UPLOAD HELPERS
   // =============================================
+
+  private async processAndUploadAttachedFiles(
+    savedAttached: PropertyAttached[],
+    files: Express.Multer.File[],
+    propertyId: number,
+  ) {
+    const uploadPromises: Promise<void>[] = [];
+
+    for (let i = 0; i < savedAttached.length; i++) {
+        const attached = savedAttached[i];
+        const file = files[i];
+
+        if (!file) continue;
+
+        const uploadPromise = (async () => {
+          try {
+              await this.propertyAttachedRepository.update(attached.id, { 
+                upload_status: MediaUploadStatus.UPLOADING 
+              });
+
+              const cleanFilename = this.cleanFilenameForUrl(file.originalname, attached.id);
+              const s3Key = this.mediaService.buildS3Key(`properties/${propertyId}/attached`, cleanFilename);
+
+              await this.mediaService.uploadFile(file.buffer, s3Key, file.mimetype);
+              await this.propertyAttachedRepository.update(attached.id, {
+                file_url: s3Key,
+                upload_status: MediaUploadStatus.COMPLETED,
+                upload_completed_at: new Date(),
+                error_message: null,
+              });
+
+              console.log(`Successfully uploaded attached file: ${attached.id}`);
+          } catch (error) {
+              await this.handleUploadError(
+                this.propertyAttachedRepository,
+                attached.id,
+                error,
+                'Failed to upload attached file'
+              );
+          }
+        })();
+
+        uploadPromises.push(uploadPromise);
+    }
+
+    await Promise.all(uploadPromises);
+  }
 
   /**
    * Limpiar nombre de archivo adjunto para que sea seguro para URL y único.
@@ -1489,11 +1465,7 @@ export class PropertiesService {
     console.error(`${contextInfo} ID ${entityId}:`, error);
   }
 
-  // =============================================
-  // END MULTIMEDIA UPLOAD HELPERS
-  // =============================================
-
-  /**
+   /**
    * Procesa y sube archivos recibidos por file upload a S3 en segundo plano.
    * Actualiza la url y el status en la base.
    */
@@ -1559,4 +1531,58 @@ export class PropertiesService {
       console.error(`Failed to process image ID ${imageId}:`, err?.message || error);
     }
   }
+
+  /**
+   * Valida cada archivo individualmente para dar mensajes de error específicos
+   */
+  validateUploadedFiles(files: { images?: Express.Multer.File[]; attached?: Express.Multer.File[] }) {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['jpg', 'svg', 'jpeg', 'png', 'gif', 'webp', 'mp4', 'mov', 'avi', 'pdf', 'doc', 'docx', 'xls', 'xlsx'];
+    const errors: string[] = [];
+
+    // Validar imágenes
+    if (files.images?.length) {
+      files.images.forEach((file, index) => {
+        // Validar tamaño
+        if (file.size > maxSize) {
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          errors.push(`Imagen "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
+        }
+
+        // Validar tipo
+        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+          errors.push(`Imagen "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
+        }
+      });
+    }
+
+    // Validar archivos adjuntos
+    if (files.attached?.length) {
+      files.attached.forEach((file, index) => {
+        // Validar tamaño
+        if (file.size > maxSize) {
+          const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
+          errors.push(`Archivo "${file.originalname}" (${fileSizeMB}MB) excede el límite de 25MB`);
+        }
+        
+        // Validar tipo
+        const fileExtension = file.originalname.split('.').pop()?.toLowerCase();
+        if (!fileExtension || !allowedTypes.includes(fileExtension)) {
+          errors.push(`Archivo "${file.originalname}" tiene tipo no válido. Permitidos: ${allowedTypes.join(', ')}`);
+        }
+      });
+    }
+
+    // Si hay errores, lanzar excepción con detalles
+    if (errors.length > 0) {
+      throw new BadRequestException(`Errores de validación de archivos: ${errors.join('; ')}`);
+    }
+  }
+
+  // =============================================
+  // END MULTIMEDIA UPLOAD HELPERS
+  // =============================================
+
+ 
 }

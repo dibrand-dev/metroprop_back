@@ -321,6 +321,16 @@ export class TokkoHelperService {
       tags: mappedTagIds
     };
 
+    // manual corrections 
+    if( metropropProperty.surface === 0 || metropropProperty.surface === undefined) {
+      metropropProperty.surface = metropropProperty.total_surface || metropropProperty.roofed_surface || metropropProperty.unroofed_surface || metropropProperty.semiroofed_surface || undefined;
+    }
+
+    if (metropropProperty.total_surface === 0 || metropropProperty.total_surface === undefined) {
+      metropropProperty.total_surface = metropropProperty.surface || metropropProperty.roofed_surface || metropropProperty.unroofed_surface || metropropProperty.semiroofed_surface || undefined;
+    }
+
+
     return metropropProperty;
   }
  

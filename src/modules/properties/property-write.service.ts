@@ -63,17 +63,13 @@ export class PropertyWriteService {
     if (multimedia360) console.log('[createPropertyCore] multimedia360:', JSON.stringify(multimedia360, null, 2));
     let savedProperty: Property | undefined;
     try {
-      // Calcular price_square_meter antes de crear la entidad
-      let price_square_meter: number | undefined = undefined;
-      if (scalars.surface !== undefined && scalars.price !== undefined) {
-        price_square_meter = await calculateSquareMetterPrice({ surface: scalars.surface, price: scalars.price }, this.propertyRepo);
-      }
+      // Calcular y asignar price_square_meter usando la función unificada
+      scalars.price_square_meter = await calculateSquareMetterPrice(scalars, this.propertyRepo);
       const newProperty: Property = this.propertyRepo.create({
         ...scalars,
         ...(organizationId !== undefined ? { organization_id: organizationId } : {}),
         ...(branchId !== undefined ? { branch_id: branchId } : {}),
-        ...(userId !== undefined ? { user_id: userId } : {}),
-        price_square_meter,
+        ...(userId !== undefined ? { user_id: userId } : {})
       });
       console.log('[createPropertyCore] newProperty:', JSON.stringify(newProperty, null, 2));
       const saved = (await this.propertyRepo.save(newProperty)) as unknown as Property;
@@ -251,18 +247,8 @@ export class PropertyWriteService {
     if (context?.userId) updateData.user_id = context.userId;
 
     Object.assign(property, updateData);
-    // Calcular y setear price_square_meter si surface y price están presentes
-    let surface = property.surface;
-    let price = property.price;
-    // Si en updateData vienen surface o price, usarlos
-    if (updateData.surface !== undefined) surface = updateData.surface;
-    if (updateData.price !== undefined) price = updateData.price;
-    if (surface !== undefined && price !== undefined) {
-      const sqm = await calculateSquareMetterPrice({ surface, price }, this.propertyRepo);
-      property.price_square_meter = sqm;
-    } else {
-      property.price_square_meter = undefined;
-    }
+    // Calcular y setear price_square_meter usando la función unificada
+    property.price_square_meter = await calculateSquareMetterPrice({ ...property, ...updateData }, this.propertyRepo);
 
     await this.propertyRepo.save(property);
 

@@ -29,6 +29,9 @@ export class Location {
   @Column({ nullable: true })
     country_id!: number;
 
+  @Column({ nullable: true })
+    state_id!: number;
+
   @Column()
     type!: string;
 

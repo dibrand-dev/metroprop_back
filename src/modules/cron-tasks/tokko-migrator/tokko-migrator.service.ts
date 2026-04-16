@@ -49,8 +49,8 @@ export class TokkoMigratorService {
 
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
-      //await this.normalizeSubLocationsByCountry(1);
-      await this.normalizeFullLocationsByCountry(1);
+      await this.normalizeSubLocationsByCountry(1);
+      //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
     } catch (e) {
@@ -206,6 +206,7 @@ export class TokkoMigratorService {
               name: division.name,
               type: 'sub_location',
               parent_id: location.id,
+              state_id: location.parent_id,
               country_id: countryId,
               migrated: true,
               full_location: division.name + ', ' + location.name,
