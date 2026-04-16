@@ -32,6 +32,12 @@ export class CreateDevelopmentDto {
   @MaxLength(500)
   publication_title!: string;
 
+  // ========== Partner API: Branch Reference ==========
+  @IsOptional()
+  @IsInt({ message: 'branch_reference_id debe ser un número entero' })
+  @IsPositive()
+  branch_reference_id?: number;
+
   // ========== Organización / Sucursal / Usuario ==========
   @IsOptional()
   @IsInt()

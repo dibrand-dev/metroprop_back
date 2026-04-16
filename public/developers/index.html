@@ -328,6 +328,14 @@
   </div>
 
   <div class="sidebar-section">
+    <div class="sidebar-section-title">Emprendimientos</div>
+    <a href="#ep-create-dev">POST Crear Emprendimiento</a>
+    <a href="#ep-get-dev">GET Obtener Emprendimiento</a>
+    <a href="#ep-update-dev">PUT Actualizar Emprendimiento</a>
+    <a href="#ep-delete-dev">DELETE Eliminar Emprendimiento</a>
+  </div>
+
+  <div class="sidebar-section">
     <div class="sidebar-section-title">Locations</div>
     <a href="#ep-loc-countries">GET Países</a>
     <a href="#ep-loc-states">GET Provincias</a>
@@ -358,6 +366,9 @@
     <a href="#ex-create-prop-min">Crear Propiedad (mínimo)</a>
     <a href="#ex-update-prop">Actualizar Propiedad</a>
     <!-- Ejemplos de imágenes y adjuntos eliminados -->
+    <a href="#ex-create-dev-full">Crear Emprendimiento (completo)</a>
+    <a href="#ex-create-dev-min">Crear Emprendimiento (mínimo)</a>
+    <a href="#ex-update-dev">Actualizar Emprendimiento</a>
   </div>
 </nav>
 
@@ -810,6 +821,107 @@
   <p>Cambia el estado a <code>NO_DISPONIBLE</code> (4). La propiedad queda visible pero inactiva.</p>
 
 
+  <!-- ===== DEVELOPMENTS ===== -->
+
+  <h2 id="ep-create-dev">POST Crear Emprendimiento</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-post">POST</span>
+    <code>/api/partner/v1/developments</code>
+  </div>
+  <p>
+    Crea un nuevo <strong>emprendimiento</strong> vinculado a un <code>branch_reference_id</code>.
+    Si ya existe un emprendimiento con el mismo <code>reference_code</code> para esa organización, se actualiza automáticamente (upsert).
+    Soporta los mismos campos de multimedia que propiedades más campos exclusivos del proyecto.
+  </p>
+  <div class="alert alert-info">
+    <strong>Diferencia con propiedades:</strong> Los emprendimientos representan proyectos en desarrollo (torres, barrios cerrados, complejos de oficinas). Se identifican internamente con <code>is_development: true</code> y tienen campos exclusivos como <code>development_type</code>, fecha de entrega y conteo de unidades.
+  </div>
+
+  <h3>Campos del request body</h3>
+  <table class="field-table">
+    <thead><tr><th>Campo</th><th>Tipo</th><th>Requerido</th><th>Descripción</th></tr></thead>
+    <tbody>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Identificación &amp; Referencia</td></tr>
+      <tr><td><code>branch_reference_id</code></td><td>integer</td><td><span class="badge badge-required">requerido</span></td><td>ID de la sucursal (retornado por <a href="#ep-create-org">POST /organizations</a> como <code>branch_id</code>)</td></tr>
+      <tr><td><code>reference_code</code></td><td>string(100)</td><td><span class="badge badge-required">requerido</span></td><td>Código de referencia único en tu sistema. Re-POST con el mismo código hace upsert.</td></tr>
+      <tr><td><code>publication_title</code></td><td>string(500)</td><td><span class="badge badge-required">requerido</span></td><td>Nombre o título del emprendimiento</td></tr>
+      <tr><td><code>description</code></td><td>text</td><td><span class="badge badge-optional">opcional</span></td><td>Descripción general del proyecto</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Estado</td></tr>
+      <tr><td><code>status</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">PropertyStatus</span> <code>0</code> Borrador · <code>2</code> Disponible · <code>3</code> Reservado · <code>4</code> No disponible</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Campos exclusivos del emprendimiento</td></tr>
+      <tr><td><code>development_type</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Tipo de proyecto: ej. <em>"Torre residencial"</em>, <em>"Barrio cerrado"</em>, <em>"Complejo de oficinas"</em></td></tr>
+      <tr><td><code>development_logo</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>URL pública del logo o imagen de marca del emprendimiento</td></tr>
+      <tr><td><code>development_units_total</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad total de unidades del proyecto</td></tr>
+      <tr><td><code>development_available_unit_count</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Unidades disponibles actualmente para la venta</td></tr>
+      <tr><td><code>development_delivery_date</code></td><td>date</td><td><span class="badge badge-optional">opcional</span></td><td>Fecha estimada de entrega. Formato ISO 8601: <code>YYYY-MM-DD</code> (ej: <code>2026-12-31</code>)</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Ubicación &mdash; <em>IDs desde la <a href="#ep-loc-countries" style="color:var(--primary);">API de Locations</a></em></td></tr>
+      <tr><td><code>street</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Calle</td></tr>
+      <tr><td><code>number</code></td><td>string(50)</td><td><span class="badge badge-optional">opcional</span></td><td>Número/altura</td></tr>
+      <tr><td><code>postal_code</code></td><td>string(20)</td><td><span class="badge badge-optional">opcional</span></td><td>Código postal</td></tr>
+      <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país</td></tr>
+      <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia/estado</td></tr>
+      <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad</td></tr>
+      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio</td></tr>
+      <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
+      <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
+      <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Características (unidad tipo)</td></tr>
+      <tr><td><code>room_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Ambientes de la unidad tipo</td></tr>
+      <tr><td><code>suite_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Dormitorios de la unidad tipo</td></tr>
+      <tr><td><code>bathroom_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Baños de la unidad tipo</td></tr>
+      <tr><td><code>toilet_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Toilettes de la unidad tipo</td></tr>
+      <tr><td><code>parking_lot_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cocheras de la unidad tipo</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Superficies</td></tr>
+      <tr><td><code>surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie de la unidad tipo</td></tr>
+      <tr><td><code>roofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie cubierta de la unidad tipo</td></tr>
+      <tr><td><code>surface_measurement</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">SurfaceMeasurement</span> <code>M2</code> o <code>HA</code></td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Precio</td></tr>
+      <tr><td><code>price</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Precio base o de la unidad tipo</td></tr>
+      <tr><td><code>currency</code></td><td>string(3)</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Currency</span> <code>USD</code>, <code>ARS</code>, etc.</td></tr>
+      <tr><td><code>expenses</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Expensas estimadas</td></tr>
+      <tr><td><code>price_square_meter</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Precio por m²</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Multimedia</td></tr>
+      <tr><td><code>images</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Imágenes del emprendimiento: <code>[{ url, description?, is_blueprint?, order_position? }]</code></td></tr>
+      <tr><td><code>attached</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Adjuntos (planos, memorias, brochures): <code>[{ file_url, description? }]</code></td></tr>
+      <tr><td><code>videos</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Videos del emprendimiento: <code>[{ url, order? }]</code></td></tr>
+      <tr><td><code>multimedia360</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Tours 360: <code>[{ url, order? }]</code></td></tr>
+      <tr><td><code>tags</code></td><td>integer[]</td><td><span class="badge badge-optional">opcional</span></td><td>IDs de tags a asociar (ej: <code>[1, 5, 12]</code>)</td></tr>
+      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Responsables</td></tr>
+      <tr><td><code>user_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del usuario responsable. Si se omite se asigna el admin de la organización.</td></tr>
+    </tbody>
+  </table>
+
+  <h2 id="ep-get-dev">GET Obtener Emprendimiento</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-get">GET</span>
+    <code>/api/partner/v1/developments/{referenceCode}</code>
+  </div>
+  <p>Retorna todos los datos del emprendimiento incluyendo multimedia, tags y campos exclusivos de desarrollo.</p>
+  <ul style="color:var(--text-light);margin-bottom:1rem;">
+    <li><strong>Parámetro:</strong> <code>referenceCode</code> — Código de referencia del emprendimiento</li>
+  </ul>
+
+  <h2 id="ep-update-dev">PUT Actualizar Emprendimiento</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-put">PUT</span>
+    <code>/api/partner/v1/developments/{referenceCode}</code>
+  </div>
+  <p>Actualiza campos del emprendimiento. Solo enviar los campos que se desean modificar.</p>
+  <div class="alert alert-warning">
+    <strong>&#9888; Importante:</strong> Si se incluye alguno de los campos <code>images</code>, <code>attached</code>, <code>tags</code>, <code>videos</code> o <code>multimedia360</code>, <u>reemplazará completamente</u> el set existente. Enviá un array vacío (ej: <code>"tags": []</code>) para eliminar todos los elementos de ese campo.
+  </div>
+
+  <h2 id="ep-delete-dev">DELETE Eliminar Emprendimiento</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-delete">DELETE</span>
+    <code>/api/partner/v1/developments/{referenceCode}</code>
+  </div>
+  <p>Soft delete: marca el emprendimiento como eliminado sin borrar datos físicamente. La operación no es reversible desde la API.</p>
+  <ul style="color:var(--text-light);margin-bottom:1rem;">
+    <li><strong>Parámetro:</strong> <code>referenceCode</code> — Código de referencia del emprendimiento</li>
+  </ul>
+
+
   <!-- ===== LOCATIONS ===== -->
 
   <h2 id="ep-loc-countries">GET Países</h2>
@@ -1131,6 +1243,155 @@
   <span class="key">"publication_title"</span>: <span class="string">"Título actualizado"</span>,
   <span class="key">"room_amount"</span>: <span class="number">4</span>,
   <span class="key">"expenses"</span>: <span class="number">52000</span>
+}</div>
+
+  <h2 id="ex-create-dev-full">Ejemplo: Crear Emprendimiento (completo)</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-post">POST</span>
+    <code>/api/partner/v1/developments</code>
+  </div>
+  <div class="code-block" id="create-dev-full-block" style="position:relative;">
+    <button id="copy-create-dev-full" style="position:absolute;top:10px;right:10px;padding:4px 12px;font-size:0.85em;border:none;border-radius:4px;background:#2563eb;color:#fff;cursor:pointer;z-index:2;">Copiar</button>
+    <span class="comment">// Request Body — todos los campos posibles</span>
+    <div id="block-copy-dev-full">
+{
+  <span class="comment">// Referencia de sucursal (obtenida al crear la organización)</span>
+  <span class="key">"branch_reference_id"</span>: <span class="number">7</span>,
+
+  <span class="comment">// Identificación</span>
+  <span class="key">"reference_code"</span>: <span class="string">"DEV-TORRE-BELGRANO-001"</span>,
+  <span class="key">"publication_title"</span>: <span class="string">"Torre Belgrano Residences — Emprendimiento Premium"</span>,
+  <span class="key">"description"</span>: <span class="string">"Emprendimiento de alta gama en el corazón de Belgrano. Torre de 18 pisos con departamentos de 1, 2 y 3 ambientes. Amenities de primer nivel: pileta cubierta, SUM, coworking, gimnasio y roof garden. Cochera y baulera opcionales."</span>,
+  <span class="key">"status"</span>: <span class="number">2</span>,
+
+  <span class="comment">// Campos exclusivos del emprendimiento</span>
+  <span class="key">"development_type"</span>: <span class="string">"Torre residencial"</span>,
+  <span class="key">"development_logo"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/logo.png"</span>,
+  <span class="key">"development_units_total"</span>: <span class="number">144</span>,
+  <span class="key">"development_available_unit_count"</span>: <span class="number">87</span>,
+  <span class="key">"development_delivery_date"</span>: <span class="string">"2026-12-31"</span>,
+
+  <span class="comment">// Ubicación</span>
+  <span class="key">"street"</span>: <span class="string">"Av. del Libertador"</span>,
+  <span class="key">"number"</span>: <span class="string">"5200"</span>,
+  <span class="key">"postal_code"</span>: <span class="string">"C1426BNL"</span>,
+  <span class="key">"country_id"</span>: <span class="number">1</span>,
+  <span class="key">"state_id"</span>: <span class="number">146</span>,
+  <span class="key">"location_id"</span>: <span class="number">24728</span>,
+  <span class="key">"sub_location_id"</span>: <span class="number">24731</span>,
+  <span class="key">"geo_lat"</span>: <span class="number">-34.5618</span>,
+  <span class="key">"geo_long"</span>: <span class="number">-58.4520</span>,
+  <span class="key">"show_exact_location"</span>: <span class="number">true</span>,
+
+  <span class="comment">// Características de la unidad tipo</span>
+  <span class="key">"room_amount"</span>: <span class="number">3</span>,
+  <span class="key">"suite_amount"</span>: <span class="number">2</span>,
+  <span class="key">"bathroom_amount"</span>: <span class="number">2</span>,
+  <span class="key">"toilet_amount"</span>: <span class="number">1</span>,
+  <span class="key">"parking_lot_amount"</span>: <span class="number">1</span>,
+
+  <span class="comment">// Superficies</span>
+  <span class="key">"surface"</span>: <span class="number">95</span>,
+  <span class="key">"roofed_surface"</span>: <span class="number">82</span>,
+  <span class="key">"unroofed_surface"</span>: <span class="number">13</span>,
+  <span class="key">"surface_measurement"</span>: <span class="string">"M2"</span>,
+
+  <span class="comment">// Precio</span>
+  <span class="key">"price"</span>: <span class="number">185000</span>,
+  <span class="key">"currency"</span>: <span class="string">"USD"</span>,
+  <span class="key">"expenses"</span>: <span class="number">60000</span>,
+  <span class="key">"price_square_meter"</span>: <span class="number">1947</span>,
+
+  <span class="comment">// Imágenes (render, fotos de obra, planos)</span>
+  <span class="key">"images"</span>: [
+    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/render-exterior.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Render exterior del edificio"</span>, <span class="key">"order_position"</span>: <span class="number">1</span> },
+    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/lobby.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Lobby de ingreso"</span>, <span class="key">"order_position"</span>: <span class="number">2</span> },
+    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/amenities-pool.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Pileta cubierta con solarium"</span>, <span class="key">"order_position"</span>: <span class="number">3</span> },
+    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/plano-tipo.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Plano de planta tipo"</span>, <span class="key">"is_blueprint"</span>: <span class="number">true</span>, <span class="key">"order_position"</span>: <span class="number">4</span> }
+  ],
+
+  <span class="comment">// Adjuntos (PDFs, memorias, brochures)</span>
+  <span class="key">"attached"</span>: [
+    { <span class="key">"file_url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/memoria-descriptiva.pdf"</span>, <span class="key">"description"</span>: <span class="string">"Memoria descriptiva del proyecto"</span> },
+    { <span class="key">"file_url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/brochure.pdf"</span>, <span class="key">"description"</span>: <span class="string">"Brochure comercial"</span> }
+  ],
+
+  <span class="comment">// Videos y 360</span>
+  <span class="key">"videos"</span>: [
+    { <span class="key">"url"</span>: <span class="string">"https://youtube.com/watch?v=DEMO_TORRE"</span>, <span class="key">"order"</span>: <span class="number">1</span> }
+  ],
+  <span class="key">"multimedia360"</span>: [
+    { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/tour-360.html"</span>, <span class="key">"order"</span>: <span class="number">1</span> }
+  ],
+
+  <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">5</span>, <span class="number">12</span>]
+}</div>
+  </div>
+  <script>
+  document.addEventListener('DOMContentLoaded', function() {
+    const btnDevFull = document.getElementById('copy-create-dev-full');
+    const blockDevFull = document.getElementById('block-copy-dev-full');
+    if (btnDevFull && blockDevFull) {
+      btnDevFull.addEventListener('click', function() {
+        navigator.clipboard.writeText(blockDevFull.innerText).then(() => {
+          btnDevFull.textContent = '¡Copiado!';
+          setTimeout(() => { btnDevFull.textContent = 'Copiar'; }, 1200);
+        }).catch(() => {
+          btnDevFull.textContent = 'Error';
+          setTimeout(() => { btnDevFull.textContent = 'Copiar'; }, 1200);
+        });
+      });
+    }
+  });
+  </script>
+  <div class="code-block"><span class="comment">// Response (201 Created)</span>
+{
+  <span class="key">"success"</span>: <span class="number">true</span>,
+  <span class="key">"created"</span>: <span class="number">true</span>,
+  <span class="key">"data"</span>: {
+    <span class="key">"id"</span>: <span class="number">42</span>,
+    <span class="key">"reference_code"</span>: <span class="string">"DEV-TORRE-BELGRANO-001"</span>,
+    <span class="key">"is_development"</span>: <span class="number">true</span>,
+    <span class="key">"development_type"</span>: <span class="string">"Torre residencial"</span>,
+    <span class="key">"development_units_total"</span>: <span class="number">144</span>,
+    <span class="key">"development_available_unit_count"</span>: <span class="number">87</span>,
+    <span class="key">"development_delivery_date"</span>: <span class="string">"2026-12-31"</span>,
+    <span class="key">"branch_id"</span>: <span class="number">7</span>,
+    <span class="key">"organization_id"</span>: <span class="number">1</span>,
+    <span class="key">"images"</span>: [<span class="comment">/* ... */</span>],
+    <span class="key">"tags"</span>: [<span class="comment">/* ... */</span>]
+  },
+  <span class="key">"warnings"</span>: <span class="number">null</span>
+}</div>
+
+  <h2 id="ex-create-dev-min">Ejemplo: Crear Emprendimiento (mínimo)</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-post">POST</span>
+    <code>/api/partner/v1/developments</code>
+  </div>
+  <div class="code-block"><span class="comment">// Solo campos obligatorios</span>
+{
+  <span class="key">"branch_reference_id"</span>: <span class="number">7</span>,
+  <span class="key">"reference_code"</span>: <span class="string">"DEV-MIN-001"</span>,
+  <span class="key">"publication_title"</span>: <span class="string">"Emprendimiento en Palermo"</span>
+}</div>
+
+  <h2 id="ex-update-dev">Ejemplo: Actualizar Emprendimiento</h2>
+  <div class="endpoint-box">
+    <span class="badge badge-put">PUT</span>
+    <code>/api/partner/v1/developments/DEV-TORRE-BELGRANO-001</code>
+  </div>
+  <div class="code-block"><span class="comment">// Solo enviar campos que cambian</span>
+{
+  <span class="comment">// Actualizar unidades disponibles y precio</span>
+  <span class="key">"development_available_unit_count"</span>: <span class="number">72</span>,
+  <span class="key">"price"</span>: <span class="number">195000</span>,
+
+  <span class="comment">// Actualizar fecha de entrega</span>
+  <span class="key">"development_delivery_date"</span>: <span class="string">"2027-03-31"</span>,
+
+  <span class="comment">// Reemplazar tags (incluir todos los que debe tener)</span>
+  <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">5</span>, <span class="number">12</span>, <span class="number">20</span>]
 }</div>
 
 

@@ -1,0 +1,150 @@
+{
+  "info": "POST /api/partner/v1/developments — Crear emprendimiento con TODA la data posible",
+  "headers": {
+    "Content-Type": "application/json",
+    "x-api-key": "TU_API_KEY_AQUI",
+    "x-api-secret": "TU_API_SECRET_AQUI"
+  },
+  "body": {
+    "branch_reference_id": 1,
+
+    "reference_code": "DEV-TORRE-2024-001",
+    "publication_title": "Torre Belgrano Residences — Emprendimiento Premium en Belgrano",
+
+    "status": 1,
+    "description": "Emprendimiento de alta gama en el corazón de Belgrano. Torre de 18 pisos con departamentos de 1, 2 y 3 ambientes. Amenities de primer nivel: pileta cubierta y descubierta, SUM, coworking, gimnasio, roof garden y seguridad 24hs. Acabados de lujo, domótica integrada y certificación LEED. Cochera y baulera opcionales.",
+
+    "street": "Av. del Libertador",
+    "number": "5200",
+    "postal_code": "C1426BNL",
+    "location_id": 1,
+    "country_id": 1,
+    "state_id": 1,
+    "sub_location_id": 2,
+    "geo_lat": -34.5618,
+    "geo_long": -58.4520,
+    "show_exact_location": true,
+
+    "suite_amount": 1,
+    "room_amount": 3,
+    "bathroom_amount": 2,
+    "toilet_amount": 1,
+    "parking_lot_amount": 1,
+
+    "surface": 95.0,
+    "roofed_surface": 82.0,
+    "unroofed_surface": 13.0,
+    "semiroofed_surface": 0,
+    "total_surface": 95.0,
+    "surface_measurement": 1,
+    "roofed_surface_measurement": 1,
+
+    "construction_year": "2025",
+
+    "expenses": 60000,
+
+    "price": 185000,
+    "currency": "USD",
+    "price_square_meter": 1947,
+
+    "user_id": null,
+
+    "development_type": "Torre residencial",
+    "development_logo": "https://ejemplo.com/emprendimientos/torre-belgrano/logo.png",
+    "development_units_total": 144,
+    "development_available_unit_count": 87,
+    "development_delivery_date": "2026-06-30",
+
+    "images": [
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/render-exterior.jpg",
+        "is_blueprint": false,
+        "description": "Render exterior del edificio",
+        "order_position": 1
+      },
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/lobby.jpg",
+        "is_blueprint": false,
+        "description": "Lobby de ingreso",
+        "order_position": 2
+      },
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/amenities-pool.jpg",
+        "is_blueprint": false,
+        "description": "Pileta cubierta con solarium",
+        "order_position": 3
+      },
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/unidad-tipo-3amb.jpg",
+        "is_blueprint": false,
+        "description": "Unidad tipo 3 ambientes — living",
+        "order_position": 4
+      },
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/plano-tipo.jpg",
+        "is_blueprint": true,
+        "description": "Plano de planta tipo",
+        "order_position": 5
+      }
+    ],
+
+    "videos": [
+      {
+        "url": "https://www.youtube.com/watch?v=EJEMPLO_VIDEO_ID",
+        "order": 1
+      }
+    ],
+
+    "multimedia360": [
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/tour-360-unidad.html",
+        "order": 1
+      },
+      {
+        "url": "https://ejemplo.com/emprendimientos/torre-belgrano/tour-360-amenities.html",
+        "order": 2
+      }
+    ],
+
+    "attached": [
+      {
+        "file_url": "https://ejemplo.com/emprendimientos/torre-belgrano/memoria-descriptiva.pdf",
+        "description": "Memoria descriptiva del emprendimiento",
+        "order": 1
+      },
+      {
+        "file_url": "https://ejemplo.com/emprendimientos/torre-belgrano/brochure.pdf",
+        "description": "Brochure comercial",
+        "order": 2
+      }
+    ],
+
+    "tags": [1, 5, 12, 23]
+  },
+  "expected_response": {
+    "success": true,
+    "created": true,
+    "data": {
+      "id": 42,
+      "reference_code": "DEV-TORRE-2024-001",
+      "is_development": true,
+      "development_type": "Torre residencial",
+      "development_units_total": 144,
+      "development_available_unit_count": 87,
+      "development_delivery_date": "2026-06-30",
+      "...": "resto de campos del emprendimiento"
+    },
+    "warnings": null
+  },
+  "notes": [
+    "branch_reference_id es obligatorio — ID de la sucursal devuelta al crear la organización",
+    "reference_code es el identificador unico del emprendimiento en tu sistema; re-POSTear el mismo reference_code hace un UPDATE (upsert)",
+    "development_type: texto libre (ej: 'Torre residencial', 'Barrio cerrado', 'PH', 'Complejo de oficinas')",
+    "development_logo: URL pública de la imagen del logo/marca del emprendimiento",
+    "development_units_total: cantidad total de unidades del emprendimiento",
+    "development_available_unit_count: unidades disponibles actualmente",
+    "development_delivery_date: fecha estimada de entrega en formato ISO 8601 (YYYY-MM-DD)",
+    "user_id: ID del usuario agente responsable; si se omite o es null se asigna el admin de la organización",
+    "status 1 = DISPONIBLE, 4 = NO_DISPONIBLE"
+  ]
+}

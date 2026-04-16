@@ -29,7 +29,7 @@ export class TokkoMigratorService {
   
 
   constructor(private readonly dataSource: DataSource, private readonly configService: ConfigService) {}
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
   async handleMigration() {
     this.logger.log('Iniciando migración automática de locations desde Tokko...');
     const enabled = this.configService.get<string>('FEATURE_FLAG_TOKKO_SYNC');
@@ -49,7 +49,7 @@ export class TokkoMigratorService {
 
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
-      await this.normalizeSubLocationsByCountry(1);
+      //await this.normalizeSubLocationsByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');

@@ -29,6 +29,8 @@ import { CreateOrganizationRegistrationDto } from '../registration/dto/create-or
 import { Request } from 'express';
 import { CreatePropertyDto } from '../properties/dto/create-property.dto';
 import { UpdatePropertyDto } from '../properties/dto/update-property.dto';
+import { CreateDevelopmentDto } from '../properties/dto/create-development.dto';
+import { UpdateDevelopmentDto } from '../properties/dto/update-development.dto';
 
 @Controller('api/partner/v1')
 @UseGuards(ThrottlerGuard, ApiKeyAuthGuard)
@@ -265,5 +267,94 @@ export class PartnerApiController {
     const partner = (request as any).partner;
     const result = await this.partnerApiService.resetFailedUploadsForPartner(referenceCode, partner);
     return result;
+  }
+
+  // ====== DEVELOPMENTS ======
+
+  @Post('developments')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Crear emprendimiento (o upsert por reference_code)',
+    description:
+      'Crea un nuevo emprendimiento vinculado a un branch existente. ' +
+      'Si ya existe un emprendimiento con el mismo reference_code en la organización, se actualiza (upsert). ' +
+      'Soporta imágenes, adjuntos, videos, multimedia 360 y tags en el payload.',
+  })
+  @ApiResponse({ status: 201, description: 'Emprendimiento creado o actualizado' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Branch no encontrada' })
+  @ApiResponse({ status: 429, description: 'Rate limit excedido' })
+  async createDevelopment(
+    @Body() dto: CreateDevelopmentDto,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.createOrUpsertDevelopment(dto, partner);
+    return {
+      success: true,
+      created: result.created,
+      data: result.data,
+      warnings: result.warnings,
+    };
+  }
+
+  @Get('developments/:referenceCode')
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Obtener emprendimiento por reference_code',
+    description: 'Retorna todos los datos de un emprendimiento incluyendo multimedia.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento' })
+  @ApiResponse({ status: 200, description: 'Emprendimiento encontrado' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento no encontrado' })
+  async getDevelopment(
+    @Param('referenceCode') referenceCode: string,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.getDevelopment(referenceCode, partner);
+    return { success: true, data: result.data };
+  }
+
+  @Put('developments/:referenceCode')
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Actualizar emprendimiento por reference_code',
+    description: 'Actualiza campos escalares, multimedia y tags de un emprendimiento existente.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento' })
+  @ApiResponse({ status: 200, description: 'Emprendimiento actualizado' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento no encontrado' })
+  async updateDevelopment(
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: UpdateDevelopmentDto,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.updateDevelopment(referenceCode, dto, partner);
+    return {
+      success: true,
+      data: result.data,
+      warnings: result.warnings,
+    };
+  }
+
+  @Delete('developments/:referenceCode')
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Eliminar emprendimiento (soft delete)',
+    description: 'Marca el emprendimiento como eliminado. No se borra físicamente de la base de datos.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento' })
+  @ApiResponse({ status: 200, description: 'Emprendimiento eliminado' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento no encontrado' })
+  async deleteDevelopment(
+    @Param('referenceCode') referenceCode: string,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.deleteDevelopment(referenceCode, partner);
+    return { success: true, ...result };
   }
 }

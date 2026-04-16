@@ -76,6 +76,8 @@ export const TAGS_BY_PROPERTY_TYPE: Record<PropertyType, number[]> = {
   [PropertyType.OFICINA_COMERCIAL]: [ ],
   // ── Quinta vacacional ───────────────────────────────────────────────────
   [PropertyType.QUINTA_VACACIONAL]: [ ],
+  // ── Emprendimiento ───────────────────────────────────────────────────
+  [PropertyType.EMPRENDIMIENTO]: [ ],
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -200,6 +202,9 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
     'garage_coverage',
     'number_of_guests',      // Cantidad de huéspedes
   ],
+  // ── Emprendimiento ────────────────────────────────────────────────────
+    [PropertyType.EMPRENDIMIENTO]: [ ]
+
 };
 
 const RUBROS = [

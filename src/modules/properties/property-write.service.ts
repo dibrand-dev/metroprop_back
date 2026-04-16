@@ -1,5 +1,4 @@
 import { Injectable } from '@nestjs/common';
-import { S3Service } from '../../common/s3.service';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Not } from 'typeorm';
 import { Property } from './entities/property.entity';
@@ -40,7 +39,6 @@ export class PropertyWriteService {
     @InjectRepository(PropertyVideo)
     private readonly propertyVideoRepo: Repository<PropertyVideo>,
     private readonly dataSource: DataSource,
-    private readonly s3Service: S3Service,
   ) {}
 
   /**

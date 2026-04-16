@@ -103,8 +103,6 @@ export class PropertiesService {
     // DEBUG: Confirmar si entra realmente a este método
     console.log('[DEBUG][PropertiesService.create] Entró al método. propertyData:', JSON.stringify(propertyData, null, 2));
 
-
-
     // Verificar que no exista una propiedad con el mismo reference_code
     const existingProperty = await this.propertyRepository.findOne({
       where: { reference_code: propertyData.reference_code },
