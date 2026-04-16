@@ -11,7 +11,7 @@ export class LocationsController {
     private readonly migrator: TokkoMigratorService,
   ) {}
   // --- ENDPOINTS DE NORMALIZACIÓN ---
-/*
+
   @Get('normalize-states')
   async normalizeStatesByCountry(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
@@ -32,7 +32,7 @@ export class LocationsController {
     await this.migrator.normalizeSubLocationsByCountry(Number(countryId), locationId ? Number(locationId) : undefined);
     return { ok: true };
   }
-*/
+
   @Get('normalize-full-locations')
   async normalizeFullLocationsByCountry(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
