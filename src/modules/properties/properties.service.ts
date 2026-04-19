@@ -782,12 +782,6 @@ export class PropertiesService {
     page: number;
     limit: number;
     mapData: Array<{ id: number; lat: number; lng: number; price?: number; reference_code: string }>;
-    /*filterStats: {
-      priceRanges: Array<{ min: number; max: number; count: number }>;
-      totalProperties: number;
-      minPrice: number;
-      maxPrice: number;
-    };*/
   }> {
     const limit = filters.limit ?? 20;
     const page = filters.page ?? 1;
@@ -831,7 +825,17 @@ export class PropertiesService {
           'p_org.company_name',
           'p_org.company_logo',
         ])
-        .leftJoinAndSelect('p.images', 'img')
+        .leftJoinAndSelect(
+          'p.images',
+          'img',
+          `img.id = (
+            SELECT pi.id
+            FROM property_images pi
+            WHERE pi."propertyId" = p.id
+            ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+            LIMIT 1
+          )`,
+        )
         .leftJoinAndSelect('p.organization', 'p_org')
         .orderBy(orderBy, orderDirection)
         .skip(offset)
@@ -877,16 +881,12 @@ export class PropertiesService {
         }))
       );
 
-    // Estadísticas para filtros
-    //const filterStats = await this.generateFilterStats(filters);
-
     return {
       data,
       total,
       page,
       limit,
       mapData,
-    //  filterStats,
     };
   }
 
@@ -1250,59 +1250,6 @@ export class PropertiesService {
 
     qb.andWhere(`((${edgeChecks.join(' + ')}) % 2) = 1`, parameters);
   }
-
-  /**
-   * Genera estadísticas para filtros (rangos de precios, conteos, etc.)
-   */
-  /*private async generateFilterStats(filters: SearchPropertiesDto) {
-    const baseQb = this.buildAdvancedSearchQuery(filters);
-    
-    // Obtener min y max precios de todas las propiedades que coinciden
-    const priceStats = await baseQb
-      .select([
-        'MIN(p.price) as minPrice',
-        'MAX(p.price) as maxPrice',
-        'COUNT(*) as totalProperties'
-      ])
-      .andWhere('p.price IS NOT NULL')
-      .andWhere('p.price > 0')
-      .getRawOne();
-
-    const minPrice = parseFloat(priceStats.minPrice) || 0;
-    const maxPrice = parseFloat(priceStats.maxPrice) || 0;
-    const totalProperties = parseInt(priceStats.totalProperties) || 0;
-
-    // Generar rangos de precios dinámicos
-    const priceRanges = [];
-    if (maxPrice > 0) {
-      const rangeSize = (maxPrice - minPrice) / 10; // 10 rangos
-      
-      for (let i = 0; i < 10; i++) {
-        const rangeMin = minPrice + (i * rangeSize);
-        const rangeMax = i === 9 ? maxPrice : minPrice + ((i + 1) * rangeSize);
-        
-        const rangeQb = this.buildAdvancedSearchQuery(filters);
-        const count = await rangeQb
-          .andWhere('p.price >= :rangeMin', { rangeMin })
-          .andWhere('p.price < :rangeMax', { rangeMax })
-          .getCount();
-
-        priceRanges.push({
-          min: Math.round(rangeMin),
-          max: Math.round(rangeMax),
-          count
-        });
-      }
-    }
-
-    return {
-      priceRanges,
-      totalProperties,
-      minPrice: Math.round(minPrice),
-      maxPrice: Math.round(maxPrice)
-    };
-  } */
-
   
   // =============================================
   // END SEARCH PROPERTIES
