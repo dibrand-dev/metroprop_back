@@ -236,3 +236,11 @@ export enum PlanName {
   GRATUITO = 1,
   PREMIUM = 2,
 }
+
+/**
+ * Ubicaciones de banners publicitarios.
+ */
+export enum BannerPlacement {
+  HEADER = 1,
+  FOOTER = 2,
+}
