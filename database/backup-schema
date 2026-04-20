@@ -185,6 +185,14 @@ CREATE SEQUENCE public.plans_id_seq
 	MAXVALUE 2147483647
 	START 1
 	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.ads_banners_id_seq;
+CREATE SEQUENCE public.ads_banners_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
 	NO CYCLE;-- public.locations definition
 
 -- Drop table
@@ -718,6 +726,26 @@ CREATE TABLE IF NOT EXISTS public.plans (
 CREATE UNIQUE INDEX IF NOT EXISTS uk_plans_plan_type ON public.plans (plan_type) WHERE (deleted = false);
 
 
+-- public.ads_banners definition
+
+-- Drop table
+
+-- DROP TABLE public.ads_banners;
+
+CREATE TABLE IF NOT EXISTS public.ads_banners (
+	id              serial4        NOT NULL,
+	name            varchar(255)   NOT NULL,
+	file            varchar(500)   NULL,
+	placements      varchar(500)   NOT NULL,
+	status          bool           NOT NULL DEFAULT true,
+	file_status     varchar(500)   NULL,
+	file_retry      int4           NOT NULL DEFAULT 0,
+	created_at      timestamp      NOT NULL DEFAULT now(),
+	updated_at      timestamp      NOT NULL DEFAULT now(),
+	CONSTRAINT pk_ads_banners PRIMARY KEY (id)
+);
+
+
 -- Ensure serial id columns have their DEFAULT nextval properly set
 -- (guards against serial4 + pre-existing sequence conflicts)
 
@@ -736,3 +764,4 @@ ALTER TABLE public.organizations      ALTER COLUMN id SET DEFAULT nextval('publi
 ALTER TABLE public.users              ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
 ALTER TABLE public.tags_mapping ALTER COLUMN id SET DEFAULT nextval('public.tags_mapping_id_seq'::regclass);
 ALTER TABLE public.plans              ALTER COLUMN id SET DEFAULT nextval('public.plans_id_seq'::regclass);
+ALTER TABLE public.ads_banners        ALTER COLUMN id SET DEFAULT nextval('public.ads_banners_id_seq'::regclass);

@@ -21,6 +21,7 @@ import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.modu
 import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.module';
 import { TokkoMigratorModule } from './modules/cron-tasks/tokko-migrator/tokko-migrator.module';
 import { PlansModule } from './modules/plans/plans.module';
+import { AdsBannersModule } from './modules/ads-banners/ads-banners.module';
 
 
 @Module({
@@ -82,6 +83,7 @@ import { PlansModule } from './modules/plans/plans.module';
     UploadS3CronModule,
     TokkoMigratorModule,
     PlansModule,
+    AdsBannersModule,
   ],
   controllers: [AppController],
   providers: [AppService],
