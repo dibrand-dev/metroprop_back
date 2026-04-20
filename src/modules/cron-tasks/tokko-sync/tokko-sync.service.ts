@@ -1,4 +1,3 @@
-import { PropertiesService } from '../../properties/properties.service';
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,12 +16,9 @@ import { TokkoHelperService } from '../../../common/helpers/tokko-helper';
 import { BranchesService } from '../../branches/branches.service';
 import { UsersService } from '../../users/users.service';
 import { MediaUploadStatus, UserRole } from '../../../common/enums';
-import { TokkoSyncLoggerService, BatchStats } from './tokko-sync-logger.service';
+import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
 import { PASSWORD_DEFAULT } from '@/common/constants';
 import { PropertyWriteService } from '@/modules/properties/property-write.service';
-import { warn } from 'console';
-import e from 'express';
-
 
 
 @Injectable()
@@ -49,7 +45,6 @@ export class TokkoSyncService implements OnModuleInit {
 		private readonly usersService: UsersService,
 		private readonly configService: ConfigService,
 		private readonly fileLogger: TokkoSyncLoggerService,
-		private readonly propertiesService: PropertiesService,
 		private readonly propertyWriteService: PropertyWriteService,
 		
 		
@@ -79,6 +74,7 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		await this.syncFreePortalFeed(apiKey);
+		await this.syncDeletedFeed(apiKey);
 	}
 
 	async triggerManualSync(): Promise<{ message: string }> {
@@ -92,6 +88,7 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		await this.syncFreePortalFeed(apiKey);
+		await this.syncDeletedFeed(apiKey);
 		return { message: 'Sync triggered' };
 	}
 
@@ -223,14 +220,36 @@ export class TokkoSyncService implements OnModuleInit {
 	// ─── Sync Orchestration ──────────────────────────────────────────────────────
 
 	private async syncFreePortalFeed(apiKey: string): Promise<void> {
-		this.logger.log('[TokkoSync] Starting sync cycle');
+		await this.runPaginatedSync(apiKey, 'feed', 'updated', (item) => this.processProperty(item));
+	}
 
-		// Load or create state row for this API key
-		let state = await this.syncStateRepo.findOne({ where: { api_key: apiKey } });
+	private async syncDeletedFeed(apiKey: string): Promise<void> {
+		await this.runPaginatedSync(apiKey, 'deleted', 'deleted', (item) => this.processDeletedProperty(item));
+	}
+
+	/**
+	 * Generic paginated sync engine. Manages TokkoSyncState lifecycle
+	 * (create/resume/advance/complete) and delegates per-item processing
+	 * to the supplied callback.
+	 */
+	private async runPaginatedSync(
+		apiKey: string,
+		syncType: string,
+		filter: string,
+		processItem: (item: any) => Promise<string>,
+	): Promise<void> {
+		const label = `[TokkoSync:${syncType}]`;
+		this.logger.log(`${label} Starting sync cycle`);
+
+		// Load or create state row for this API key + sync type
+		let state = await this.syncStateRepo.findOne({
+			where: { api_key: apiKey, sync_type: syncType },
+		});
 
 		if (!state) {
 			state = this.syncStateRepo.create({
 				api_key: apiKey,
+				sync_type: syncType,
 				sync_from_date: new Date('2000-01-01'),
 				current_offset: 0,
 				total_count: 0,
@@ -241,7 +260,6 @@ export class TokkoSyncService implements OnModuleInit {
 
 		// If previous run finished, start a new one
 		if (state.is_complete) {
-			// Advance sync_from_date to when the last run completed (or stay at default)
 			state.sync_from_date = state.completed_at ?? new Date('2000-01-01');
 			state.current_offset = 0;
 			state.total_count = 0;
@@ -250,20 +268,25 @@ export class TokkoSyncService implements OnModuleInit {
 			state.completed_at = null;
 			state = await this.syncStateRepo.save(state);
 			this.logger.log(
-				`[TokkoSync] New run — syncing from ${state.sync_from_date.toISOString()}`,
+				`${label} New run — syncing from ${state.sync_from_date.toISOString()}`,
 			);
 		} else {
 			this.logger.log(
-				`[TokkoSync] Resuming run at offset ${state.current_offset}/${state.total_count}`,
+				`${label} Resuming run at offset ${state.current_offset}/${state.total_count}`,
 			);
 		}
 
-		await this.fetchAndProcessBatch(state);
+		await this.fetchAndProcessBatch(state, filter, processItem);
 	}
 
 	// ─── Batch Processing ────────────────────────────────────────────────────────
 
-	private async fetchAndProcessBatch(state: any): Promise<void> {
+	private async fetchAndProcessBatch(
+		state: TokkoSyncState,
+		filter: string,
+		processItem: (item: any) => Promise<string>,
+	): Promise<void> {
+		const label = `[TokkoSync:${state.sync_type}]`;
 		// Format date as ISO without milliseconds for the API
 		const dateFrom = state.sync_from_date.toISOString().split('.')[0];
 
@@ -272,10 +295,12 @@ export class TokkoSyncService implements OnModuleInit {
 			this.BATCH_SIZE,
 			state.current_offset,
 			dateFrom,
+			undefined,
+			filter,
 		);
 
 		if ('error' in result) {
-			this.logger.error(`[TokkoSync] API fetch failed: ${result.error} — ${result.details ?? ''}`);
+			this.logger.error(`${label} API fetch failed: ${result.error} — ${result.details ?? ''}`);
 			return;
 		}
 
@@ -288,25 +313,24 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		this.logger.log(
-			`[TokkoSync] Fetched ${objects.length} items (offset=${state.current_offset}, total=${totalCount})`,
+			`${label} Fetched ${objects.length} items (offset=${state.current_offset}, total=${totalCount})`,
 		);
 		this.fileLogger.logBatchStart(state.current_offset, totalCount, dateFrom);
 
-		const stats: any = { totalReceived: objects.length, created: 0, updated: 0, skipped: 0, failed: 0 };
+		const stats: any = { totalReceived: objects.length, created: 0, updated: 0, skipped: 0, failed: 0, deleted: 0 };
 
 		// Process each item, logging errors without aborting the batch
 		for (const item of objects) {
 			this.fileLogger.logItemReceived(item);
 			try {
-				const outcome = await this.processProperty(item);
-				if (outcome === 'created') stats.created++;
-				else if (outcome === 'updated') stats.updated++;
+				const outcome = await processItem(item);
+				if (outcome in stats) stats[outcome]++;
 				else stats.skipped++;
 			} catch (err) {
 				stats.failed++;
 				const msg = err instanceof Error ? err.message : String(err);
 				this.logger.error(
-					`[TokkoSync] Error processing item id=${item.id} pub=${item.publication_id}: ${msg}`,
+					`${label} Error processing item id=${item.id} pub=${item.publication_id}: ${msg}`,
 				);
 				this.fileLogger.logItemFailed(item, err);
 			}
@@ -314,7 +338,7 @@ export class TokkoSyncService implements OnModuleInit {
 
 		this.fileLogger.logBatchEnd(stats);
 		this.logger.log(
-			`[TokkoSync] Batch done — created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} failed=${stats.failed}`,
+			`${label} Batch done — ${Object.entries(stats).filter(([k]) => k !== 'totalReceived').map(([k, v]) => `${k}=${v}`).join(' ')}`,
 		);
 
 		// Advance offset
@@ -325,11 +349,49 @@ export class TokkoSyncService implements OnModuleInit {
 		if (isDone) {
 			state.is_complete = true;
 			state.completed_at = new Date();
-			this.logger.log(`[TokkoSync] Run complete. Processed ${newOffset}/${totalCount} items.`);
-			this.fileLogger.info(`RUN_COMPLETE processed=${newOffset} total=${totalCount}`);
+			this.logger.log(`${label} Run complete. Processed ${newOffset}/${totalCount} items.`);
+			this.fileLogger.info(`RUN_COMPLETE [${state.sync_type}] processed=${newOffset} total=${totalCount}`);
 		}
 
 		await this.syncStateRepo.save(state);
+	}
+
+	// ─── Deleted Property Processing ─────────────────────────────────────────────
+
+	/**
+	 * Marks a property as deleted in the local DB when it appears
+	 * in the Tokko "filter=deleted" feed.
+	 */
+	private async processDeletedProperty(item: any): Promise<string> {
+		if (!item || typeof item !== 'object') {
+			this.fileLogger.warn('DELETE_SKIPPED reason="invalid payload"');
+			return 'skipped';
+		}
+
+		const publicationId = item.publication_id != null ? String(item.publication_id) : null;
+		if (!publicationId) {
+			this.fileLogger.warn(`DELETE_SKIPPED tokko_id=${item.id ?? 'N/A'} reason="no publication_id"`);
+			return 'skipped';
+		}
+
+		const existing = await this.propertyRepo.findOne({ where: { publication_id: publicationId } });
+
+		if (!existing) {
+			this.fileLogger.info(`DELETE_NOT_FOUND pub_id=${publicationId} — property not in local DB, nothing to delete`);
+			return 'skipped';
+		}
+
+		if (existing.deleted) {
+			this.fileLogger.info(`DELETE_ALREADY pub_id=${publicationId} property_id=${existing.id} — already marked deleted`);
+			return 'skipped';
+		}
+
+		existing.deleted = true;
+		await this.propertyRepo.save(existing);
+
+		this.logger.log(`[TokkoSync:deleted] Marked property id=${existing.id} pub=${publicationId} as deleted`);
+		this.fileLogger.info(`DELETE_DONE pub_id=${publicationId} property_id=${existing.id}`);
+		return 'deleted';
 	}
 
 	// ─── Single Property Upsert ──────────────────────────────────────────────────

@@ -276,6 +276,14 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	key_reference_code varchar(255) NULL,
 	maintenance_user varchar(255) NULL,
 	development varchar(255) NULL,
+	development_id int4 NULL,
+	development_type int4 NULL,
+	development_logo varchar(500) NULL,
+	development_logo_status varchar(20) NULL,
+	development_logo_retry_count int4 DEFAULT 0 NULL,
+	development_units_total int4 NULL,
+	development_delivery_date date NULL,
+	development_available_unit_count int4 NULL,
 	network_information text NULL,
 	transaction_requirements text NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
@@ -672,6 +680,7 @@ CREATE TABLE IF NOT EXISTS public.tokko_sync_state (
 	completed_at timestamp NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
 	updated_at timestamp DEFAULT now() NOT NULL,
+	tokko_sync_state varchar(50) DEFAULT 'feed' NOT NULL,
 	CONSTRAINT pk_tokko_sync_state PRIMARY KEY (id),
 	CONSTRAINT uq_tokko_sync_state_api_key UNIQUE (api_key)
 );

@@ -26,7 +26,8 @@ import {
   Brightness,
   GarageCoverage,
   PublicationPlan,
-  PropertySubtype
+  PropertySubtype,
+  DevelopmentType,
 } from '../../../common/enums';
 import { Organization } from '@/modules/organizations/entities/organization.entity';
 
@@ -296,8 +297,8 @@ export class Property {
   @Column({ type: 'integer', nullable: true })
   development_id?: number;
 
-  @Column({ type: 'varchar', length: 100, nullable: true })
-  development_type?: string;
+  @Column({ type: 'integer', nullable: true })
+  development_type?: DevelopmentType;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   development_logo?: string;

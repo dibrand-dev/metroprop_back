@@ -357,6 +357,7 @@
     <a href="#enum-surface-measurement">SurfaceMeasurement</a>
     <a href="#enum-orientation">Orientation</a>
     <a href="#enum-disposition">Disposition</a>
+    <a href="#enum-development-type">DevelopmentType</a>
   </div>
 
   <div class="sidebar-section">
@@ -849,7 +850,7 @@
       <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Estado</td></tr>
       <tr><td><code>status</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">PropertyStatus</span> <code>0</code> Borrador · <code>2</code> Disponible · <code>3</code> Reservado · <code>4</code> No disponible</td></tr>
       <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Campos exclusivos del emprendimiento</td></tr>
-      <tr><td><code>development_type</code></td><td>string(100)</td><td><span class="badge badge-optional">opcional</span></td><td>Tipo de proyecto: ej. <em>"Torre residencial"</em>, <em>"Barrio cerrado"</em>, <em>"Complejo de oficinas"</em></td></tr>
+      <tr><td><code>development_type</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">DevelopmentType</span> <code>1</code> Desarrollo vertical · <code>2</code> Desarrollo horizontal</td></tr>
       <tr><td><code>development_logo</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>URL pública del logo o imagen de marca del emprendimiento</td></tr>
       <tr><td><code>development_units_total</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cantidad total de unidades del proyecto</td></tr>
       <tr><td><code>development_available_unit_count</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Unidades disponibles actualmente para la venta</td></tr>
@@ -865,21 +866,6 @@
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
       <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Características (unidad tipo)</td></tr>
-      <tr><td><code>room_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Ambientes de la unidad tipo</td></tr>
-      <tr><td><code>suite_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Dormitorios de la unidad tipo</td></tr>
-      <tr><td><code>bathroom_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Baños de la unidad tipo</td></tr>
-      <tr><td><code>toilet_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Toilettes de la unidad tipo</td></tr>
-      <tr><td><code>parking_lot_amount</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Cocheras de la unidad tipo</td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Superficies</td></tr>
-      <tr><td><code>surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie de la unidad tipo</td></tr>
-      <tr><td><code>roofed_surface</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Superficie cubierta de la unidad tipo</td></tr>
-      <tr><td><code>surface_measurement</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">SurfaceMeasurement</span> <code>M2</code> o <code>HA</code></td></tr>
-      <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Precio</td></tr>
-      <tr><td><code>price</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Precio base o de la unidad tipo</td></tr>
-      <tr><td><code>currency</code></td><td>string(3)</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">Currency</span> <code>USD</code>, <code>ARS</code>, etc.</td></tr>
-      <tr><td><code>expenses</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>Expensas estimadas</td></tr>
-      <tr><td><code>price_square_meter</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Precio por m²</td></tr>
       <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Multimedia</td></tr>
       <tr><td><code>images</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Imágenes del emprendimiento: <code>[{ url, description?, is_blueprint?, order_position? }]</code></td></tr>
       <tr><td><code>attached</code></td><td>array</td><td><span class="badge badge-optional">opcional</span></td><td>Adjuntos (planos, memorias, brochures): <code>[{ file_url, description? }]</code></td></tr>
@@ -1114,6 +1100,12 @@
     <div class="enum-item"><span>Lateral</span><span class="value">4</span></div>
   </div>
 
+  <h2 id="enum-development-type">Enum: DevelopmentType</h2>
+  <div class="enum-grid">
+    <div class="enum-item"><span>Desarrollo vertical</span><span class="value">1</span></div>
+    <div class="enum-item"><span>Desarrollo horizontal</span><span class="value">2</span></div>
+  </div>
+  
   <!-- ===== EXAMPLES ===== -->
 
   <h2 id="ex-create-org">Ejemplo: Crear Organización</h2>
@@ -1252,26 +1244,18 @@
   </div>
   <div class="code-block" id="create-dev-full-block" style="position:relative;">
     <button id="copy-create-dev-full" style="position:absolute;top:10px;right:10px;padding:4px 12px;font-size:0.85em;border:none;border-radius:4px;background:#2563eb;color:#fff;cursor:pointer;z-index:2;">Copiar</button>
-    <span class="comment">// Request Body — todos los campos posibles</span>
     <div id="block-copy-dev-full">
 {
-  <span class="comment">// Referencia de sucursal (obtenida al crear la organización)</span>
   <span class="key">"branch_reference_id"</span>: <span class="number">7</span>,
-
-  <span class="comment">// Identificación</span>
   <span class="key">"reference_code"</span>: <span class="string">"DEV-TORRE-BELGRANO-001"</span>,
   <span class="key">"publication_title"</span>: <span class="string">"Torre Belgrano Residences — Emprendimiento Premium"</span>,
   <span class="key">"description"</span>: <span class="string">"Emprendimiento de alta gama en el corazón de Belgrano. Torre de 18 pisos con departamentos de 1, 2 y 3 ambientes. Amenities de primer nivel: pileta cubierta, SUM, coworking, gimnasio y roof garden. Cochera y baulera opcionales."</span>,
   <span class="key">"status"</span>: <span class="number">2</span>,
-
-  <span class="comment">// Campos exclusivos del emprendimiento</span>
-  <span class="key">"development_type"</span>: <span class="string">"Torre residencial"</span>,
+  <span class="key">"development_type"</span>: <span class="number">2</span>,
   <span class="key">"development_logo"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/logo.png"</span>,
   <span class="key">"development_units_total"</span>: <span class="number">144</span>,
   <span class="key">"development_available_unit_count"</span>: <span class="number">87</span>,
   <span class="key">"development_delivery_date"</span>: <span class="string">"2026-12-31"</span>,
-
-  <span class="comment">// Ubicación</span>
   <span class="key">"street"</span>: <span class="string">"Av. del Libertador"</span>,
   <span class="key">"number"</span>: <span class="string">"5200"</span>,
   <span class="key">"postal_code"</span>: <span class="string">"C1426BNL"</span>,
@@ -1282,48 +1266,22 @@
   <span class="key">"geo_lat"</span>: <span class="number">-34.5618</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.4520</span>,
   <span class="key">"show_exact_location"</span>: <span class="number">true</span>,
-
-  <span class="comment">// Características de la unidad tipo</span>
-  <span class="key">"room_amount"</span>: <span class="number">3</span>,
-  <span class="key">"suite_amount"</span>: <span class="number">2</span>,
-  <span class="key">"bathroom_amount"</span>: <span class="number">2</span>,
-  <span class="key">"toilet_amount"</span>: <span class="number">1</span>,
-  <span class="key">"parking_lot_amount"</span>: <span class="number">1</span>,
-
-  <span class="comment">// Superficies</span>
-  <span class="key">"surface"</span>: <span class="number">95</span>,
-  <span class="key">"roofed_surface"</span>: <span class="number">82</span>,
-  <span class="key">"unroofed_surface"</span>: <span class="number">13</span>,
-  <span class="key">"surface_measurement"</span>: <span class="string">"M2"</span>,
-
-  <span class="comment">// Precio</span>
-  <span class="key">"price"</span>: <span class="number">185000</span>,
-  <span class="key">"currency"</span>: <span class="string">"USD"</span>,
-  <span class="key">"expenses"</span>: <span class="number">60000</span>,
-  <span class="key">"price_square_meter"</span>: <span class="number">1947</span>,
-
-  <span class="comment">// Imágenes (render, fotos de obra, planos)</span>
   <span class="key">"images"</span>: [
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/render-exterior.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Render exterior del edificio"</span>, <span class="key">"order_position"</span>: <span class="number">1</span> },
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/lobby.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Lobby de ingreso"</span>, <span class="key">"order_position"</span>: <span class="number">2</span> },
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/amenities-pool.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Pileta cubierta con solarium"</span>, <span class="key">"order_position"</span>: <span class="number">3</span> },
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/plano-tipo.jpg"</span>, <span class="key">"description"</span>: <span class="string">"Plano de planta tipo"</span>, <span class="key">"is_blueprint"</span>: <span class="number">true</span>, <span class="key">"order_position"</span>: <span class="number">4</span> }
   ],
-
-  <span class="comment">// Adjuntos (PDFs, memorias, brochures)</span>
   <span class="key">"attached"</span>: [
     { <span class="key">"file_url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/memoria-descriptiva.pdf"</span>, <span class="key">"description"</span>: <span class="string">"Memoria descriptiva del proyecto"</span> },
     { <span class="key">"file_url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/brochure.pdf"</span>, <span class="key">"description"</span>: <span class="string">"Brochure comercial"</span> }
   ],
-
-  <span class="comment">// Videos y 360</span>
   <span class="key">"videos"</span>: [
     { <span class="key">"url"</span>: <span class="string">"https://youtube.com/watch?v=DEMO_TORRE"</span>, <span class="key">"order"</span>: <span class="number">1</span> }
   ],
   <span class="key">"multimedia360"</span>: [
     { <span class="key">"url"</span>: <span class="string">"https://ejemplo.com/emprendimientos/torre-belgrano/tour-360.html"</span>, <span class="key">"order"</span>: <span class="number">1</span> }
   ],
-
   <span class="key">"tags"</span>: [<span class="number">1</span>, <span class="number">5</span>, <span class="number">12</span>]
 }</div>
   </div>
@@ -1352,7 +1310,7 @@
     <span class="key">"id"</span>: <span class="number">42</span>,
     <span class="key">"reference_code"</span>: <span class="string">"DEV-TORRE-BELGRANO-001"</span>,
     <span class="key">"is_development"</span>: <span class="number">true</span>,
-    <span class="key">"development_type"</span>: <span class="string">"Torre residencial"</span>,
+    <span class="key">"development_type"</span>: <span class="number">2</span>,
     <span class="key">"development_units_total"</span>: <span class="number">144</span>,
     <span class="key">"development_available_unit_count"</span>: <span class="number">87</span>,
     <span class="key">"development_delivery_date"</span>: <span class="string">"2026-12-31"</span>,
@@ -1383,9 +1341,8 @@
   </div>
   <div class="code-block"><span class="comment">// Solo enviar campos que cambian</span>
 {
-  <span class="comment">// Actualizar unidades disponibles y precio</span>
+  <span class="comment">// Actualizar unidades disponibles</span>
   <span class="key">"development_available_unit_count"</span>: <span class="number">72</span>,
-  <span class="key">"price"</span>: <span class="number">195000</span>,
 
   <span class="comment">// Actualizar fecha de entrega</span>
   <span class="key">"development_delivery_date"</span>: <span class="string">"2027-03-31"</span>,

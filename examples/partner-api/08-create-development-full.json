@@ -31,21 +31,7 @@
     "toilet_amount": 1,
     "parking_lot_amount": 1,
 
-    "surface": 95.0,
-    "roofed_surface": 82.0,
-    "unroofed_surface": 13.0,
-    "semiroofed_surface": 0,
-    "total_surface": 95.0,
-    "surface_measurement": 1,
-    "roofed_surface_measurement": 1,
-
     "construction_year": "2025",
-
-    "expenses": 60000,
-
-    "price": 185000,
-    "currency": "USD",
-    "price_square_meter": 1947,
 
     "user_id": null,
 

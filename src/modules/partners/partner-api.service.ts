@@ -11,8 +11,6 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
-import { PropertyImage } from '../properties/entities/property-image.entity';
-import { PropertyAttached } from '../properties/entities/property-attached.entity';
 import { Partner } from './entities/partner.entity';
 
 import { PropertiesService } from '../properties/properties.service';
@@ -24,6 +22,7 @@ import { CreatePropertyDto } from '../properties/dto/create-property.dto';
 import { UpdatePropertyDto } from '../properties/dto/update-property.dto';
 import { CreateDevelopmentDto } from '../properties/dto/create-development.dto';
 import { UpdateDevelopmentDto } from '../properties/dto/update-development.dto';
+import { PropertyType } from '@/common/enums';
 
 @Injectable()
 export class PartnerApiService {
@@ -38,8 +37,6 @@ export class PartnerApiService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
-    @InjectRepository(PropertyImage)
-    @InjectRepository(PropertyAttached)
     private readonly propertiesService: PropertiesService,
     private readonly propertyWriteService: PropertyWriteService,
     private readonly registrationService: RegistrationService,
@@ -309,7 +306,7 @@ export class PartnerApiService {
       relations: ['admin_user'],
     });
     const userId = dto.user_id ?? orgWithAdmin?.admin_user?.id;
-
+    dto.is_development = true;
     dto.organization_id = organization.id;
     dto.user_id = userId;
     dto.branch_id = branch.id;

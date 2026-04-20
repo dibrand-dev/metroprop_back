@@ -13,9 +13,10 @@ import {
   IsEnum,
   IsNumber,
   IsDateString,
+  isNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PropertyStatus } from '../../../common/enums';
+import { PropertyStatus, DevelopmentType, PropertyType, OperationType } from '../../../common/enums';
 import { CreateImageDto, CreateVideoDto, CreateMultimedia360Dto, CreateAttachedDto } from './create-property.dto';
 
 export class CreateDevelopmentDto {
@@ -33,8 +34,8 @@ export class CreateDevelopmentDto {
   publication_title!: string;
 
   // ========== Partner API: Branch Reference ==========
-  @IsOptional()
   @IsInt({ message: 'branch_reference_id debe ser un número entero' })
+  @IsOptional()
   @IsPositive()
   branch_reference_id?: number;
 
@@ -58,6 +59,17 @@ export class CreateDevelopmentDto {
   @IsOptional()
   @IsEnum(PropertyStatus)
   status?: PropertyStatus;
+
+  @IsNotEmpty()
+  @IsEnum(PropertyType)
+  property_type = PropertyType.EMPRENDIMIENTO;
+
+  @IsNotEmpty()
+  price = 0;
+
+  @IsNotEmpty()
+  @IsEnum(OperationType)
+  operation_type = OperationType.VENTA;
 
   // ========== Descripción ==========
   @IsOptional()
@@ -113,41 +125,26 @@ export class CreateDevelopmentDto {
   @IsBoolean()
   show_exact_location?: boolean;
 
-  // ========== Características ==========
   @IsOptional()
-  @IsInt()
-  @Min(0)
-  suite_amount?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  room_amount?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  bathroom_amount?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  toilet_amount?: number;
-
-  @IsOptional()
-  @IsInt()
-  @Min(0)
-  parking_lot_amount?: number;
+  @IsString()
+  @MaxLength(20)
+  postal_code?: string;
 
   // ========== Emprendimiento ==========
+
+
+  @IsOptional()
+  @IsBoolean()
+  is_development?: boolean;
+
   @IsOptional()
   @IsInt()
   development_id?: number;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(100)
-  development_type?: string;
+  @IsEnum(DevelopmentType)
+  @IsInt()
+  development_type?: DevelopmentType;
 
   @IsOptional()
   @IsString()

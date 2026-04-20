@@ -203,6 +203,14 @@ export enum TemporalRentPeriod {
 }
 
 /**
+ * Tipo de desarrollo/emprendimiento.
+ */
+export enum DevelopmentType {
+  VERTICAL = 1,    // Desarrollo vertical
+  HORIZONTAL = 2,  // Desarrollo horizontal
+}
+
+/**
  * Plan de publicación para una propiedad.
  */
 export enum PublicationPlan {

@@ -4,16 +4,22 @@ import {
 	Column,
 	CreateDateColumn,
 	UpdateDateColumn,
+	Unique,
 } from 'typeorm';
 
 @Entity('tokko_sync_state')
+@Unique(['api_key', 'sync_type'])
 export class TokkoSyncState {
 	@PrimaryGeneratedColumn()
 	id!: number;
 
 	/** The Tokko freeportal API key this state row tracks */
-	@Column({ type: 'varchar', length: 500, unique: true, nullable: false })
+	@Column({ type: 'varchar', length: 500, nullable: false })
 	api_key!: string;
+
+	/** Discriminator: 'feed' for the regular upsert sync, 'deleted' for the deletion sync */
+	@Column({ type: 'varchar', length: 50, nullable: false, default: 'feed' })
+	sync_type!: string;
 
 	/**
 	 * The "from date" used in the current/last batch's API call.
