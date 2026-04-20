@@ -1313,12 +1313,13 @@ export class TokkoHelperService {
     offset: number = 0,
     dateFrom: string = '2000-01-01T00:00:00',
     organizationId?: string,
+    filter: string = 'updated',
   ): Promise<{ objects: any[]; meta: any } | { error: string; details?: string }> {
     try {
       let url =
         `https://tokkobroker.com/portals/simple_portal/api/v1/freeportals/` +
         `?api_key=${encodeURIComponent(apiKey)}&format=json&lang=es-MX` +
-        `&filter=updated&date_from=${encodeURIComponent(dateFrom)}` +
+        `&filter=${encodeURIComponent(filter)}&date_from=${encodeURIComponent(dateFrom)}` +
         `&limit=${limit}&offset=${offset}`;
 
       if (organizationId) {

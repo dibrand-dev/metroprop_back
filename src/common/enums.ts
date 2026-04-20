@@ -28,6 +28,7 @@ export enum PropertyType {
   LOCAL_COMERCIAL = 15,       // Local comercial
   OFICINA_COMERCIAL = 16,     // Oficina comercial
   QUINTA_VACACIONAL = 17,     // Quinta vacacional
+  EMPRENDIMIENTO = 18,          // Emprendimiento
 }
 
 /**
@@ -199,6 +200,14 @@ export enum TemporalRentPeriod {
   SEMANA_SANTA = 28,                  // Semana santa
   PRIMER_QUINCENA_DICIEMBRE = 29,     // 1er quincena de diciembre
   SEGUNDA_QUINCENA_DICIEMBRE = 30,    // 2da quincena de diciembre
+}
+
+/**
+ * Tipo de desarrollo/emprendimiento.
+ */
+export enum DevelopmentType {
+  VERTICAL = 1,    // Desarrollo vertical
+  HORIZONTAL = 2,  // Desarrollo horizontal
 }
 
 /**

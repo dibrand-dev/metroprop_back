@@ -11,8 +11,6 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
-import { PropertyImage } from '../properties/entities/property-image.entity';
-import { PropertyAttached } from '../properties/entities/property-attached.entity';
 import { Partner } from './entities/partner.entity';
 
 import { PropertiesService } from '../properties/properties.service';
@@ -22,6 +20,9 @@ import { RegistrationService } from '../registration/registration.service';
 import { CreateOrganizationRegistrationDto } from '../registration/dto/create-organization-registration.dto';
 import { CreatePropertyDto } from '../properties/dto/create-property.dto';
 import { UpdatePropertyDto } from '../properties/dto/update-property.dto';
+import { CreateDevelopmentDto } from '../properties/dto/create-development.dto';
+import { UpdateDevelopmentDto } from '../properties/dto/update-development.dto';
+import { PropertyType } from '@/common/enums';
 
 @Injectable()
 export class PartnerApiService {
@@ -36,8 +37,6 @@ export class PartnerApiService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Property)
     private readonly propertyRepo: Repository<Property>,
-    @InjectRepository(PropertyImage)
-    @InjectRepository(PropertyAttached)
     private readonly propertiesService: PropertiesService,
     private readonly propertyWriteService: PropertyWriteService,
     private readonly registrationService: RegistrationService,
@@ -289,6 +288,138 @@ export class PartnerApiService {
   }
 
   // ================================================================
+  // CREATE / UPSERT DEVELOPMENT
+  // ================================================================
+
+  async createOrUpsertDevelopment(
+    dto: CreateDevelopmentDto,
+    partner: Partner,
+  ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
+    if (typeof dto.branch_reference_id !== 'number') {
+      throw new BadRequestException('branch_reference_id es obligatorio y debe ser un número');
+    }
+
+    const { organization, branch } = await this.resolveBranchForPartner(dto.branch_reference_id, partner);
+
+    const orgWithAdmin = await this.organizationRepo.findOne({
+      where: { id: organization.id },
+      relations: ['admin_user'],
+    });
+    const userId = dto.user_id ?? orgWithAdmin?.admin_user?.id;
+    dto.is_development = true;
+    dto.organization_id = organization.id;
+    dto.user_id = userId;
+    dto.branch_id = branch.id;
+
+    const existing = await this.propertyRepo.findOne({
+      where: {
+        reference_code: dto.reference_code,
+        organization_id: organization.id,
+        is_development: true,
+        deleted: false,
+      },
+    });
+
+    const { branch_reference_id, ...rest } = dto as any;
+    const { tags, images, videos, multimedia360, attached, ...propertyData } = rest;
+
+    if (existing) {
+      const { warnings } = await this.propertyWriteService.updatePropertyCore(
+        existing,
+        propertyData,
+        { tags, images, videos, multimedia360, attached },
+      );
+
+      const updated = await this.propertyRepo.findOne({
+        where: { id: existing.id, deleted: false },
+        relations: ['images', 'tags', 'videos', 'attached'],
+      });
+
+      return {
+        data: updated!,
+        created: false,
+        warnings: warnings?.length ? warnings : undefined,
+      };
+    }
+
+    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+      { ...propertyData, is_development: true, deleted: false },
+      { tags, images, videos, multimedia360, attached },
+    );
+
+    const finalProperty = await this.propertyRepo.findOne({
+      where: { id: savedProperty.id },
+      relations: ['images', 'tags', 'videos', 'attached'],
+    });
+
+    return {
+      data: finalProperty!,
+      created: true,
+      warnings: warnings?.length ? warnings : undefined,
+    };
+  }
+
+  // ================================================================
+  // UPDATE DEVELOPMENT (by reference_code)
+  // ================================================================
+
+  async updateDevelopment(
+    referenceCode: string,
+    dto: UpdateDevelopmentDto,
+    partner: Partner,
+  ): Promise<{ data: Property; warnings?: string[] }> {
+    const development = await this.findDevelopmentByRefCode(referenceCode, partner);
+
+    const { tags, images, videos, multimedia360, attached, ...propertyData } = dto as any;
+    const { warnings } = await this.propertyWriteService.updatePropertyCore(
+      development,
+      propertyData,
+      { tags, images, videos, multimedia360, attached },
+    );
+
+    const result = await this.propertyRepo.findOne({
+      where: { id: development.id },
+      relations: ['images', 'tags', 'videos', 'attached'],
+    });
+
+    return {
+      data: result!,
+      warnings: warnings?.length ? warnings : undefined,
+    };
+  }
+
+  // ================================================================
+  // GET DEVELOPMENT (by reference_code)
+  // ================================================================
+
+  async getDevelopment(
+    referenceCode: string,
+    partner: Partner,
+  ): Promise<{ data: Property }> {
+    const development = await this.findDevelopmentByRefCode(referenceCode, partner);
+    const result = await this.propertiesService.findOne(development.id!);
+    return { data: result };
+  }
+
+  // ================================================================
+  // DELETE (soft) DEVELOPMENT
+  // ================================================================
+
+  async deleteDevelopment(
+    referenceCode: string,
+    partner: Partner,
+  ): Promise<{ message: string }> {
+    const development = await this.findDevelopmentByRefCode(referenceCode, partner);
+
+    development.deleted = true;
+    development.deleted_at = new Date();
+    await this.propertyRepo.save(development);
+
+    this.logger.log(`Development ${referenceCode} soft-deleted by partner ${partner.id}`);
+    return { message: `Emprendimiento ${referenceCode} eliminado correctamente` };
+  }
+
+  // ================================================================
   //  PRIVATE HELPERS
   // ================================================================
 
@@ -382,6 +513,43 @@ export class PartnerApiService {
       this.logger.warn(`Failed to create agent user ${agentEmail}: ${reason}`);
       return { userId: adminUserId, agentWarnings };
     }
+  }
+
+  /**
+   * Find development (is_development = true) by reference_code scoped to the partner's organizations.
+   */
+  private async findDevelopmentByRefCode(
+    referenceCode: string,
+    partner: Partner,
+  ): Promise<Property> {
+    const orgIds = await this.organizationRepo
+      .createQueryBuilder('org')
+      .select('org.id')
+      .where('org.source_partner_id = :partnerId', { partnerId: partner.id })
+      .andWhere('org.deleted = false')
+      .getMany();
+
+    if (orgIds.length === 0) {
+      throw new NotFoundException(`No se encontraron organizaciones para este partner`);
+    }
+
+    const ids = orgIds.map((o) => o.id);
+
+    const development = await this.propertyRepo
+      .createQueryBuilder('prop')
+      .where('prop.reference_code = :referenceCode', { referenceCode })
+      .andWhere('prop.organization_id IN (:...orgIds)', { orgIds: ids })
+      .andWhere('prop.is_development = true')
+      .andWhere('prop.deleted = false')
+      .getOne();
+
+    if (!development) {
+      throw new NotFoundException(
+        `Emprendimiento con código ${referenceCode} no encontrado para este partner`,
+      );
+    }
+
+    return development;
   }
 
   /**

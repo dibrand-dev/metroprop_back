@@ -19,6 +19,8 @@ import { CreatePropertyDto } from './dto/create-property.dto';
 import { UpdatePropertyDto } from './dto/update-property.dto';
 import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 import { SearchPropertiesDto } from './dto/search-properties.dto';
+import { CreateDevelopmentDto } from './dto/create-development.dto';
+import { UpdateDevelopmentDto } from './dto/update-development.dto';
 
 import { UploadedFiles, UseInterceptors } from '@nestjs/common';
 
@@ -133,6 +135,30 @@ export class PropertiesController {
   @HttpCode(HttpStatus.ACCEPTED)
   async forceUpload(@Param('propertyId', ParseIntPipe) propertyId: number) {
     return this.uploadS3Service.forceUploadForProperty(propertyId);
+  }
+
+  /**
+   * POST /properties/development
+   * Crear un nuevo emprendimiento
+   */
+  @Post('development')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
+  createDevelopment(@Body() createDevelopmentDto: CreateDevelopmentDto) {
+    return this.propertiesService.createDevelopment(createDevelopmentDto);
+  }
+
+  /**
+   * PATCH /properties/development/:id
+   * Actualizar un emprendimiento existente
+   */
+  @Patch('development/:id')
+  @UseGuards(JwtAuthGuard)
+  updateDevelopment(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateDevelopmentDto: UpdateDevelopmentDto,
+  ) {
+    return this.propertiesService.updateDevelopment(id, updateDevelopmentDto);
   }
 
   /**
