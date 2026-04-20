@@ -177,6 +177,14 @@ CREATE SEQUENCE public.users_id_seq
 	MAXVALUE 2147483647
 	START 1
 	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.plans_id_seq;
+CREATE SEQUENCE public.plans_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
 	NO CYCLE;-- public.locations definition
 
 -- Drop table
@@ -687,6 +695,29 @@ CREATE TABLE IF NOT EXISTS public.tokko_sync_state (
 CREATE INDEX IF NOT EXISTS idx_branches_external_reference ON public.branches USING btree (external_reference) WHERE (external_reference IS NOT NULL);
 
 
+-- public.plans definition
+
+-- Drop table
+
+-- DROP TABLE public.plans;
+
+CREATE TABLE IF NOT EXISTS public.plans (
+	id              serial4      NOT NULL,
+	plan_type       int4         NOT NULL,
+	price           int4         NOT NULL DEFAULT 0,
+	currency        varchar(3)   NOT NULL DEFAULT 'USD',
+	property_limit  int4         NOT NULL DEFAULT 0,
+	highlight_limit int4         NOT NULL DEFAULT 0,
+	is_active       bool         NOT NULL DEFAULT true,
+	deleted         bool         NOT NULL DEFAULT false,
+	deleted_at      timestamp    NULL,
+	created_at      timestamp    NOT NULL DEFAULT now(),
+	updated_at      timestamp    NOT NULL DEFAULT now(),
+	CONSTRAINT pk_plans PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_plans_plan_type ON public.plans (plan_type) WHERE (deleted = false);
+
+
 -- Ensure serial id columns have their DEFAULT nextval properly set
 -- (guards against serial4 + pre-existing sequence conflicts)
 
@@ -704,3 +735,4 @@ ALTER TABLE public.branches           ALTER COLUMN id SET DEFAULT nextval('publi
 ALTER TABLE public.organizations      ALTER COLUMN id SET DEFAULT nextval('public.organizations_id_seq'::regclass);
 ALTER TABLE public.users              ALTER COLUMN id SET DEFAULT nextval('public.users_id_seq'::regclass);
 ALTER TABLE public.tags_mapping ALTER COLUMN id SET DEFAULT nextval('public.tags_mapping_id_seq'::regclass);
+ALTER TABLE public.plans              ALTER COLUMN id SET DEFAULT nextval('public.plans_id_seq'::regclass);

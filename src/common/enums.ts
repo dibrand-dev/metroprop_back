@@ -228,3 +228,11 @@ export enum UserRole {
   USER_ROL_COLLABORATOR = 3,
   USER_ROL_SUPER_ADMIN = 4,
 }
+
+/**
+ * Nombres de planes comerciales.
+ */
+export enum PlanName {
+  GRATUITO = 1,
+  PREMIUM = 2,
+}

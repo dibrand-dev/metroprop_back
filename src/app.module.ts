@@ -20,6 +20,7 @@ import { DevelopersModule } from './modules/developers/developers.module';
 import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.module';
 import { UploadS3CronModule } from './modules/cron-tasks/upload-s3/upload-s3.module';
 import { TokkoMigratorModule } from './modules/cron-tasks/tokko-migrator/tokko-migrator.module';
+import { PlansModule } from './modules/plans/plans.module';
 
 
 @Module({
@@ -80,6 +81,7 @@ import { TokkoMigratorModule } from './modules/cron-tasks/tokko-migrator/tokko-m
     TokkoSyncModule,
     UploadS3CronModule,
     TokkoMigratorModule,
+    PlansModule,
   ],
   controllers: [AppController],
   providers: [AppService],
