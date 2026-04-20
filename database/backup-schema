@@ -420,6 +420,7 @@ CREATE TABLE IF NOT EXISTS public.property_images (
 	CONSTRAINT "FK_7a07b6b7f9418bf1d5160106694" FOREIGN KEY ("propertyId") REFERENCES public.properties(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_property_images_property_id ON public.property_images USING btree ("propertyId");
+CREATE INDEX IF NOT EXISTS idx_property_images_cover ON public.property_images USING btree ("propertyId", order_position, id);
 
 
 -- public.property_operations definition
