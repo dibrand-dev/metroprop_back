@@ -45,8 +45,28 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
+  @Matches(/^\+?[1-9]\d{1,14}$/, { 
+    message: 'Teléfono debe ser válido' 
+  })
+  phone_additional?: string;
+
+
+  @IsOptional()
+  @IsString()
+  @Matches(/^\+?[1-9]\d{1,14}$/, { 
+    message: 'Teléfono debe ser válido' 
+  })
+  phone_whatsapp?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(1000)
   bio?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  document?: string;
 
   @IsOptional()
   @IsInt({ message: 'ID de organización debe ser un número' })
