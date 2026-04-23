@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -29,7 +29,6 @@ import {
 } from '../../common/enums';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
-import { DataSource } from 'typeorm';
 import { THUMB_PREFIX } from '@/common/constants';
 import { accessSync } from 'fs';
 import { filter } from 'rxjs';
@@ -761,6 +760,87 @@ export class PropertiesService {
 
     const result = await this.findOne(id);
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
+  }
+
+  /**
+   * Cambia el estado de una o varias propiedades.
+   */
+  async changeStatus(
+    body: {
+      id?: number;
+      ids?: number[];
+      status: number;
+    },
+  ): Promise<{ message: string; updated: number; ids: number[]; status: PropertyStatus }> {
+    const { id, ids, status } = body;
+    const hasId = id != null;
+    const hasIds = Array.isArray(ids) && ids.length > 0;
+
+    if ((hasId && hasIds) || (!hasId && !hasIds)) {
+      throw new BadRequestException('Debe enviar solo id o solo ids junto con status');
+    }
+
+    const validStatuses = Object.values(PropertyStatus).filter(
+      (value): value is PropertyStatus => typeof value === 'number',
+    );
+
+    if (!Number.isInteger(status) || !validStatuses.includes(status as PropertyStatus)) {
+      throw new BadRequestException('status debe ser un valor valido de PropertyStatus');
+    }
+
+    if (hasId && (!Number.isInteger(id) || (id as number) <= 0)) {
+      throw new BadRequestException('id debe ser un numero entero mayor a 0');
+    }
+
+    if (
+      hasIds &&
+      (ids as number[]).some((currentId) => !Number.isInteger(currentId) || currentId <= 0)
+    ) {
+      throw new BadRequestException('ids debe ser un array de numeros enteros mayores a 0');
+    }
+
+    const targetIds = hasId ? [id as number] : Array.from(new Set(ids as number[]));
+
+    const existingProperties = await this.propertyRepository.find({
+      where: {
+        id: In(targetIds),
+        deleted: false,
+      },
+      select: ['id'],
+    });
+
+    const existingIds = new Set(existingProperties.map((property) => property.id as number));
+    const notFoundIds = targetIds.filter((targetId) => !existingIds.has(targetId));
+    const existingTargetIds = targetIds.filter((targetId) => existingIds.has(targetId));
+
+    if (notFoundIds.length > 0) {
+      console.warn(
+        `[PropertiesService.changeStatus] IDs no encontrados (se omiten y continúa el proceso): ${notFoundIds.join(', ')}`,
+      );
+    }
+
+    let affected = 0;
+    if (existingTargetIds.length > 0) {
+      const updateResult = await this.propertyRepository
+        .createQueryBuilder()
+        .update(Property)
+        .set({ status })
+        .where('id IN (:...targetIds)', { targetIds: existingTargetIds })
+        .andWhere('deleted = :deleted', { deleted: false })
+        .execute();
+
+      affected = updateResult.affected ?? 0;
+    }
+
+    return {
+      message:
+        notFoundIds.length > 0
+          ? 'Estado actualizado parcialmente. Algunos IDs no fueron encontrados.'
+          : 'Estado actualizado correctamente',
+      updated: affected,
+      ids: existingTargetIds,
+      status: status as PropertyStatus,
+    };
   }
 
   /**

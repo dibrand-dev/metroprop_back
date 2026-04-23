@@ -10,7 +10,8 @@ import {
   IsString,
   IsEnum,
   Matches,
-  ValidateIf
+  ValidateIf,
+  IsBoolean
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { UserRole } from '../../../common/enums';
@@ -91,6 +92,14 @@ export class CreateUserDto {
   @IsString()
   @MaxLength(255)
   avatar?: string;
+
+  @IsOptional()
+  @Type(() => Boolean)
+  @IsBoolean({ message: 'accept_newsletters debe ser booleano' })
+  accept_newsletters?: boolean;
+
+
+
 
   @IsOptional()
   @IsString()

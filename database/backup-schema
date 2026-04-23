@@ -603,6 +603,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 	bio text NULL,
 	avatar varchar(255) NULL,
 	is_verified bool DEFAULT false NOT NULL,
+	accept_newsletters bool DEFAULT false NOT NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
 	updated_at timestamp DEFAULT now() NOT NULL,
 	deleted bool DEFAULT false NOT NULL,

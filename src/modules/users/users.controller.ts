@@ -111,4 +111,17 @@ export class UsersController {
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.usersService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
   }
+
+  @Post('change-password')
+  @HttpCode(HttpStatus.OK)
+  async changePassword(
+    @Body()
+    body: {
+      id: number;
+      oldPassword: string;
+      newPassword: string;
+    },
+  ) {
+    return this.usersService.changePassword(body.id, body.oldPassword, body.newPassword);
+  }
 }
