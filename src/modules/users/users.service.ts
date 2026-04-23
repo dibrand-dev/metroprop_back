@@ -302,6 +302,39 @@ export class UsersService {
     return { success: true, message: 'Contraseña actualizada correctamente' };
   }
 
+  async changePassword(
+    id: number,
+    oldPassword: string,
+    newPassword: string,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!Number.isInteger(id) || id <= 0) {
+      return { success: false, message: 'id invalido' };
+    }
+
+    if (!oldPassword || !newPassword) {
+      return { success: false, message: 'oldPassword y newPassword son obligatorios' };
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id, deleted: false },
+      select: ['id', 'password'],
+    });
+
+    if (!user) {
+      return { success: false, message: 'Usuario no encontrado' };
+    }
+
+    const isOldPasswordValid = await bcrypt.compare(oldPassword, user.password);
+    if (!isOldPasswordValid) {
+      return { success: false, message: 'La contraseña actual no es correcta' };
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.save(user);
+
+    return { success: true, message: 'Contraseña actualizada correctamente' };
+  }
+
   /**
    * Solicitar reset de password (moved from registration service)
    */

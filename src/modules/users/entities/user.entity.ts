@@ -53,6 +53,9 @@ export class User {
   @Column({ type: 'boolean', default: false })
   is_verified!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  accept_newsletters!: boolean;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   email_verification_token?: string;
 

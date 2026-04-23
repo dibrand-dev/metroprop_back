@@ -254,6 +254,23 @@ export class PropertiesController {
   }
 
   /**
+   * PATCH /properties/status
+   * Cambiar estado de una o varias propiedades
+   */
+  @Patch('status')
+  @UseGuards(JwtAuthGuard)
+  changeStatus(
+    @Body()
+    body: {
+      id?: number;
+      ids?: number[];
+      status: number;
+    },
+  ) {
+    return this.propertiesService.changeStatus(body);
+  }
+
+  /**
    * PATCH /properties/:id
    * Actualizar una propiedad
    */
