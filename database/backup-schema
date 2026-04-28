@@ -600,6 +600,8 @@ CREATE TABLE IF NOT EXISTS public.users (
 	role_id int4 DEFAULT 2 NOT NULL,
 	organization_id int4 NULL,
 	phone varchar(50) NULL,
+	phone_additional varchar(50) NULL,
+	phone_whatsapp varchar(50) NULL,
 	bio text NULL,
 	avatar varchar(255) NULL,
 	is_verified bool DEFAULT false NOT NULL,
