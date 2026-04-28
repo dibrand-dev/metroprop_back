@@ -35,6 +35,12 @@ export class User {
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone?: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone_additional?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone_whatsapp?: string;
+
   @Column({ type: 'text', nullable: true })
   bio?: string;
 
