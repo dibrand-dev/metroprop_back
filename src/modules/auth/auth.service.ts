@@ -39,7 +39,7 @@ export class AuthService {
     });
 
     // Excluir campos sensibles antes de devolver
-    const { password, email_verification_token, password_reset_token, password_reset_token_expires, role_id, ...safeUser } = user;
+    const { password, email_verification_token, password_reset_token, password_reset_token_expires, ...safeUser } = user;
 
     return {
       access_token,
