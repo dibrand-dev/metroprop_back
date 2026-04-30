@@ -23,6 +23,7 @@ import { TokkoMigratorModule } from './modules/cron-tasks/tokko-migrator/tokko-m
 import { PlansModule } from './modules/plans/plans.module';
 import { AdsBannersModule } from './modules/ads-banners/ads-banners.module';
 import { LeadsModule } from './modules/leads/leads.module';
+import { FavouritesModule } from './modules/favourites/favourites.module';
 
 
 @Module({
@@ -86,6 +87,7 @@ import { LeadsModule } from './modules/leads/leads.module';
     PlansModule,
     AdsBannersModule,
     LeadsModule,
+    FavouritesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
