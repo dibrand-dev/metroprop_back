@@ -6,6 +6,7 @@ import { LeadProperty } from './entities/lead-property.entity';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { Property } from '../properties/entities/property.entity';
+import { LeadFiltersDto } from './dto/lead-filters.dto';
 
 @Injectable()
 export class LeadsService {
@@ -18,11 +19,61 @@ export class LeadsService {
     private readonly propertyRepository: Repository<Property>,
   ) {}
 
-  async findAll(): Promise<Lead[]> {
-    return this.leadsRepository.find({
-      relations: ['lead_properties'],
-      order: { created_at: 'DESC' },
-    });
+  async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
+    const {
+      id,
+      email,
+      name,
+      phone,
+      property_id,
+      organization_id,
+      limit = 20,
+      offset = 0,
+    } = filters;
+
+    const queryBuilder = this.leadsRepository
+      .createQueryBuilder('lead')
+      .leftJoinAndSelect('lead.lead_properties', 'leadProperty')
+      .orderBy('lead.created_at', 'DESC')
+      .take(limit)
+      .skip(offset)
+      .distinct(true);
+
+    if (id !== undefined) {
+      queryBuilder.andWhere('lead.id = :id', { id });
+    }
+
+    if (organization_id !== undefined) {
+      queryBuilder.andWhere('lead.organization_id = :organization_id', {
+        organization_id,
+      });
+    }
+
+    if (property_id !== undefined) {
+      queryBuilder.andWhere('leadProperty.property_id = :property_id', {
+        property_id,
+      });
+    }
+
+    if (email) {
+      queryBuilder.andWhere('lead.email ILIKE :email', {
+        email: `%${email}%`,
+      });
+    }
+
+    if (name) {
+      queryBuilder.andWhere('lead.name ILIKE :name', {
+        name: `%${name}%`,
+      });
+    }
+
+    if (phone) {
+      queryBuilder.andWhere('lead.phone ILIKE :phone', {
+        phone: `%${phone}%`,
+      });
+    }
+
+    return queryBuilder.getMany();
   }
 
   async findOne(id: number): Promise<Lead> {
@@ -154,5 +205,13 @@ export class LeadsService {
     });
 
     return this.leadPropertyRepository.save(leadProperty);
+  }
+
+  async findAllByOrganization(organizationId: number): Promise<Lead[]> {
+    return this.leadsRepository.find({
+      where: { organization_id: organizationId },
+      relations: ['lead_properties'],
+      order: { created_at: 'DESC' },
+    });
   }
 }

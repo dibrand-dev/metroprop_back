@@ -202,6 +202,14 @@ CREATE SEQUENCE public.lead_property_id_seq
 	START 1
 	CACHE 1
 	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.favourites_id_seq;
+CREATE SEQUENCE public.favourites_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
 DROP SEQUENCE IF EXISTS public.ads_banners_id_seq;
 CREATE SEQUENCE public.ads_banners_id_seq
 	INCREMENT BY 1
@@ -805,6 +813,25 @@ CREATE INDEX IF NOT EXISTS idx_lead_property_lead_id ON public.lead_property USI
 CREATE INDEX IF NOT EXISTS idx_lead_property_property_id ON public.lead_property USING btree (property_id);
 
 
+-- public.favourites definition
+
+-- Drop table
+
+-- DROP TABLE public.favourites;
+
+CREATE TABLE IF NOT EXISTS public.favourites (
+	id serial4 NOT NULL,
+	user_id int4 NOT NULL,
+	property_id int4 NOT NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT pk_favourites PRIMARY KEY (id)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_favourites_user_property ON public.favourites USING btree (user_id, property_id);
+CREATE INDEX IF NOT EXISTS idx_favourites_user_id ON public.favourites USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_favourites_property_id ON public.favourites USING btree (property_id);
+
+
 -- Ensure serial id columns have their DEFAULT nextval properly set
 -- (guards against serial4 + pre-existing sequence conflicts)
 
@@ -826,6 +853,7 @@ ALTER TABLE public.plans              ALTER COLUMN id SET DEFAULT nextval('publi
 ALTER TABLE public.ads_banners        ALTER COLUMN id SET DEFAULT nextval('public.ads_banners_id_seq'::regclass);
 ALTER TABLE public.leads              ALTER COLUMN id SET DEFAULT nextval('public.leads_id_seq'::regclass);
 ALTER TABLE public.lead_property      ALTER COLUMN id SET DEFAULT nextval('public.lead_property_id_seq'::regclass);
+ALTER TABLE public.favourites         ALTER COLUMN id SET DEFAULT nextval('public.favourites_id_seq'::regclass);
 
 
 -- public.leads foreign keys
@@ -840,3 +868,11 @@ ALTER TABLE public.lead_property DROP CONSTRAINT IF EXISTS "FK_lead_property_lea
 ALTER TABLE public.lead_property ADD CONSTRAINT "FK_lead_property_lead_id" FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE CASCADE;
 ALTER TABLE public.lead_property DROP CONSTRAINT IF EXISTS "FK_lead_property_property_id";
 ALTER TABLE public.lead_property ADD CONSTRAINT "FK_lead_property_property_id" FOREIGN KEY (property_id) REFERENCES public.properties(id) ON DELETE CASCADE;
+
+
+-- public.favourites foreign keys
+
+ALTER TABLE public.favourites DROP CONSTRAINT IF EXISTS "FK_favourites_user_id";
+ALTER TABLE public.favourites ADD CONSTRAINT "FK_favourites_user_id" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
+ALTER TABLE public.favourites DROP CONSTRAINT IF EXISTS "FK_favourites_property_id";
+ALTER TABLE public.favourites ADD CONSTRAINT "FK_favourites_property_id" FOREIGN KEY (property_id) REFERENCES public.properties(id) ON DELETE CASCADE;

@@ -1,16 +1,17 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, UseInterceptors } from '@nestjs/common';
 import { NoFilesInterceptor } from '@nestjs/platform-express';
 import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
+import { LeadFiltersDto } from './dto/lead-filters.dto';
 
 @Controller('leads')
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
   @Get()
-  findAll() {
-    return this.leadsService.findAll();
+  findAll(@Query() filters: LeadFiltersDto) {
+    return this.leadsService.findAll(filters);
   }
 
   @Get(':id')
@@ -37,4 +38,11 @@ export class LeadsController {
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.leadsService.remove(id);
   }
+
+  // get all leads by organization id
+  @Get('organization/:orgId')
+  findAllByOrganization(@Param('orgId', ParseIntPipe) orgId: number) {
+    return this.leadsService.findAllByOrganization(orgId);
+  }
+
 }
