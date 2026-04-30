@@ -21,7 +21,8 @@
     "cuit": "30-71234567-9",
     "admin_name": "Juan Pérez",
     "admin_email": "juan.perez@inmobiliariademo.com",
-    "admin_phone": "+5411-1234-5678"
+    "admin_phone": "+5411-1234-5678",
+    "admin_document": "30123456"
   },
   "expected_response": {
     "success": true,

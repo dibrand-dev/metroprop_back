@@ -603,6 +603,7 @@ CREATE TABLE IF NOT EXISTS public.users (
 	phone_additional varchar(50) NULL,
 	phone_whatsapp varchar(50) NULL,
 	bio text NULL,
+	document varchar(50) NULL,
 	avatar varchar(255) NULL,
 	is_verified bool DEFAULT false NOT NULL,
 	accept_newsletters bool DEFAULT false NOT NULL,

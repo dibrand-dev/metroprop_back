@@ -1,9 +1,10 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, EntityManager } from 'typeorm';
+import { Repository, Like, EntityManager, FindOptionsWhere } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
+import { Property } from '../properties/entities/property.entity';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserFiltersDto } from './dto/user-filters.dto';
@@ -86,6 +87,7 @@ export class UsersService {
         'id',
         'name',
         'email',
+        'document',
         'role_id',
         'is_verified',
         'created_at',
@@ -114,6 +116,36 @@ export class UsersService {
 
   async findByEmail(email: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { email } });
+  }
+
+  async searchUserByCondition(
+    where: FindOptionsWhere<User>,
+    password?: string,
+    select: (keyof User)[] = ['id'],
+  ): Promise<Partial<User> | null> {
+    const selectedFields = password
+      ? Array.from(new Set<keyof User>([...select, 'password']))
+      : select;
+
+    const user = await this.usersRepository.findOne({
+      where,
+      select: selectedFields,
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    if (password) {
+      const isPasswordValid = await bcrypt.compare(password, user.password);
+      if (!isPasswordValid) {
+        return null;
+      }
+      const { password: _password, ...safeUser } = user;
+      return safeUser;
+    }
+
+    return user;
   }
 
   /**
@@ -161,11 +193,50 @@ export class UsersService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.usersRepository.delete(id);
+    await this.usersRepository.manager.transaction(async (manager) => {
+      const userRepository = manager.getRepository(User);
+      const propertyRepository = manager.getRepository(Property);
 
-    if (result.affected === 0) {
-      throw new NotFoundException('User not found');
-    }
+      const user = await userRepository.findOne({
+        where: { id },
+        relations: ['organization', 'organization.admin_user'],
+      });
+
+      if (!user) {
+        throw new NotFoundException('User not found');
+      }
+
+      const organizationAdminId = user.organization?.admin_user?.id;
+      const isOrganizationAdmin = organizationAdminId === user.id;
+      const isAdminUser = user.role_id === UserRole.USER_ROL_ADMIN || isOrganizationAdmin;
+
+      if (isAdminUser) {
+        throw new BadRequestException('admin user cannot be deleted');
+      }
+
+      const propertyWhereConditions = user.organization?.id
+        ? { user_id: id, organization_id: user.organization.id }
+        : { user_id: id };
+
+      const assignedPropertiesCount = await propertyRepository.count({
+        where: propertyWhereConditions,
+      });
+
+      if (assignedPropertiesCount > 0) {
+        if (!organizationAdminId) {
+          throw new BadRequestException('No se pudieron reasignar las propiedades porque la organización no tiene admin_user');
+        }
+
+        await propertyRepository.update(propertyWhereConditions, {
+          user_id: organizationAdminId,
+        });
+      }
+
+      const result = await userRepository.delete(id);
+      if (result.affected === 0) {
+        throw new NotFoundException('User not found');
+      }
+    });
   }
 
   async validatePassword(password: string, hashedPassword: string): Promise<boolean> {
@@ -368,11 +439,11 @@ export class UsersService {
     }
   }
 
-    async addBranchToUser(userId: number, branchId: number): Promise<void> {
-      await this.usersRepository
-        .createQueryBuilder()
-        .relation(User, 'branches')
-        .of(userId)
-        .add(branchId);
-    }
+  async addBranchToUser(userId: number, branchId: number): Promise<void> {
+    await this.usersRepository
+      .createQueryBuilder()
+      .relation(User, 'branches')
+      .of(userId)
+      .add(branchId);
+  }
 }

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class ProfessionalRegistrationDto {
   @IsEmail()
@@ -14,6 +14,11 @@ export class ProfessionalRegistrationDto {
 
   @IsNotEmpty()
   phone!: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  document?: string;
 
   @IsNotEmpty()
   company_name!: string;

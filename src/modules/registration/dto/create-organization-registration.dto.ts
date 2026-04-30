@@ -30,6 +30,11 @@ export class CreateOrganizationRegistrationDto extends BaseOrganizationFieldsDto
 
   @IsOptional()
   @IsString()
+  @MaxLength(50)
+  admin_document?: string;
+
+  @IsOptional()
+  @IsString()
   admin_avatar?: string;
 
   @IsOptional()

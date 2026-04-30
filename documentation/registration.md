@@ -9,7 +9,8 @@
 {
   "name": "Juan Perez",
   "email": "juan@mail.com",
-  "password": "12345678"
+  "password": "12345678",
+  "document": "30123456"
 }
 ```
 
@@ -21,6 +22,7 @@
   "name": "Profesional Ejemplo",
   "email": "pro@mail.com",
   "password": "12345678",
+  "document": "30123456",
   "license": "1234-5678"
 }
 ```

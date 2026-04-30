@@ -11,7 +11,10 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { OrganizationsService } from './organizations.service';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -44,16 +47,22 @@ export class OrganizationsController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  create(@Body() data: CreateOrganizationDto) {
-    return this.organizationsService.create(data);
+  @UseInterceptors(FileInterceptor('company_logo', { storage: undefined }))
+  create(
+    @Body() data: CreateOrganizationDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.organizationsService.create(data, file);
   }
 
   @Patch(':id')
+  @UseInterceptors(FileInterceptor('company_logo', { storage: undefined }))
   update(
     @Param('id', ParseIntPipe) id: number, 
-    @Body() data: UpdateOrganizationDto
+    @Body() data: UpdateOrganizationDto,
+    @UploadedFile() file?: Express.Multer.File,
   ) {
-    return this.organizationsService.update(id, data);
+    return this.organizationsService.update(id, data, file);
   }
 
   @Delete(':id')

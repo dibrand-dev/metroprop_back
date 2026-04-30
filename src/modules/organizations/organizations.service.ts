@@ -93,24 +93,45 @@ export class OrganizationsService {
     return org;
   }
 
-  create(data: CreateOrganizationDto): Promise<Organization> {
+  async create(
+    data: CreateOrganizationDto,
+    file?: Express.Multer.File,
+  ): Promise<Organization> {
     const { adminUserId, ...rest } = data;
     const org = this.repo.create(rest as Partial<Organization>) as Organization;
     if (adminUserId) {
       (org as any).admin_user = { id: adminUserId };
     }
-    
-    return this.repo.save(org);
+
+    const createdOrg = await this.repo.save(org);
+
+    if (file) {
+      await this.uploadLogoToS3(file, createdOrg.id);
+      return this.findOne(createdOrg.id);
+    }
+
+    return createdOrg;
   }
 
-  async update(id: number, data: UpdateOrganizationDto): Promise<Organization> {
+  async update(
+    id: number,
+    data: UpdateOrganizationDto,
+    file?: Express.Multer.File,
+  ): Promise<Organization> {
     const org = await this.findOne(id);
     const { adminUserId, ...rest } = data;
     Object.assign(org, rest);
     if (adminUserId !== undefined) {
       (org as any).admin_user = adminUserId ? { id: adminUserId } : null;
     }
-    return this.repo.save(org);
+    const updatedOrg = await this.repo.save(org);
+
+    if (file) {
+      await this.uploadLogoToS3(file, id);
+      return this.findOne(id);
+    }
+
+    return updatedOrg;
   }
 
   async remove(id: number) {

@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsInt, Min } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsInt, Min, IsString, MaxLength } from 'class-validator';
 
 export class RegisterDto {
   @IsEmail()
@@ -16,6 +16,11 @@ export class RegisterDto {
   
   @IsNotEmpty()
   phone!: string; 
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  document?: string;
 
   @IsOptional()
   @IsInt()

@@ -19,7 +19,8 @@
   "email": "juan@mail.com",
   "password": "12345678",
   "google_id": "opcional",
-  "phone": "+5491122334455"
+  "phone": "+5491122334455",
+  "document": "30123456"
 }
 ```
 
@@ -32,7 +33,8 @@
   "email": "nuevo@mail.com",
   "password": "nuevaPassword",
   "branchIds": [1,2],
-  "avatar": "url_avatar"
+  "avatar": "url_avatar",
+  "document": "30123456"
 }
 ```
 

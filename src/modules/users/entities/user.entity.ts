@@ -44,6 +44,9 @@ export class User {
   @Column({ type: 'text', nullable: true })
   bio?: string;
 
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  document?: string;
+
   @Column({ type: 'varchar', length: 255, nullable: true })
   avatar?: string;
 

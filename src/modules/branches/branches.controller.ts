@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Patch } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
@@ -28,15 +29,24 @@ export class BranchesController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
-  create(@Body() data: CreateBranchDto) {
-    return this.branchesService.create(data);
+  @UseInterceptors(FileInterceptor('branch_logo', { storage: undefined }))
+  create(
+    @Body() data: CreateBranchDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.branchesService.create(data, file);
   }
 
-  @Put(':id')
+  @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
-  update(@Param('id') id: number, @Body() data: UpdateBranchDto) {
-    return this.branchesService.update(id, data);
+  @UseInterceptors(FileInterceptor('branch_logo', { storage: undefined }))
+  update(
+    @Param('id') id: number,
+    @Body() data: UpdateBranchDto,
+    @UploadedFile() file?: Express.Multer.File,
+  ) {
+    return this.branchesService.update(id, data, file);
   }
 
   @Delete(':id')
@@ -44,5 +54,13 @@ export class BranchesController {
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id') id: number) {
     return this.branchesService.remove(id);
+  }
+
+  // get all branches by organization id
+  @Get('organization/:orgId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  getByOrganization(@Param('orgId') orgId: number) {
+    return this.branchesService.getByOrganization(orgId); 
   }
 }

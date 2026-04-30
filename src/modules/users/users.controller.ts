@@ -10,11 +10,8 @@ import {
   ParseIntPipe,
   HttpCode,
   HttpStatus,
-  UploadedFile,
-  UseInterceptors,
   UseGuards,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -123,5 +120,34 @@ export class UsersController {
     },
   ) {
     return this.usersService.changePassword(body.id, body.oldPassword, body.newPassword);
+  }
+
+  // Que accion tomar cuando se cierra una cuenta ? Que pasa si viene info de tokko ?
+  @Post('close-account')
+  @HttpCode(HttpStatus.OK)
+  async closeAccount(
+    @Body()
+    body: {
+      id: number;
+      password: string;
+    },
+  ) {
+    const user = await this.usersService.searchUserByCondition(
+      { id: body.id, deleted: false },
+      body.password,
+    );
+
+    if (user) {
+      await this.usersService.remove(body.id);
+      return {
+        success: true,
+        message: 'Cuenta eliminada exitosamente'
+      };
+    } else {
+      return {
+        success: false,
+        message: 'Contraseña incorrecta. No se pudo eliminar la cuenta.'
+      };
+    }
   }
 }

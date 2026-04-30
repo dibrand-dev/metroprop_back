@@ -66,7 +66,7 @@ export class CreateUserDto {
 
   @IsOptional()
   @IsString()
-  @MaxLength(100)
+  @MaxLength(50, { message: 'Documento no puede exceder 50 caracteres' })
   document?: string;
 
   @IsOptional()
