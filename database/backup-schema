@@ -186,6 +186,22 @@ CREATE SEQUENCE public.plans_id_seq
 	START 1
 	CACHE 1
 	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.leads_id_seq;
+CREATE SEQUENCE public.leads_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+DROP SEQUENCE IF EXISTS public.lead_property_id_seq;
+CREATE SEQUENCE public.lead_property_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
 DROP SEQUENCE IF EXISTS public.ads_banners_id_seq;
 CREATE SEQUENCE public.ads_banners_id_seq
 	INCREMENT BY 1
@@ -750,6 +766,45 @@ CREATE TABLE IF NOT EXISTS public.ads_banners (
 );
 
 
+-- public.leads definition
+
+-- Drop table
+
+-- DROP TABLE public.leads;
+
+	CREATE TABLE IF NOT EXISTS public.leads (
+		id serial4 NOT NULL,
+		"name" varchar(255) NOT NULL,
+		email varchar(255) NOT NULL,
+		country_code varchar(10) NULL,
+		phone varchar(50) NULL,
+		organization_id int4 NOT NULL,
+		created_at timestamp DEFAULT now() NOT NULL,
+		updated_at timestamp DEFAULT now() NOT NULL,
+		CONSTRAINT pk_leads PRIMARY KEY (id)
+	);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_leads_email_organization ON public.leads USING btree (email, organization_id);
+
+
+-- public.lead_property definition
+
+-- Drop table
+
+-- DROP TABLE public.lead_property;
+
+CREATE TABLE IF NOT EXISTS public.lead_property (
+	id serial4 NOT NULL,
+	lead_id int4 NOT NULL,
+	property_id int4 NOT NULL,
+	message text NULL,
+	created_at timestamp DEFAULT now() NOT NULL,
+	updated_at timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT pk_lead_property PRIMARY KEY (id)
+);
+CREATE INDEX IF NOT EXISTS idx_lead_property_lead_id ON public.lead_property USING btree (lead_id);
+CREATE INDEX IF NOT EXISTS idx_lead_property_property_id ON public.lead_property USING btree (property_id);
+
+
 -- Ensure serial id columns have their DEFAULT nextval properly set
 -- (guards against serial4 + pre-existing sequence conflicts)
 
@@ -769,3 +824,19 @@ ALTER TABLE public.users              ALTER COLUMN id SET DEFAULT nextval('publi
 ALTER TABLE public.tags_mapping ALTER COLUMN id SET DEFAULT nextval('public.tags_mapping_id_seq'::regclass);
 ALTER TABLE public.plans              ALTER COLUMN id SET DEFAULT nextval('public.plans_id_seq'::regclass);
 ALTER TABLE public.ads_banners        ALTER COLUMN id SET DEFAULT nextval('public.ads_banners_id_seq'::regclass);
+ALTER TABLE public.leads              ALTER COLUMN id SET DEFAULT nextval('public.leads_id_seq'::regclass);
+ALTER TABLE public.lead_property      ALTER COLUMN id SET DEFAULT nextval('public.lead_property_id_seq'::regclass);
+
+
+-- public.leads foreign keys
+
+ALTER TABLE public.leads DROP CONSTRAINT IF EXISTS "FK_leads_organization_id";
+ALTER TABLE public.leads ADD CONSTRAINT "FK_leads_organization_id" FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE;
+
+
+-- public.lead_property foreign keys
+
+ALTER TABLE public.lead_property DROP CONSTRAINT IF EXISTS "FK_lead_property_lead_id";
+ALTER TABLE public.lead_property ADD CONSTRAINT "FK_lead_property_lead_id" FOREIGN KEY (lead_id) REFERENCES public.leads(id) ON DELETE CASCADE;
+ALTER TABLE public.lead_property DROP CONSTRAINT IF EXISTS "FK_lead_property_property_id";
+ALTER TABLE public.lead_property ADD CONSTRAINT "FK_lead_property_property_id" FOREIGN KEY (property_id) REFERENCES public.properties(id) ON DELETE CASCADE;
