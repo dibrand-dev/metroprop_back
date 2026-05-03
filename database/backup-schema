@@ -876,3 +876,41 @@ ALTER TABLE public.favourites DROP CONSTRAINT IF EXISTS "FK_favourites_user_id";
 ALTER TABLE public.favourites ADD CONSTRAINT "FK_favourites_user_id" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;
 ALTER TABLE public.favourites DROP CONSTRAINT IF EXISTS "FK_favourites_property_id";
 ALTER TABLE public.favourites ADD CONSTRAINT "FK_favourites_property_id" FOREIGN KEY (property_id) REFERENCES public.properties(id) ON DELETE CASCADE;
+
+
+-- ============================================================
+-- search_alerts table
+-- ============================================================
+
+DROP SEQUENCE IF EXISTS public.search_alerts_id_seq;
+CREATE SEQUENCE public.search_alerts_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+
+DROP TABLE IF EXISTS public.search_alerts;
+CREATE TABLE public.search_alerts (
+	id          integer NOT NULL DEFAULT nextval('search_alerts_id_seq'::regclass),
+	user_id     integer NOT NULL,
+	filters     text    NOT NULL,
+	title       varchar(200) NOT NULL,
+	status      varchar(50)  NOT NULL DEFAULT 'active',
+	last_email_sent timestamp NULL,
+	created_at  timestamp NOT NULL DEFAULT now(),
+	updated_at  timestamp NOT NULL DEFAULT now(),
+	CONSTRAINT pk_search_alerts PRIMARY KEY (id),
+	CONSTRAINT fk_search_alerts_user FOREIGN KEY (user_id)
+		REFERENCES public.users(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_search_alerts_user_id ON public.search_alerts (user_id);
+CREATE INDEX IF NOT EXISTS idx_search_alerts_status  ON public.search_alerts (status);
+
+
+-- public.search_alerts foreign keys
+
+ALTER TABLE public.search_alerts DROP CONSTRAINT IF EXISTS "fk_search_alerts_user";
+ALTER TABLE public.search_alerts ADD CONSTRAINT "fk_search_alerts_user" FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;

@@ -24,6 +24,8 @@ import { PlansModule } from './modules/plans/plans.module';
 import { AdsBannersModule } from './modules/ads-banners/ads-banners.module';
 import { LeadsModule } from './modules/leads/leads.module';
 import { FavouritesModule } from './modules/favourites/favourites.module';
+import { SearchAlertsModule } from './modules/search-alerts/search-alerts.module';
+import { SearchAlertsCronModule } from './modules/cron-tasks/search-alerts/search-alerts-cron.module';
 
 
 @Module({
@@ -88,6 +90,8 @@ import { FavouritesModule } from './modules/favourites/favourites.module';
     AdsBannersModule,
     LeadsModule,
     FavouritesModule,
+    SearchAlertsModule,
+    SearchAlertsCronModule,
   ],
   controllers: [AppController],
   providers: [AppService],
