@@ -29,9 +29,7 @@ import {
 } from '../../common/enums';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
-import { THUMB_PREFIX } from '@/common/constants';
-import { accessSync } from 'fs';
-import { filter } from 'rxjs';
+import { THUMB_PREFIX, COUNTRY_ARGENTINA_ID } from '@/common/constants';
 
 export interface PropertyCard {
   id: number;
@@ -77,7 +75,7 @@ export class PropertiesService {
   async createDraft(createDraftDto: CreateDraftPropertyDto): Promise<Property> {
 
     if(createDraftDto.organization_id == null) {
-      createDraftDto.direct_owner = true; 
+      createDraftDto.direct_owner = true;
     }
     console.log("[PropertiesService.createDraft] createDraftDto:", JSON.stringify(createDraftDto, null, 2));
 
@@ -1121,6 +1119,8 @@ export class PropertiesService {
         }
       }
     }
+
+    filters.country_id = COUNTRY_ARGENTINA_ID;
 
     const qb = this.propertyRepository
       .createQueryBuilder('p')
