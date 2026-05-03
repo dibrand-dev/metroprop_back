@@ -18,6 +18,7 @@ import {
 import { Type } from 'class-transformer';
 import { PropertyStatus, DevelopmentType, PropertyType, OperationType } from '../../../common/enums';
 import { CreateImageDto, CreateVideoDto, CreateMultimedia360Dto, CreateAttachedDto } from './create-property.dto';
+import { CreateDevelopmentUnitDto } from './create-development-unit.dto';
 
 export class CreateDevelopmentDto {
   // ========== Identificadores ==========
@@ -196,4 +197,14 @@ export class CreateDevelopmentDto {
   @ValidateNested({ each: true })
   @Type(() => CreateAttachedDto)
   attached?: CreateAttachedDto[];
+
+  /**
+   * Unidades del emprendimiento. Cada unidad es una propiedad hija vinculada automáticamente
+   * al emprendimiento recién creado. Se procesan en el mismo request.
+   */
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateDevelopmentUnitDto)
+  units?: CreateDevelopmentUnitDto[];
 }

@@ -237,8 +237,8 @@ export class PropertyWriteService {
   ): Promise<{ warnings: string[] }> {
     const warnings: string[] = [];
 
-    // No permitir actualizar reference_code
-    const { reference_code, ...restScalars } = scalars;
+    // Campos que nunca se pueden sobreescribir en un update
+    const { reference_code, organization_id, development_id, deleted, ...restScalars } = scalars;
     const updateData: any = { ...restScalars };
     if (context?.organizationId) updateData.organization_id = context.organizationId;
     if (context?.branchId) updateData.branch_id = context.branchId;

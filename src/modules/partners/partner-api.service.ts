@@ -321,7 +321,7 @@ export class PartnerApiService {
     });
 
     const { branch_reference_id, ...rest } = dto as any;
-    const { tags, images, videos, multimedia360, attached, ...propertyData } = rest;
+    const { tags, images, videos, multimedia360, attached, units, ...propertyData } = rest;
 
     if (existing) {
       const { warnings } = await this.propertyWriteService.updatePropertyCore(
@@ -330,15 +330,29 @@ export class PartnerApiService {
         { tags, images, videos, multimedia360, attached },
       );
 
+      // Process inline units for upsert too
+      const unitWarnings: string[] = [];
+      if (units && units.length > 0) {
+        for (const unitDto of units) {
+          const { warnings: uw } = await this.addOrUpsertUnitToDevelopment(
+            existing.reference_code,
+            { ...unitDto, branch_reference_id: dto.branch_reference_id },
+            partner,
+          );
+          if (uw) unitWarnings.push(...uw);
+        }
+      }
+
       const updated = await this.propertyRepo.findOne({
         where: { id: existing.id, deleted: false },
         relations: ['images', 'tags', 'videos', 'attached'],
       });
 
+      const allWarnings = [...(warnings ?? []), ...unitWarnings];
       return {
         data: updated!,
         created: false,
-        warnings: warnings?.length ? warnings : undefined,
+        warnings: allWarnings.length ? allWarnings : undefined,
       };
     }
 
@@ -347,15 +361,29 @@ export class PartnerApiService {
       { tags, images, videos, multimedia360, attached },
     );
 
+    // Process inline units
+    const unitWarnings: string[] = [];
+    if (units && units.length > 0) {
+      for (const unitDto of units) {
+        const { warnings: uw } = await this.addOrUpsertUnitToDevelopment(
+          savedProperty.reference_code,
+          { ...unitDto, branch_reference_id: dto.branch_reference_id },
+          partner,
+        );
+        if (uw) unitWarnings.push(...uw);
+      }
+    }
+
     const finalProperty = await this.propertyRepo.findOne({
       where: { id: savedProperty.id },
       relations: ['images', 'tags', 'videos', 'attached'],
     });
 
+    const allWarnings = [...(warnings ?? []), ...unitWarnings];
     return {
       data: finalProperty!,
       created: true,
-      warnings: warnings?.length ? warnings : undefined,
+      warnings: allWarnings.length ? allWarnings : undefined,
     };
   }
 
@@ -586,6 +614,180 @@ export class PartnerApiService {
     }
 
     return property;
+  }
+
+  // ================================================================
+  // DEVELOPMENT UNITS
+  // ================================================================
+
+  /**
+   * Creates or upserts a unit (child property) under a development.
+   * The unit's `development_id`, `organization_id`, `branch_id` are resolved
+   * from the parent development so the partner only needs to send property fields.
+   */
+  async addOrUpsertUnitToDevelopment(
+    developmentRefCode: string,
+    dto: import('../properties/dto/create-development-unit.dto').CreateDevelopmentUnitDto,
+    partner: Partner,
+  ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
+    // 1. Resolve parent development
+    const parentDev = await this.findDevelopmentByRefCode(developmentRefCode, partner);
+
+    // 2. If branch_reference_id provided validate it, otherwise inherit from parent
+    let branchId = parentDev.branch_id!;
+    let organizationId = parentDev.organization_id!;
+
+    // 3. Check upsert
+    const existing = await this.propertyRepo.findOne({
+      where: {
+        reference_code: dto.reference_code,
+        organization_id: organizationId,
+        development_id: parentDev.id,
+        deleted: false,
+      },
+    });
+
+    const { branch_reference_id, is_development, development_id, ...rest } = dto as any;
+    const { tags, images, videos, multimedia360, attached, ...propertyData } = rest;
+
+    const unitScalars = {
+      ...propertyData,
+      is_development: false,
+      development_id: parentDev.id,
+      organization_id: organizationId,
+      branch_id: branchId,
+    };
+
+    if (existing) {
+      const { warnings } = await this.propertyWriteService.updatePropertyCore(
+        existing,
+        unitScalars,
+        { tags, images, videos, multimedia360, attached },
+      );
+
+      const updated = await this.propertyRepo.findOne({
+        where: { id: existing.id, deleted: false },
+        relations: ['images', 'tags', 'videos', 'attached'],
+      });
+
+      return {
+        data: updated!,
+        created: false,
+        warnings: warnings?.length ? warnings : undefined,
+      };
+    }
+
+    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+      { ...unitScalars, deleted: false },
+      { tags, images, videos, multimedia360, attached },
+    );
+
+    const finalUnit = await this.propertyRepo.findOne({
+      where: { id: savedProperty.id },
+      relations: ['images', 'tags', 'videos', 'attached'],
+    });
+
+    return {
+      data: finalUnit!,
+      created: true,
+      warnings: warnings?.length ? warnings : undefined,
+    };
+  }
+
+  /**
+   * Returns all active units (child properties) of a development.
+   */
+  async getUnitsForDevelopment(
+    developmentRefCode: string,
+    partner: Partner,
+  ): Promise<{ data: Property[]; total: number }> {
+    const parentDev = await this.findDevelopmentByRefCode(developmentRefCode, partner);
+
+    const units = await this.propertyRepo.find({
+      where: {
+        development_id: parentDev.id,
+        deleted: false,
+      },
+      relations: ['images', 'tags', 'videos', 'attached'],
+    });
+
+    return { data: units, total: units.length };
+  }
+
+  /**
+   * Updates a specific unit of a development by its reference_code.
+   */
+  async updateDevelopmentUnit(
+    developmentRefCode: string,
+    unitRefCode: string,
+    dto: import('../properties/dto/update-development-unit.dto').UpdateDevelopmentUnitDto,
+    partner: Partner,
+  ): Promise<{ data: Property; warnings?: string[] }> {
+    const parentDev = await this.findDevelopmentByRefCode(developmentRefCode, partner);
+
+    const unit = await this.propertyRepo.findOne({
+      where: {
+        reference_code: unitRefCode,
+        development_id: parentDev.id,
+        deleted: false,
+      },
+    });
+
+    if (!unit) {
+      throw new NotFoundException(
+        `Unidad con código ${unitRefCode} no encontrada en el emprendimiento ${developmentRefCode}`,
+      );
+    }
+
+    const { branch_reference_id, is_development, development_id, tags, images, videos, multimedia360, attached, ...propertyData } = dto as any;
+
+    const { warnings } = await this.propertyWriteService.updatePropertyCore(
+      unit,
+      propertyData,
+      { tags, images, videos, multimedia360, attached },
+    );
+
+    const result = await this.propertyRepo.findOne({
+      where: { id: unit.id },
+      relations: ['images', 'tags', 'videos', 'attached'],
+    });
+
+    return {
+      data: result!,
+      warnings: warnings?.length ? warnings : undefined,
+    };
+  }
+
+  /**
+   * Soft-deletes a specific unit of a development by its reference_code.
+   */
+  async deleteDevelopmentUnit(
+    developmentRefCode: string,
+    unitRefCode: string,
+    partner: Partner,
+  ): Promise<{ message: string }> {
+    const parentDev = await this.findDevelopmentByRefCode(developmentRefCode, partner);
+
+    const unit = await this.propertyRepo.findOne({
+      where: {
+        reference_code: unitRefCode,
+        development_id: parentDev.id,
+        deleted: false,
+      },
+    });
+
+    if (!unit) {
+      throw new NotFoundException(
+        `Unidad con código ${unitRefCode} no encontrada en el emprendimiento ${developmentRefCode}`,
+      );
+    }
+
+    unit.deleted = true;
+    unit.deleted_at = new Date();
+    await this.propertyRepo.save(unit);
+
+    this.logger.log(`Unit ${unitRefCode} soft-deleted from development ${developmentRefCode} by partner ${partner.id}`);
+    return { message: `Unidad ${unitRefCode} eliminada del emprendimiento ${developmentRefCode}` };
   }
 
 }

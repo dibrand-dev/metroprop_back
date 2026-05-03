@@ -286,10 +286,6 @@ export class Property {
   @Column({ type: 'varchar', length: 20, nullable: true })
   last_renovation?: string;
 
-  // ========== Información de Desarrollo ==========
-  @Column({ type: 'varchar', length: 255, nullable: true })
-  development?: string;
-
   // ========== Emprendimiento ==========
   @Column({ type: 'boolean', default: false, nullable: true })
   is_development?: boolean;
@@ -339,6 +335,19 @@ export class Property {
   deleted?: boolean;
 
   // ========== Relaciones ==========
+
+  /** Unidades hijas cuando esta propiedad es un emprendimiento (is_development = true). */
+  @OneToMany(() => Property, (unit) => unit.development, {
+    cascade: false,
+    eager: false,
+  })
+  units?: Property[];
+
+  /** Emprendimiento padre cuando esta propiedad es una unidad (development_id != null). */
+  @ManyToOne(() => Property, (dev) => dev.units, { nullable: true, eager: false })
+  @JoinColumn({ name: 'development_id' })
+  development?: Property;
+
   @OneToMany(() => PropertyImage, (image) => image.property, {
     cascade: true,
     eager: false,

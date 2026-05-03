@@ -657,8 +657,11 @@ export class PropertiesService {
         .leftJoinAndSelect('property.videos', 'videos')
         .leftJoinAndSelect('property.attached', 'attached')
         .leftJoinAndSelect('property.organization', 'organization')
+        .leftJoinAndSelect('property.units', 'units')
+        .leftJoinAndSelect('units.images', 'unitImages')
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
+        .andWhere('(units.deleted = false OR units.id IS NULL)')
         .select([
           'property',
           'images',
@@ -667,11 +670,21 @@ export class PropertiesService {
           'videos',
           'attached',
           'organization',
+          'units',
+          'unitImages',
         ])
         .getOne();
 
       if (property?.images) {
         property.images = prependImagePrefixToUrls('', property.images);
+      }
+
+      if (property?.units?.length) {
+        for (const unit of property.units) {
+          if (unit.images?.length) {
+            unit.images = prependImagePrefixToUrls('', unit.images);
+          }
+        }
       }
 
       // Buscar usuario relacionado si existe user_id

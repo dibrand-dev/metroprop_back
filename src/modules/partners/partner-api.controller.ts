@@ -31,6 +31,8 @@ import { CreatePropertyDto } from '../properties/dto/create-property.dto';
 import { UpdatePropertyDto } from '../properties/dto/update-property.dto';
 import { CreateDevelopmentDto } from '../properties/dto/create-development.dto';
 import { UpdateDevelopmentDto } from '../properties/dto/update-development.dto';
+import { CreateDevelopmentUnitDto } from '../properties/dto/create-development-unit.dto';
+import { UpdateDevelopmentUnitDto } from '../properties/dto/update-development-unit.dto';
 
 @Controller('api/partner/v1')
 @UseGuards(ThrottlerGuard, ApiKeyAuthGuard)
@@ -355,6 +357,97 @@ export class PartnerApiController {
   ) {
     const partner = (request as any).partner;
     const result = await this.partnerApiService.deleteDevelopment(referenceCode, partner);
+    return { success: true, ...result };
+  }
+
+  // ====== DEVELOPMENT UNITS ======
+
+  @Post('developments/:referenceCode/units')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Crear / actualizar (upsert) unidad en un emprendimiento',
+    description:
+      'Crea una unidad (propiedad hija) vinculada al emprendimiento indicado por reference_code. ' +
+      'Si ya existe una unidad con el mismo reference_code bajo ese emprendimiento se actualiza (upsert). ' +
+      'El servidor asigna automáticamente development_id, organization_id y branch_id del emprendimiento padre. ' +
+      'Acepta los mismos campos que una propiedad regular (imágenes, videos, tags, adjuntos).',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento padre' })
+  @ApiResponse({ status: 201, description: 'Unidad creada o actualizada' })
+  @ApiResponse({ status: 400, description: 'Datos inválidos' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento no encontrado' })
+  async addUnitToDevelopment(
+    @Param('referenceCode') referenceCode: string,
+    @Body() dto: CreateDevelopmentUnitDto,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.addOrUpsertUnitToDevelopment(referenceCode, dto, partner);
+    return {
+      success: true,
+      created: result.created,
+      data: result.data,
+      warnings: result.warnings,
+    };
+  }
+
+  @Get('developments/:referenceCode/units')
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Listar unidades de un emprendimiento',
+    description: 'Retorna todas las unidades (propiedades hijas) activas del emprendimiento.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento padre' })
+  @ApiResponse({ status: 200, description: 'Lista de unidades' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento no encontrado' })
+  async getUnitsForDevelopment(
+    @Param('referenceCode') referenceCode: string,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.getUnitsForDevelopment(referenceCode, partner);
+    return { success: true, total: result.total, data: result.data };
+  }
+
+  @Put('developments/:referenceCode/units/:unitRefCode')
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Actualizar unidad de un emprendimiento',
+    description: 'Actualiza campos de una unidad existente. Solo enviar los campos que se desean modificar.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento padre' })
+  @ApiParam({ name: 'unitRefCode', description: 'Código de referencia de la unidad' })
+  @ApiResponse({ status: 200, description: 'Unidad actualizada' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento o unidad no encontrados' })
+  async updateDevelopmentUnit(
+    @Param('referenceCode') referenceCode: string,
+    @Param('unitRefCode') unitRefCode: string,
+    @Body() dto: UpdateDevelopmentUnitDto,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.updateDevelopmentUnit(referenceCode, unitRefCode, dto, partner);
+    return { success: true, data: result.data, warnings: result.warnings };
+  }
+
+  @Delete('developments/:referenceCode/units/:unitRefCode')
+  @ApiTags('Developments')
+  @ApiOperation({
+    summary: 'Eliminar unidad de un emprendimiento (soft delete)',
+    description: 'Marca la unidad como eliminada. No se borra físicamente de la base de datos.',
+  })
+  @ApiParam({ name: 'referenceCode', description: 'Código de referencia del emprendimiento padre' })
+  @ApiParam({ name: 'unitRefCode', description: 'Código de referencia de la unidad' })
+  @ApiResponse({ status: 200, description: 'Unidad eliminada' })
+  @ApiResponse({ status: 404, description: 'Emprendimiento o unidad no encontrados' })
+  async deleteDevelopmentUnit(
+    @Param('referenceCode') referenceCode: string,
+    @Param('unitRefCode') unitRefCode: string,
+    @Req() request: Request,
+  ) {
+    const partner = (request as any).partner;
+    const result = await this.partnerApiService.deleteDevelopmentUnit(referenceCode, unitRefCode, partner);
     return { success: true, ...result };
   }
 }
