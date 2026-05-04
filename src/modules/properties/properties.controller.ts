@@ -198,10 +198,10 @@ export class PropertiesController {
   }
 
   /**
-   * GET /properties/mis-propiedades
+   * GET /properties/my-properties
    * Listado privado de propiedades de la organización del usuario autenticado, con filtros y paginación
    */
-  @Get('mis-propiedades')
+  @Get('my-properties')
   @UseGuards(JwtAuthGuard)
   myProperties(
     @Query() searchDto: SearchPropertiesDto,
