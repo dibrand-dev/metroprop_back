@@ -207,7 +207,9 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
 
 };
 
-const RUBROS = [
+export const COUNTRY_ARGENTINA_ID = 1; // ID fijo para Argentina en la tabla de países
+
+export const RUBROS = [
   "Aberturas",
   "Agencia",
   "Agencia comercial",
