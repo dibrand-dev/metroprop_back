@@ -263,6 +263,11 @@ export class SearchPropertiesDto {
   @IsOptional()
   @IsString()
   polygon?: string;
+
+  @IsOptional()
+  @IsInt()
+  property_id?: number;
+
 }
 
 /**

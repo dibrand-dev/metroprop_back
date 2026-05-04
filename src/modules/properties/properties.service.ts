@@ -1120,8 +1120,6 @@ export class PropertiesService {
       }
     }
 
-    filters.country_id = COUNTRY_ARGENTINA_ID;
-
     const qb = this.propertyRepository
       .createQueryBuilder('p')
       .leftJoin('organizations', 'org', 'p.organization_id = org.id');
@@ -1134,12 +1132,22 @@ export class PropertiesService {
       });
 
     const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
-
     if (scopedOrganizationId != null) {
       qb.andWhere('p.organization_id = :organization_id', {
         organization_id: scopedOrganizationId,
       });
     }
+
+    if(filters.property_id != null) {
+      qb.andWhere('p.id = :property_id', {
+        property_id: filters.property_id,
+      });
+
+      return { qb, orderBy, orderDirection };
+    }
+
+    /* ############# HARDCODED ARGENTINA POR AHORA ################# */
+    filters.country_id = COUNTRY_ARGENTINA_ID;
 
     if (filters.branch_id != null) {
       qb.andWhere('p.branch_id = :branch_id', {
