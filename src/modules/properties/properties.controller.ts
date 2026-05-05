@@ -207,6 +207,8 @@ export class PropertiesController {
     @Query() searchDto: SearchPropertiesDto,
     @Req() request: Request,
   ) {
+
+    console.log("User from request:", (request as any).user);
     const user = (request as any).user;
     const organizationId = user?.organization_id ?? user?.organization?.id;
 
