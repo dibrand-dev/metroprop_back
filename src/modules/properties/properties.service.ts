@@ -1343,6 +1343,9 @@ export class PropertiesService {
       );
     }
 */
+
+    console.log("EL QB???", qb.getSql(), qb.getParameters());
+
     return { qb, orderBy, orderDirection };
   }
 

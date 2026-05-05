@@ -215,6 +215,8 @@ export class PropertiesController {
       searchDto.user_id = user.id;
     }
 
+    console.log("search dto en controller", searchDto);
+
     return this.propertiesService.searchPanelProperties(searchDto);
   }
 
