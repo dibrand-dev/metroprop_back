@@ -207,16 +207,15 @@ export class PropertiesController {
     @Query() searchDto: SearchPropertiesDto,
     @Req() request: Request,
   ) {
-
-    console.log("User from request:", (request as any).user);
     const user = (request as any).user;
-    const organizationId = user?.organization_id ?? user?.organization?.id;
 
-    if (!organizationId) {
-      throw new BadRequestException('El usuario autenticado no tiene organization_id asociado');
+    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
+      searchDto.organization_id = user?.organization_id ?? user?.organization?.id;
+    } else {
+      searchDto.user_id = user.id;
     }
 
-    return this.propertiesService.searchPanelProperties(searchDto, organizationId);
+    return this.propertiesService.searchPanelProperties(searchDto);
   }
 
   /**

@@ -1054,13 +1054,11 @@ export class PropertiesService {
 
   async searchPanelProperties(
     filters: SearchPropertiesDto,
-    organizationId: number,
   ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
     filters.limit = filters.limit ?? 20;
-    filters.page = filters.page ?? 1; 
+    filters.page = filters.page ?? 1;
 
     const { qb } = await this.buildAdvancedSearchQuery(filters, {
-      organizationId,
       includeStatusFilter: true,
     });
 
@@ -1073,7 +1071,6 @@ export class PropertiesService {
   private async buildAdvancedSearchQuery(
     filters: SearchPropertiesDto,
     options?: {
-      organizationId?: number;
       includeStatusFilter?: boolean;
     },
   ) {
@@ -1131,10 +1128,9 @@ export class PropertiesService {
         orgDeleted: false,
       });
 
-    const scopedOrganizationId = options?.organizationId ?? filters.organization_id;
-    if (scopedOrganizationId != null) {
+    if (filters.organization_id != null) {
       qb.andWhere('p.organization_id = :organization_id', {
-        organization_id: scopedOrganizationId,
+        organization_id: filters.organization_id,
       });
     }
 
