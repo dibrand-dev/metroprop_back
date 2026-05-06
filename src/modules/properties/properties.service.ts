@@ -26,6 +26,7 @@ import {
   MediaUploadStatus,
   Currency,
   PropertyType,
+  PublicationPlan,
 } from '../../common/enums';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
@@ -778,80 +779,147 @@ export class PropertiesService {
    */
   async changeStatus(
     body: {
-      id?: number;
-      ids?: number[];
+      ids: number | number[];
       status: number;
     },
   ): Promise<{ message: string; updated: number; ids: number[]; status: PropertyStatus }> {
-    const { id, ids, status } = body;
-    const hasId = id != null;
-    const hasIds = Array.isArray(ids) && ids.length > 0;
-
-    if ((hasId && hasIds) || (!hasId && !hasIds)) {
-      throw new BadRequestException('Debe enviar solo id o solo ids junto con status');
-    }
+    const { ids, status } = body;
 
     const validStatuses = Object.values(PropertyStatus).filter(
       (value): value is PropertyStatus => typeof value === 'number',
     );
-
     if (!Number.isInteger(status) || !validStatuses.includes(status as PropertyStatus)) {
       throw new BadRequestException('status debe ser un valor valido de PropertyStatus');
     }
 
-    if (hasId && (!Number.isInteger(id) || (id as number) <= 0)) {
-      throw new BadRequestException('id debe ser un numero entero mayor a 0');
-    }
-
-    if (
-      hasIds &&
-      (ids as number[]).some((currentId) => !Number.isInteger(currentId) || currentId <= 0)
-    ) {
-      throw new BadRequestException('ids debe ser un array de numeros enteros mayores a 0');
-    }
-
-    const targetIds = hasId ? [id as number] : Array.from(new Set(ids as number[]));
-
-    const existingProperties = await this.propertyRepository.find({
-      where: {
-        id: In(targetIds),
-        deleted: false,
-      },
-      select: ['id'],
-    });
-
-    const existingIds = new Set(existingProperties.map((property) => property.id as number));
-    const notFoundIds = targetIds.filter((targetId) => !existingIds.has(targetId));
-    const existingTargetIds = targetIds.filter((targetId) => existingIds.has(targetId));
-
-    if (notFoundIds.length > 0) {
-      console.warn(
-        `[PropertiesService.changeStatus] IDs no encontrados (se omiten y continúa el proceso): ${notFoundIds.join(', ')}`,
-      );
-    }
+    const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
 
     let affected = 0;
-    if (existingTargetIds.length > 0) {
+    if (targetIds.length > 0) {
       const updateResult = await this.propertyRepository
         .createQueryBuilder()
         .update(Property)
         .set({ status })
-        .where('id IN (:...targetIds)', { targetIds: existingTargetIds })
+        .where('id IN (:...targetIds)', { targetIds })
         .andWhere('deleted = :deleted', { deleted: false })
         .execute();
-
       affected = updateResult.affected ?? 0;
     }
 
     return {
-      message:
-        notFoundIds.length > 0
-          ? 'Estado actualizado parcialmente. Algunos IDs no fueron encontrados.'
-          : 'Estado actualizado correctamente',
+      message: notFoundIds.length > 0
+        ? 'Estado actualizado parcialmente. Algunos IDs no fueron encontrados.'
+        : 'Estado actualizado correctamente',
       updated: affected,
-      ids: existingTargetIds,
+      ids: targetIds,
       status: status as PropertyStatus,
     };
+  }
+
+  async changeSelectedPlan(
+    body: {
+      ids: number | number[];
+      selected_plan: number;
+    },
+  ): Promise<{ message: string; updated: number; ids: number[]; selected_plan: PublicationPlan }> {
+    const { ids, selected_plan } = body;
+
+    const validPlans = Object.values(PublicationPlan).filter(
+      (value): value is PublicationPlan => typeof value === 'number',
+    );
+    if (!Number.isInteger(selected_plan) || !validPlans.includes(selected_plan as PublicationPlan)) {
+      throw new BadRequestException('selected_plan debe ser un valor valido de PublicationPlan');
+    }
+
+    const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
+
+    let affected = 0;
+    if (targetIds.length > 0) {
+      const updateResult = await this.propertyRepository
+        .createQueryBuilder()
+        .update(Property)
+        .set({ selected_plan })
+        .where('id IN (:...targetIds)', { targetIds })
+        .andWhere('deleted = :deleted', { deleted: false })
+        .execute();
+      affected = updateResult.affected ?? 0;
+    }
+
+    return {
+      message: notFoundIds.length > 0
+        ? 'Plan actualizado parcialmente. Algunos IDs no fueron encontrados.'
+        : 'Plan actualizado correctamente',
+      updated: affected,
+      ids: targetIds,
+      selected_plan: selected_plan as PublicationPlan,
+    };
+  }
+
+  async changeUser(
+    body: {
+      ids: number | number[];
+      user_id: number;
+    },
+  ): Promise<{ message: string; updated: number; ids: number[]; user_id: number }> {
+    const { ids, user_id } = body;
+    if (!Number.isInteger(user_id) || user_id <= 0) {
+      throw new BadRequestException('user_id debe ser un numero entero mayor a 0');
+    }
+
+    const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
+
+    let affected = 0;
+    if (targetIds.length > 0) {
+      const updateResult = await this.propertyRepository
+        .createQueryBuilder()
+        .update(Property)
+        .set({ user_id })
+        .where('id IN (:...targetIds)', { targetIds })
+        .andWhere('deleted = :deleted', { deleted: false })
+        .execute();
+      affected = updateResult.affected ?? 0;
+    }
+
+    return {
+      message: notFoundIds.length > 0
+        ? 'Usuario asignado parcialmente. Algunos IDs no fueron encontrados.'
+        : 'Usuario asignado correctamente',
+      updated: affected,
+      ids: targetIds,
+      user_id,
+    };
+  }
+
+  private async resolveTargetIds(
+    ids: number | number[],
+  ): Promise<{ targetIds: number[]; notFoundIds: number[] }> {
+    const raw = Array.isArray(ids) ? ids : [ids];
+
+    if (raw.length === 0) {
+      throw new BadRequestException('ids no puede estar vacío');
+    }
+    if (raw.some((i) => !Number.isInteger(i) || i <= 0)) {
+      throw new BadRequestException('ids debe contener enteros mayores a 0');
+    }
+
+    const candidateIds = Array.from(new Set(raw));
+
+    const existing = await this.propertyRepository.find({
+      where: { id: In(candidateIds), deleted: false },
+      select: ['id'],
+    });
+
+    const existingSet = new Set(existing.map((p) => p.id as number));
+    const notFoundIds = candidateIds.filter((i) => !existingSet.has(i));
+    const targetIds = candidateIds.filter((i) => existingSet.has(i));
+
+    if (notFoundIds.length > 0) {
+      console.warn(
+        `[PropertiesService] IDs no encontrados (se omiten): ${notFoundIds.join(', ')}`,
+      );
+    }
+
+    return { targetIds, notFoundIds };
   }
 
   /**
@@ -1054,17 +1122,142 @@ export class PropertiesService {
 
   async searchPanelProperties(
     filters: SearchPropertiesDto,
-  ): Promise<{ data: Property[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    data: Property[];
+    total: number;
+    page: number;
+    limit: number;
+    facets: {
+      status: Array<{ value: number | null; count: number }>;
+      room_amount: Array<{ value: number | null; count: number }>;
+      bathroom_amount: Array<{ value: number | null; count: number }>;
+      suite_amount: Array<{ value: number | null; count: number }>;
+      property_type: Array<{ value: number | null; count: number }>;
+      selected_plan: Array<{ value: number | null; count: number }>;
+      operation_type: Array<{ value: number | null; count: number }>;
+      users: Array<{ user_id: number | null; count: number }>;
+      location_id: Array<{ value: number | null; count: number }>;
+    };
+  }> {
     filters.limit = filters.limit ?? 20;
     filters.page = filters.page ?? 1;
+    const offset = (filters.page - 1) * filters.limit;
 
-    const { qb } = await this.buildAdvancedSearchQuery(filters, {
+    const { qb: baseQb } = await this.buildAdvancedSearchQuery(filters, {
       includeStatusFilter: true,
     });
 
-    const [data, total] = await qb.getManyAndCount();
+    const toFacet = (raw: { value: number | null; count: string }[]) =>
+      raw.map((r) => ({ value: r.value, count: parseInt(r.count, 10) }));
 
-    return { data, total, page: filters.page, limit: filters.limit };
+    // Run all facet counts in parallel
+    const [
+      statusRaw,
+      roomRaw,
+      bathroomRaw,
+      suiteRaw,
+      propertyTypeRaw,
+      selectedPlanRaw,
+      operationTypeRaw,
+      usersRaw,
+      locationRaw,
+    ] = await Promise.all([
+      baseQb.clone()
+        .select('p.status', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.status')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.room_amount', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.room_amount')
+        .orderBy('p.room_amount', 'ASC')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.bathroom_amount', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.bathroom_amount')
+        .orderBy('p.bathroom_amount', 'ASC')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.suite_amount', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.suite_amount')
+        .orderBy('p.suite_amount', 'ASC')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.property_type', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.property_type')
+        .orderBy('p.property_type', 'ASC')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.selected_plan', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.selected_plan')
+        .orderBy('p.selected_plan', 'ASC')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.operation_type', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.operation_type')
+        .orderBy('p.operation_type', 'ASC')
+        .getRawMany<{ value: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.user_id', 'user_id')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.user_id')
+        .orderBy('count', 'DESC')
+        .getRawMany<{ user_id: number | null; count: string }>(),
+      baseQb.clone()
+        .select('p.location_id', 'value')
+        .addSelect('COUNT(p.id)', 'count')
+        .groupBy('p.location_id')
+        .orderBy('count', 'DESC')
+        .getRawMany<{ value: number | null; count: string }>(),
+    ]);
+
+    // Add image join and pagination to main query
+    baseQb
+      .leftJoinAndSelect(
+        'p.images',
+        'img',
+        `img.id = (
+          SELECT pi.id
+          FROM property_images pi
+          WHERE pi."propertyId" = p.id
+          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+          LIMIT 1
+        )`,
+      )
+      .skip(offset)
+      .take(filters.limit);
+
+    const [data, total] = await baseQb.getManyAndCount();
+
+    for (const property of data) {
+      if (property.images?.length) {
+        property.images = prependImagePrefixToUrls(THUMB_PREFIX, property.images);
+      }
+    }
+
+    return {
+      data,
+      total,
+      page: filters.page,
+      limit: filters.limit,
+      facets: {
+        status: toFacet(statusRaw),
+        room_amount: toFacet(roomRaw),
+        bathroom_amount: toFacet(bathroomRaw),
+        suite_amount: toFacet(suiteRaw),
+        property_type: toFacet(propertyTypeRaw),
+        selected_plan: toFacet(selectedPlanRaw),
+        operation_type: toFacet(operationTypeRaw),
+        users: usersRaw.map((r) => ({ user_id: r.user_id, count: parseInt(r.count, 10) })),
+        location_id: toFacet(locationRaw),
+      },
+    };
   }
 
   

@@ -215,8 +215,6 @@ export class PropertiesController {
       searchDto.user_id = user.id;
     }
 
-    console.log("search dto en controller", searchDto);
-
     return this.propertiesService.searchPanelProperties(searchDto);
   }
 
@@ -265,12 +263,44 @@ export class PropertiesController {
   changeStatus(
     @Body()
     body: {
-      id?: number;
-      ids?: number[];
+      ids: number | number[];
       status: number;
     },
   ) {
     return this.propertiesService.changeStatus(body);
+  }
+
+  /**
+   * PATCH /properties/republish
+   * Cambiar el plan de publicación (selected_plan) de una o varias propiedades
+   */
+  @Patch('republish')
+  @UseGuards(JwtAuthGuard)
+  changeSelectedPlan(
+    @Body()
+    body: {
+      ids: number | number[];
+      selected_plan: number;
+    },
+  ) {
+    return this.propertiesService.changeSelectedPlan(body);
+  }
+
+
+  /**
+   * PATCH /properties/change-user
+   * Cambiar usuario asignado de una o varias propiedades
+   */
+  @Patch('change-user')
+  @UseGuards(JwtAuthGuard)
+  changeUser(
+    @Body()
+    body: {
+      ids: number | number[];
+      user_id: number;
+    },
+  ) {
+    return this.propertiesService.changeUser(body);
   }
 
   /**

@@ -69,6 +69,7 @@ export enum PropertyStatus {
   DISPONIBLE = 2,    // Disponible (default)
   RESERVADA = 3,     // Reservada
   NO_DISPONIBLE = 4, // No disponible
+  ARCHIVADA = 5,      // Archivada (oculta para usuarios)
 }
 
 /**
