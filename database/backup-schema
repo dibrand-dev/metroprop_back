@@ -285,6 +285,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	property_type int4 NOT NULL,
 	property_subtype int4 NOT NULL,
 	status int4 DEFAULT 2 NOT NULL,
+	view_count int4 DEFAULT 0 NOT NULL,
 	suite_amount int4 NULL,
 	room_amount int4 NULL,
 	bathroom_amount int4 NULL,

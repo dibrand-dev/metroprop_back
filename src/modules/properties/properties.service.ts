@@ -738,6 +738,32 @@ export class PropertiesService {
     return property;
   }
 
+  async incrementViewCount(id: number) {
+    const property = await this.propertyRepository.findOne({
+      where: {
+        id,
+        deleted: false,
+      },
+      select: ['id', 'view_count'],
+    });
+
+    if (!property) {
+      throw new NotFoundException(`Propiedad con ID ${id} no encontrada`);
+    }
+
+    await this.propertyRepository.increment({ id }, 'view_count', 1);
+
+    const updatedProperty = await this.propertyRepository.findOne({
+      where: { id },
+      select: ['id', 'view_count'],
+    });
+
+    return {
+      counted: true,
+      view_count: updatedProperty?.view_count ?? property.view_count + 1,
+    };
+  }
+
   /**
    * Actualizar una propiedad
    */

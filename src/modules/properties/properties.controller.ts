@@ -254,6 +254,14 @@ export class PropertiesController {
     return this.propertiesService.findOne(id, format ?? null);
   }
 
+  @Post(':id/view')
+  @HttpCode(HttpStatus.OK)
+  incrementViewCount(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.propertiesService.incrementViewCount(id);
+  }
+
   /**
    * PATCH /properties/status
    * Cambiar estado de una o varias propiedades

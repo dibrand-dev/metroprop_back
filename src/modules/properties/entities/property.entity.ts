@@ -113,6 +113,9 @@ export class Property {
   @Column({ type: 'integer', nullable: false, default: PropertyStatus.DISPONIBLE })
   status!: PropertyStatus;
 
+  @Column({ type: 'integer', nullable: false, default: 0 })
+  view_count!: number;
+
   // ========== Características Principales ==========
   @Column({ type: 'integer', nullable: true })
   suite_amount?: number;
