@@ -609,6 +609,7 @@ export class PropertiesService {
           'property.id',
           'property.price',
           'property.price_square_meter',
+          'property.view_count',
           'property.bathroom_amount',
           'property.street',
           'property.room_amount',
@@ -1161,7 +1162,7 @@ export class PropertiesService {
       property_type: Array<{ value: number | null; count: number }>;
       selected_plan: Array<{ value: number | null; count: number }>;
       operation_type: Array<{ value: number | null; count: number }>;
-      users: Array<{ user_id: number | null; count: number }>;
+      users: Array<{ value: number | null; count: number }>;
       location_id: Array<{ value: number | null; count: number }>;
     };
   }> {
