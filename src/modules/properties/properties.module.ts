@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { PropertiesService } from './properties.service';
 import { PropertyWriteService } from './property-write.service';
 import { PropertiesController } from './properties.controller';
+import { PropertyOwnershipGuard } from '../../common/guards/property-ownership.guard';
 import { Property } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
 import { PropertyAttribute } from './entities/property-attribute.entity';
@@ -29,7 +30,7 @@ import { PropertyAttached } from './entities/property-attached.entity';
     UploadS3CronModule,
   ],
   controllers: [PropertiesController],
-  providers: [PropertiesService, PropertyWriteService],
+  providers: [PropertiesService, PropertyWriteService, PropertyOwnershipGuard],
   exports: [PropertiesService, PropertyWriteService],
 })
 export class PropertiesModule {}

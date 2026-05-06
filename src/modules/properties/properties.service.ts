@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   BadRequestException,
+  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -27,10 +28,18 @@ import {
   Currency,
   PropertyType,
   PublicationPlan,
+  UserRole,
 } from '../../common/enums';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
 import { THUMB_PREFIX, COUNTRY_ARGENTINA_ID } from '@/common/constants';
+
+export interface RequestingUser {
+  id: number;
+  role_id: number;
+  organization_id?: number;
+  organization?: { id: number };
+}
 
 export interface PropertyCard {
   id: number;
@@ -782,6 +791,7 @@ export class PropertiesService {
       ids: number | number[];
       status: number;
     },
+    requestingUser?: RequestingUser,
   ): Promise<{ message: string; updated: number; ids: number[]; status: PropertyStatus }> {
     const { ids, status } = body;
 
@@ -793,6 +803,10 @@ export class PropertiesService {
     }
 
     const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
+
+    if (requestingUser) {
+      await this.assertBulkOwnership(requestingUser, targetIds);
+    }
 
     let affected = 0;
     if (targetIds.length > 0) {
@@ -821,6 +835,7 @@ export class PropertiesService {
       ids: number | number[];
       selected_plan: number;
     },
+    requestingUser?: RequestingUser,
   ): Promise<{ message: string; updated: number; ids: number[]; selected_plan: PublicationPlan }> {
     const { ids, selected_plan } = body;
 
@@ -832,6 +847,10 @@ export class PropertiesService {
     }
 
     const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
+
+    if (requestingUser) {
+      await this.assertBulkOwnership(requestingUser, targetIds);
+    }
 
     let affected = 0;
     if (targetIds.length > 0) {
@@ -860,6 +879,7 @@ export class PropertiesService {
       ids: number | number[];
       user_id: number;
     },
+    requestingUser?: RequestingUser,
   ): Promise<{ message: string; updated: number; ids: number[]; user_id: number }> {
     const { ids, user_id } = body;
     if (!Number.isInteger(user_id) || user_id <= 0) {
@@ -867,6 +887,10 @@ export class PropertiesService {
     }
 
     const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
+
+    if (requestingUser) {
+      await this.assertBulkOwnership(requestingUser, targetIds);
+    }
 
     let affected = 0;
     if (targetIds.length > 0) {
@@ -888,6 +912,45 @@ export class PropertiesService {
       ids: targetIds,
       user_id,
     };
+  }
+
+  private async assertBulkOwnership(
+    user: RequestingUser,
+    propertyIds: number[],
+  ): Promise<void> {
+    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) return;
+    if (propertyIds.length === 0) return;
+
+    const properties = await this.propertyRepository.find({
+      where: { id: In(propertyIds), deleted: false },
+      select: ['id', 'user_id', 'organization_id'],
+    });
+
+    if (user.role_id === UserRole.USER_ROL_ADMIN) {
+      const userOrgId = user.organization_id ?? user.organization?.id;
+      const forbidden = properties.find((p) => p.organization_id !== userOrgId);
+      if (forbidden) {
+        throw new ForbiddenException(
+          `No tenés permiso para modificar la propiedad ${forbidden.id}`,
+        );
+      }
+      return;
+    }
+
+    if (
+      user.role_id === UserRole.USER_ROL_SELLER ||
+      user.role_id === UserRole.USER_ROL_COLLABORATOR
+    ) {
+      const forbidden = properties.find((p) => p.user_id !== user.id);
+      if (forbidden) {
+        throw new ForbiddenException(
+          `No tenés permiso para modificar la propiedad ${forbidden.id}`,
+        );
+      }
+      return;
+    }
+
+    throw new ForbiddenException('No tenés permiso para realizar esta acción');
   }
 
   private async resolveTargetIds(

@@ -30,6 +30,7 @@ import { EnhancedFileFieldsInterceptor } from '../../common/interceptors/enhance
 import { UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { PropertyOwnershipGuard } from '../../common/guards/property-ownership.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { Request } from 'express';
@@ -72,7 +73,7 @@ export class PropertiesController {
    * - attached: Cualquier tipo de archivo (pdf, doc, etc.)
    */
   @Post(':propertyId/save-multimedia')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   @UseInterceptors(
     EnhancedFileFieldsInterceptor(
       [{ name: 'images', maxCount: 20 }, { name: 'attached', maxCount: 20 }],
@@ -105,7 +106,7 @@ export class PropertiesController {
    * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
   @Get(':propertyId/multimedia')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   async getMultimedia(@Param('propertyId', ParseIntPipe) propertyId: number) {
     return this.propertiesService.getMultimedia(propertyId);
   }
@@ -153,7 +154,7 @@ export class PropertiesController {
    * Actualizar un emprendimiento existente
    */
   @Patch('development/:id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   updateDevelopment(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateDevelopmentDto: UpdateDevelopmentDto,
@@ -266,8 +267,9 @@ export class PropertiesController {
       ids: number | number[];
       status: number;
     },
+    @Req() req: Request,
   ) {
-    return this.propertiesService.changeStatus(body);
+    return this.propertiesService.changeStatus(body, (req as any).user);
   }
 
   /**
@@ -282,8 +284,9 @@ export class PropertiesController {
       ids: number | number[];
       selected_plan: number;
     },
+    @Req() req: Request,
   ) {
-    return this.propertiesService.changeSelectedPlan(body);
+    return this.propertiesService.changeSelectedPlan(body, (req as any).user);
   }
 
 
@@ -299,8 +302,9 @@ export class PropertiesController {
       ids: number | number[];
       user_id: number;
     },
+    @Req() req: Request,
   ) {
-    return this.propertiesService.changeUser(body);
+    return this.propertiesService.changeUser(body, (req as any).user);
   }
 
   /**
@@ -308,7 +312,7 @@ export class PropertiesController {
    * Actualizar una propiedad
    */
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updatePropertyDto: UpdatePropertyDto,
@@ -321,7 +325,7 @@ export class PropertiesController {
    * Eliminar lógico (soft delete) una propiedad
    */
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.propertiesService.remove(id);
