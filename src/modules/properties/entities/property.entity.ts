@@ -389,7 +389,7 @@ export class Property {
   organization?: Organization;
 
   // Relación con User (asignado)
-  @ManyToOne(() => User, { nullable: true, eager: false })
+  @ManyToOne(() => User, { nullable: true, eager: false, createForeignKeyConstraints: false })
   @JoinColumn({ name: 'user_id' })
   user?: User;
 
