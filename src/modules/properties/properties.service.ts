@@ -1281,7 +1281,7 @@ export class PropertiesService {
         property_type: toFacet(propertyTypeRaw),
         selected_plan: toFacet(selectedPlanRaw),
         operation_type: toFacet(operationTypeRaw),
-        users: usersRaw.map((r) => ({ user_id: r.user_id, count: parseInt(r.count, 10) })),
+        users: usersRaw.map((r) => ({ value: r.user_id, count: parseInt(r.count, 10) })),
         location_id: toFacet(locationRaw),
       },
     };
