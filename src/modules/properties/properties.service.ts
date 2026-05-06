@@ -36,6 +36,8 @@ export interface PropertyCard {
   id: number;
   publication_title: string;
   street?: string;
+  user_id?: number;
+  user?: { id: number; name: string; email: string; phone?: string };
   total_surface?: number;
   room_amount?: number;
   bathroom_amount?: number;
@@ -1052,10 +1054,9 @@ export class PropertiesService {
     if (filters.full) {
       // Modo full: query completa con todas las relaciones
       const qb = baseQb.clone();
-
-
       qb.leftJoinAndSelect('p.images', 'img')
         .leftJoinAndSelect('p.organization', 'p_org')
+        .leftJoinAndSelect('p.user', 'usr')
         .addOrderBy('img.order_position', 'ASC')
         .skip(offset)
         .take(limit)
@@ -1068,6 +1069,7 @@ export class PropertiesService {
         .select([
           'p.id',
           'p.publication_title',
+          'p.user_id',
           'p.street',
           'p.total_surface',
           'p.room_amount',
@@ -1081,6 +1083,10 @@ export class PropertiesService {
           'p_org.id',
           'p_org.company_name',
           'p_org.company_logo',
+          'usr.id',
+          'usr.name',
+          'usr.email',
+          'usr.phone',
         ])
         .leftJoinAndSelect(
           'p.images',
@@ -1094,6 +1100,7 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org')
+        .leftJoinAndSelect('p.user', 'usr')
         .orderBy(orderBy, orderDirection)
         .skip(offset)
         .take(limit);
@@ -1103,6 +1110,7 @@ export class PropertiesService {
       data = partialProps.map((p) => ({
         id: p.id as number,
         publication_title: p.publication_title,
+        user_id: p.user_id,
         street: p.street,
         total_surface: p.total_surface,
         room_amount: p.room_amount,
@@ -1117,6 +1125,12 @@ export class PropertiesService {
           id: p.organization.id,
           company_name: p.organization.company_name,
           company_logo: p.organization.company_logo,
+        } : undefined,
+        user: p.user ? {
+          id: p.user.id,
+          name: p.user.name,
+          email: p.user.email,
+          phone: p.user.phone,
         } : undefined,
       }));
     }
@@ -1244,8 +1258,9 @@ export class PropertiesService {
         .getRawMany<{ value: number | null; count: string }>(),
     ]);
 
-    // Add image join and pagination to main query
+    // Add image join, user join and pagination to main query
     baseQb
+      .leftJoinAndSelect('p.user', 'usr')
       .leftJoinAndSelect(
         'p.images',
         'img',
@@ -1287,7 +1302,6 @@ export class PropertiesService {
     };
   }
 
-  
   private async buildAdvancedSearchQuery(
     filters: SearchPropertiesDto,
     options?: {

@@ -30,6 +30,7 @@ import {
   DevelopmentType,
 } from '../../../common/enums';
 import { Organization } from '@/modules/organizations/entities/organization.entity';
+import { User } from '@/modules/users/entities/user.entity';
 
 @Entity('properties')
 @Index('idx_properties_status', ['status'])
@@ -386,6 +387,11 @@ export class Property {
   @ManyToOne(() => Organization, { nullable: true, eager: false })
   @JoinColumn({ name: 'organization_id' })
   organization?: Organization;
+
+  // Relación con User (asignado)
+  @ManyToOne(() => User, { nullable: true, eager: false })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
 
 
 }
