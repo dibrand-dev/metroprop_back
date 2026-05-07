@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
+import { User } from '../users/entities/user.entity';
 
 @Controller('branches')
 export class BranchesController {
@@ -17,6 +18,21 @@ export class BranchesController {
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   findAll() {
     return this.branchesService.findAll();
+  }
+
+  // get all branches by organization id
+  @Get('organization/:orgId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_COLLABORATOR, UserRole.USER_ROL_SELLER)
+  getByOrganization(@Request() req: any, @Param('orgId') orgId: number) {
+    if (
+      req.user.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
+      req.user.organization_id !== Number(orgId)
+    ) {
+      throw new ForbiddenException('No tienes permisos para acceder a esta organización');
+    }
+
+    return this.branchesService.getByOrganization(orgId);
   }
 
   @Get(':id')
@@ -54,19 +70,5 @@ export class BranchesController {
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id') id: number) {
     return this.branchesService.remove(id);
-  }
-
-  // get all branches by organization id
-  @Get('organization/:orgId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
-  getByOrganization(@Request() req: any, @Param('orgId') orgId: number) {
-    if (
-      req.user.organization_id !== Number(orgId)
-    ) {
-      throw new ForbiddenException('No tienes permisos para acceder a esta organización');
-    }
-
-    return this.branchesService.getByOrganization(orgId);
   }
 }

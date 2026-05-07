@@ -440,6 +440,34 @@ export class UsersService {
     return { success: true, message: 'Contraseña actualizada correctamente' };
   }
 
+  async changeEmail(
+    userId: number,
+    newEmail: string,
+  ): Promise<{ success: boolean; message: string; newEmail?: string; name?: string }> {
+    const existing = await this.usersRepository.findOne({
+      where: { email: newEmail, deleted: false },
+      select: ['id'],
+    });
+
+    if (existing) {
+      return { success: false, message: 'El nuevo email ya está en uso' };
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: userId, deleted: false },
+      select: ['id', 'email', 'name'],
+    });
+
+    if (!user) {
+      return { success: false, message: 'Usuario no encontrado' };
+    }
+
+    user.email = newEmail;
+    await this.usersRepository.save(user);
+
+    return { success: true, message: 'Email actualizado correctamente', newEmail, name: user.name };
+  }
+
   /**
    * Solicitar reset de password (moved from registration service)
    */

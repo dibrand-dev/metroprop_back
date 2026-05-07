@@ -593,4 +593,54 @@ export class EmailService {
       html,
     });
   }
+
+  async sendEmailChangedEmail(to: string, name: string): Promise<void> {
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'https://metroprop.co');
+
+    const html = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head>
+        <meta charset="UTF-8">
+        <title>Email actualizado - Metroprop</title>
+      </head>
+      <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#ffffff;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:20px 0;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding:20px; background-color:#F5F5F5;">
+                    <img src="${frontendUrl}/images/metropropLogo.png" alt="Metroprop Logo" width="150" style="display:block;">
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:32px 40px; color:#333333; font-size:16px; line-height:1.6; text-align:center;">
+                    <p style="margin:0 0 16px 0; font-size:24px; font-weight:800;">¡Hola, ${name}!</p>
+                    <p style="margin:0 0 16px 0;">Te confirmamos que el email de tu cuenta en <strong>Metroprop</strong> ha sido actualizado correctamente.</p>
+                    <p style="margin:0 0 24px 0;">A partir de ahora podés iniciar sesión con esta dirección de email.</p>
+                    <a href="${frontendUrl}/login" style="display:inline-block; background-color:#007bff; color:#fff; text-decoration:none; padding:14px 48px; border-radius:4px; font-size:15px; font-weight:bold;">
+                      Iniciar sesión
+                    </a>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding:20px 40px; background-color:#F5F5F5; text-align:center; font-size:12px; color:#888;">
+                    <p style="margin:0;">Si no realizaste este cambio, contactanos de inmediato.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await this.sendEmail({
+      to,
+      subject: 'MetroProp · Tu email ha sido actualizado',
+      html,
+    });
+  }
 }

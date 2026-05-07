@@ -128,6 +128,34 @@ export class UsersController {
     return this.usersService.changePassword(body.id, body.oldPassword, body.newPassword);
   }
 
+  @Post('change-email')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  async changeEmail(
+    @Request() req: any,
+    @Body()
+    body: {
+      oldEmail: string;
+      newEmail: string;
+    },
+  ) {
+    if (req.user.email !== body.oldEmail) {
+      return { success: false, message: 'El email actual no coincide con tu cuenta' };
+    }
+
+    const result = await this.usersService.changeEmail(req.user.id, body.newEmail);
+
+    if (result.success && result.newEmail && result.name) {
+      try {
+        await this.emailService.sendEmailChangedEmail(result.newEmail, result.name);
+      } catch (emailError) {
+        console.error('Error sending email changed notification:', emailError);
+      }
+    }
+
+    return { success: result.success, message: result.message };
+  }
+
   
   @Post('update-password')
   @HttpCode(HttpStatus.OK)
