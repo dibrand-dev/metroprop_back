@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Patch } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, UseGuards, UseInterceptors, UploadedFile, Patch, Request, ForbiddenException } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { BranchesService } from './branches.service';
 import { CreateBranchDto } from './dto/create-branch.dto';
@@ -21,14 +21,14 @@ export class BranchesController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   findOne(@Param('id') id: number) {
     return this.branchesService.findOne(id);
   }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   @UseInterceptors(FileInterceptor('branch_logo', { storage: undefined }))
   create(
     @Body() data: CreateBranchDto,
@@ -39,7 +39,7 @@ export class BranchesController {
 
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   @UseInterceptors(FileInterceptor('branch_logo', { storage: undefined }))
   update(
     @Param('id') id: number,
@@ -59,8 +59,14 @@ export class BranchesController {
   // get all branches by organization id
   @Get('organization/:orgId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
-  getByOrganization(@Param('orgId') orgId: number) {
-    return this.branchesService.getByOrganization(orgId); 
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  getByOrganization(@Request() req: any, @Param('orgId') orgId: number) {
+    if (
+      req.user.organization_id !== Number(orgId)
+    ) {
+      throw new ForbiddenException('No tienes permisos para acceder a esta organización');
+    }
+
+    return this.branchesService.getByOrganization(orgId);
   }
 }
