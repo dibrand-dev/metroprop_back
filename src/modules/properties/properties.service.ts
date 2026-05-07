@@ -670,6 +670,7 @@ export class PropertiesService {
         .leftJoinAndSelect('property.organization', 'organization')
         .leftJoinAndSelect('property.units', 'units')
         .leftJoinAndSelect('units.images', 'unitImages')
+        .leftJoinAndSelect('property.user', 'user') 
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
         .andWhere('(units.deleted = false OR units.id IS NULL)')
@@ -683,6 +684,7 @@ export class PropertiesService {
           'organization',
           'units',
           'unitImages',
+          'user',
         ])
         .getOne();
 
@@ -695,27 +697,6 @@ export class PropertiesService {
           if (unit.images?.length) {
             unit.images = prependImagePrefixToUrls('', unit.images);
           }
-        }
-      }
-
-      // Buscar usuario relacionado si existe user_id
-      if (property?.user_id && property.organization_id) {
-        const userRepo = this.dataSource.getRepository('users');
-        const user = await userRepo.findOne({
-          where: {
-            id: property.user_id,
-            organization_id: property.organization_id,
-            deleted: false,
-          },
-          select: ['id', 'name', 'email', 'phone'],
-        });
-        if (user) {
-          (property as any).user = {
-            id: user.id,
-            name: user.name,
-            email: user.email,
-            phone: user.phone,
-          };
         }
       }
     }
@@ -1191,7 +1172,7 @@ export class PropertiesService {
       const qb = baseQb.clone();
       qb.leftJoinAndSelect('p.images', 'img')
         .leftJoinAndSelect('p.organization', 'p_org')
-        .leftJoinAndSelect('p.user', 'usr')
+     //   .leftJoinAndSelect('p.user', 'usr')
         .addOrderBy('img.order_position', 'ASC')
         .skip(offset)
         .take(limit)
@@ -1218,10 +1199,10 @@ export class PropertiesService {
           'p_org.id',
           'p_org.company_name',
           'p_org.company_logo',
-          'usr.id',
-          'usr.name',
-          'usr.email',
-          'usr.phone',
+      //    'usr.id',
+      //    'usr.name',
+      //    'usr.email',
+      //    'usr.phone',
         ])
         .leftJoinAndSelect(
           'p.images',
@@ -1235,7 +1216,7 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org')
-        .leftJoinAndSelect('p.user', 'usr')
+     //   .leftJoinAndSelect('p.user', 'usr')
         .orderBy(orderBy, orderDirection)
         .skip(offset)
         .take(limit);
