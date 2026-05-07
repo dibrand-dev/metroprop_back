@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
+  Request,
 } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -44,18 +45,23 @@ export class UsersController {
   }
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findById(id);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   create(@Body() createUserDto: CreateUserDto) {
     return this.usersService.create(createUserDto);
   }
 
   @Patch(':id')
-  update(
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
+  update( 
     @Param('id', ParseIntPipe) id: number, 
     @Body() updateUserDto: UpdateUserDto
   ) {
@@ -120,6 +126,22 @@ export class UsersController {
     },
   ) {
     return this.usersService.changePassword(body.id, body.oldPassword, body.newPassword);
+  }
+
+  
+  @Post('update-password')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
+  async updatePassword(
+    @Request() req: any,
+    @Body()
+    body: {
+      user_id: number;
+      newPassword: string;
+    },
+  ) {
+    return this.usersService.updatePassword(body.user_id, body.newPassword, req.user.id);
   }
 
   // Que accion tomar cuando se cierra una cuenta ? Que pasa si viene info de tokko ?

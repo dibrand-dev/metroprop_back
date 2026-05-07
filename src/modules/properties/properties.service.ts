@@ -1027,8 +1027,80 @@ export class PropertiesService {
   // =============================================
   // SEARCH PROPERTIES
   // =============================================
-  
-  
+
+  async getPropertiesCardsByIds(ids: number[]): Promise<PropertyCard[]> {
+    if (!ids.length) return [];
+
+    const qb = this.propertyRepository
+      .createQueryBuilder('p')
+      .select([
+        'p.id',
+        'p.publication_title',
+        'p.user_id',
+        'p.street',
+        'p.total_surface',
+        'p.room_amount',
+        'p.bathroom_amount',
+        'p.currency',
+        'p.price',
+        'p.price_square_meter',
+        'p.geo_lat',
+        'p.geo_long',
+        'p.created_at',
+        'p_org.id',
+        'p_org.company_name',
+        'p_org.company_logo',
+        'usr.id',
+        'usr.name',
+        'usr.email',
+        'usr.phone',
+      ])
+      .leftJoinAndSelect(
+        'p.images',
+        'img',
+        `img.id = (
+          SELECT pi.id
+          FROM property_images pi
+          WHERE pi."propertyId" = p.id
+          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+          LIMIT 1
+        )`,
+      )
+      .leftJoinAndSelect('p.organization', 'p_org')
+      .leftJoinAndSelect('p.user', 'usr')
+      .where('p.id IN (:...ids)', { ids })
+      .andWhere('p.deleted = false');
+
+    const props = await qb.getMany();
+
+    return props.map((p) => ({
+      id: p.id as number,
+      publication_title: p.publication_title,
+      user_id: p.user_id,
+      street: p.street,
+      total_surface: p.total_surface,
+      room_amount: p.room_amount,
+      bathroom_amount: p.bathroom_amount,
+      currency: p.currency,
+      price: p.price,
+      price_square_meter: p.price_square_meter,
+      images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
+      lat: p.geo_lat,
+      long: p.geo_long,
+      organization: p.organization ? {
+        id: p.organization.id,
+        company_name: p.organization.company_name,
+        company_logo: p.organization.company_logo,
+      } : undefined,
+      user: p.user ? {
+        id: p.user.id,
+        name: p.user.name,
+        email: p.user.email,
+        phone: p.user.phone,
+      } : undefined,
+    }));
+  }
+
   /**
    * Búsqueda avanzada de propiedades con múltiples filtros.
    * Usa QueryBuilder con parámetros parametrizados para máxima performance.

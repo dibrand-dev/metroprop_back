@@ -5,9 +5,10 @@ import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
 import { FavouritesService } from './favourites.service';
 import { FavouritesController } from './favourites.controller';
+import { PropertiesModule } from '../properties/properties.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Favourite, User, Property])],
+  imports: [TypeOrmModule.forFeature([Favourite, User, Property]), PropertiesModule],
   providers: [FavouritesService],
   controllers: [FavouritesController],
   exports: [FavouritesService],

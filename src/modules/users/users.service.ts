@@ -406,6 +406,40 @@ export class UsersService {
     return { success: true, message: 'Contraseña actualizada correctamente' };
   }
 
+  async updatePassword(
+    user_id: number,
+    newPassword: string,
+    adminId: number,
+  ): Promise<{ success: boolean; message: string }> {
+    if (!Number.isInteger(user_id) || user_id <= 0) {
+      return { success: false, message: 'user_id invalido' };
+    }
+
+    const [admin, user] = await Promise.all([
+      this.usersRepository.findOne({
+        where: { id: adminId, deleted: false },
+        select: ['id', 'organization_id'],
+      }),
+      this.usersRepository.findOne({
+        where: { id: user_id, deleted: false },
+        select: ['id', 'password', 'organization_id'],
+      }),
+    ]);
+
+    if (!user) {
+      return { success: false, message: 'Usuario no encontrado' };
+    }
+
+    if (!admin || admin.organization_id !== user.organization_id) {
+      return { success: false, message: 'No tienes permisos para modificar este usuario' };
+    }
+
+    user.password = await bcrypt.hash(newPassword, 10);
+    await this.usersRepository.save(user);
+
+    return { success: true, message: 'Contraseña actualizada correctamente' };
+  }
+
   /**
    * Solicitar reset de password (moved from registration service)
    */

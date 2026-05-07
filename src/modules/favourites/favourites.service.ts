@@ -5,6 +5,7 @@ import { Favourite } from './entities/favourite.entity';
 import { ToggleFavouriteDto } from './dto/toggle-favourite.dto';
 import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
+import { PropertiesService } from '../properties/properties.service';
 
 @Injectable()
 export class FavouritesService {
@@ -15,6 +16,7 @@ export class FavouritesService {
     private readonly usersRepository: Repository<User>,
     @InjectRepository(Property)
     private readonly propertiesRepository: Repository<Property>,
+    private readonly propertiesService: PropertiesService,
   ) {}
 
   async toggle(toggleFavouriteDto: ToggleFavouriteDto) {
@@ -59,12 +61,22 @@ export class FavouritesService {
     };
   }
 
-  async getByUserId(userId: number): Promise<Favourite[]> {
-    return this.favouritesRepository.find({
+  async getPropertyIdsByUserId(userId: number): Promise<number[]> {
+    const favourites = await this.favouritesRepository.find({
       where: { user_id: userId },
-      relations: ['property'],
+      select: ['property_id'],
       order: { created_at: 'DESC' },
     });
+    return favourites.map((f) => f.property_id);
+  }
+
+  async getFavouriteProperties(userId: number) {
+    const ids = await this.getPropertyIdsByUserId(userId);
+    if (!ids.length) return [];
+    // Preserve the favourite order (most recently added first)
+    const cards = await this.propertiesService.getPropertiesCardsByIds(ids);
+    const indexMap = new Map(ids.map((id, i) => [id, i]));
+    return cards.sort((a, b) => (indexMap.get(a.id) ?? 0) - (indexMap.get(b.id) ?? 0));
   }
 
   private async validateReferences(userId: number, propertyId: number): Promise<void> {
