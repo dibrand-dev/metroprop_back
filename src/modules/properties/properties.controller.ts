@@ -182,7 +182,10 @@ export class PropertiesController {
   @Post('draft')
   @HttpCode(HttpStatus.CREATED)
   @UseGuards(JwtAuthGuard)
-  createDraft(@Body() createDraftDto: CreateDraftPropertyDto) {
+  createDraft(@Body() createDraftDto: CreateDraftPropertyDto, @Req() req: Request) {
+    const user = (req as any).user;
+    createDraftDto.user_id = user.id;
+    createDraftDto.organization_id = user?.organization_id ?? user?.organization?.id;
     return this.propertiesService.createDraft(createDraftDto);
   }
 
