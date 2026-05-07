@@ -212,9 +212,12 @@ export class PropertiesController {
     @Req() request: Request,
   ) {
     const user = (request as any).user;
-
-    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
+    console.log("User in my-properties endpoint:", user);
+    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN || user.role_id === UserRole.USER_ROL_ADMIN) {
       searchDto.organization_id = user?.organization_id ?? user?.organization?.id;
+      if(searchDto.organization_id  === undefined) {
+        searchDto.user_id = user.id;
+      }
     } else {
       searchDto.user_id = user.id;
     }
