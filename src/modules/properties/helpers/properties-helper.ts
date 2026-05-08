@@ -42,6 +42,7 @@ export async function calculateSquareMetterPrice(
   let surface: number | undefined;
   let price: number | undefined;
   let data: any = input;
+
   if (typeof input === 'number') {
     // Buscar property por id
     const prop = await propertyRepo.findOne({
@@ -51,6 +52,7 @@ export async function calculateSquareMetterPrice(
     if (!prop) return undefined;
     data = prop;
   }
+
   // Obtener surface por prioridad
   surface =
     data.surface !== undefined && data.surface !== null
@@ -60,15 +62,13 @@ export async function calculateSquareMetterPrice(
       : data.roofed_surface !== undefined && data.roofed_surface !== null
       ? data.roofed_surface
       : undefined;
+  const surfaceNum = surface !== undefined && surface !== null ? Number(surface) : NaN;
   price = data.price !== undefined && data.price !== null ? data.price : undefined;
-  if (
-    typeof surface === 'number' &&
-    !isNaN(surface) &&
-    surface > 0 &&
-    typeof price === 'number' &&
-    !isNaN(price)
-  ) {
-    return Number(price) / Number(surface);
+  const priceNum = price !== undefined && price !== null ? Number(price) : NaN;
+
+  if (!isNaN(surfaceNum) && surfaceNum > 0 && !isNaN(priceNum) && priceNum > 0) {
+    return priceNum / surfaceNum;
   }
+
   return undefined;
 }

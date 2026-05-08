@@ -605,11 +605,8 @@ export class PropertiesService {
    * Obtener una propiedad por ID
    */
   async findOne(id: number, format: string | null = null): Promise<Property> {
-    console.log('[´properties.service] ID A BUSCAR', id);
-    this.logger.log('[PropertiesService.findOne] Buscando propiedad con ID:', id, 'format:', format);
-
+    
     let property: Property | null = null;
-    console.log("[PropertiesService.findOne] ID recibido:", id, "Format recibido:", format);
     if (format === 'card') {
       // Usar QueryBuilder para traer campos seleccionados y la relación organization
       property = await this.propertyRepository.createQueryBuilder('property')
@@ -640,7 +637,6 @@ export class PropertiesService {
           property.images = prependImagePrefixToUrls(THUMB_PREFIX, [firstImage]);
         }
       }
-      console.log("[PropertiesService.findOne] Resultado para formato 'marker':", JSON.stringify(property, null, 2));
     } else if (format === 'multimedia') {
       // Traer id, todas las imágenes, todos los videos y multimedia360
       property = await this.propertyRepository.findOne({
@@ -657,7 +653,6 @@ export class PropertiesService {
         property.videos = allVideos.filter(v => !v.is_360);
         (property as any).multimedia360 = allVideos.filter(v => v.is_360);
       }
-      console.log("[PropertiesService.findOne] Resultado para formato 'multimedia':", JSON.stringify(property, null, 2));
 
     } else {
       // DETALLE MAS COMPLETO DE LA PROPIEDAD
@@ -700,8 +695,6 @@ export class PropertiesService {
         }
       }
     }
-
-    this.logger.log('[PropertiesService.findOne] Resultado:', JSON.stringify(property, null, 2));
 
     if (!property) {
       throw new NotFoundException(`Propiedad con ID ${id} no encontrada`);
