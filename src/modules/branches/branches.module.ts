@@ -4,9 +4,10 @@ import { MediaModule } from '../../common/media/media.module';
 import { Branch } from './entities/branch.entity';
 import { BranchesService } from './branches.service';
 import { BranchesController } from './branches.controller';
+import { PlansModule } from '../plans/plans.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Branch]), MediaModule],
+  imports: [TypeOrmModule.forFeature([Branch]), MediaModule, PlansModule],
   providers: [BranchesService],
   controllers: [BranchesController],
   exports: [BranchesService],
