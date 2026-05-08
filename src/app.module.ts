@@ -26,6 +26,7 @@ import { LeadsModule } from './modules/leads/leads.module';
 import { FavouritesModule } from './modules/favourites/favourites.module';
 import { SearchAlertsModule } from './modules/search-alerts/search-alerts.module';
 import { SearchAlertsCronModule } from './modules/cron-tasks/search-alerts/search-alerts-cron.module';
+import { PaymentsCronModule } from './modules/cron-tasks/payments/payments-cron.module';
 
 
 @Module({
@@ -92,6 +93,7 @@ import { SearchAlertsCronModule } from './modules/cron-tasks/search-alerts/searc
     FavouritesModule,
     SearchAlertsModule,
     SearchAlertsCronModule,
+    PaymentsCronModule,
   ],
   controllers: [AppController],
   providers: [AppService],
