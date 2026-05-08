@@ -11,8 +11,9 @@ export class FavouritesController {
   @UseGuards(JwtAuthGuard)
   toggle( @Req() request: Request, @Body() toggleFavouriteDto: ToggleFavouriteDto) {
     const user = (request as any).user;
-    if (user.user_id) {
-      toggleFavouriteDto.user_id = user.user_id;
+    console.log("User in toggle:", user);
+    if (user.id) {
+      toggleFavouriteDto.user_id = user.id;
       return this.favouritesService.toggle(toggleFavouriteDto);
     }
     return false;
@@ -22,8 +23,8 @@ export class FavouritesController {
     @UseGuards(JwtAuthGuard)
     getByUserId( @Req() request: Request) {
       const user = (request as any).user;
-      if (user.user_id) {
-        return this.favouritesService.getPropertyIdsByUserId(user.user_id);
+      if (user.id) {
+        return this.favouritesService.getPropertyIdsByUserId(user.id);
       }
       return [];
     }
@@ -35,8 +36,8 @@ export class FavouritesController {
     ) {
       const user = (request as any).user;
 
-      if (user.user_id) {
-        return this.favouritesService.getFavouriteProperties(user.user_id);
+      if (user.id) {
+        return this.favouritesService.getFavouriteProperties(user.id);
       }
 
       return [];
