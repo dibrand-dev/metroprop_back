@@ -20,44 +20,35 @@ export class FavouritesService {
   ) {}
 
   async toggle(toggleFavouriteDto: ToggleFavouriteDto) {
+    const user_id = toggleFavouriteDto.user_id!;
     await this.validateReferences(
-      toggleFavouriteDto.user_id,
+      user_id,
       toggleFavouriteDto.property_id,
     );
 
     const existingFavourite = await this.favouritesRepository.findOne({
       where: {
-        user_id: toggleFavouriteDto.user_id,
+        user_id: user_id,
         property_id: toggleFavouriteDto.property_id,
       },
     });
 
-    if (toggleFavouriteDto.status) {
-      if (existingFavourite) {
-        return {
-          status: true,
-          favourite: existingFavourite,
-        };
-      }
-
-      const favourite = this.favouritesRepository.create({
-        user_id: toggleFavouriteDto.user_id,
-        property_id: toggleFavouriteDto.property_id,
-      });
-
-      const savedFavourite = await this.favouritesRepository.save(favourite);
+    if (existingFavourite) {
+      await this.favouritesRepository.delete(existingFavourite.id);
       return {
-        status: true,
-        favourite: savedFavourite,
+        status: false,
       };
     }
 
-    if (existingFavourite) {
-      await this.favouritesRepository.delete(existingFavourite.id);
-    }
+    const favourite = this.favouritesRepository.create({
+      user_id: user_id,
+      property_id: toggleFavouriteDto.property_id,
+    });
 
+    const savedFavourite = await this.favouritesRepository.save(favourite);
     return {
-      status: false,
+      status: true,
+      favourite: savedFavourite,
     };
   }
 
