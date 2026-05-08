@@ -242,6 +242,9 @@ export class Property {
   @Column({ type: 'integer', nullable: true, default: PublicationPlan.PUBLICATION_FREE })
   selected_plan?: PublicationPlan;
 
+  @Column({ type: 'integer', nullable: true })
+  hired_plan_id?: number;
+
   @Column({ type: 'numeric', precision: 15, scale: 2, nullable: true })
   price_square_meter?: number;
 

@@ -8,8 +8,14 @@ export class FavouritesController {
   constructor(private readonly favouritesService: FavouritesService) {}
 
   @Post('toggle')
-  toggle(@Body() toggleFavouriteDto: ToggleFavouriteDto) {
-    return this.favouritesService.toggle(toggleFavouriteDto);
+  @UseGuards(JwtAuthGuard)
+  toggle( @Req() request: Request, @Body() toggleFavouriteDto: ToggleFavouriteDto) {
+    const user = (request as any).user;
+    if (user.user_id) {
+      toggleFavouriteDto.user_id = user.user_id;
+      return this.favouritesService.toggle(toggleFavouriteDto);
+    }
+    return false;
   }
 
   @Get('list-ids')
