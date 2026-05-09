@@ -576,6 +576,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
 	id serial4 NOT NULL,
     organizations ADD status bool DEFAULT true NULL,
 	company_logo varchar NULL,
+	license_number varchar(100) NULL,
 	company_name varchar(255) NOT NULL,
 	address varchar NULL,
 	phone varchar NULL,

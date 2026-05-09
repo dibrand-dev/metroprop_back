@@ -76,11 +76,27 @@ export class UsersController {
   }
 
   @Delete(':id')
-  @HttpCode(HttpStatus.NO_CONTENT)
+  @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+    const requester = req.user;
+
+    if (requester.role_id === UserRole.USER_ROL_ADMIN) {
+      // Admin no puede eliminarse a sí mismo
+      if (requester.id === id) {
+        return { success: false, message: 'No se puede eliminar al admin de la organización' };
+      }
+
+      // Admin solo puede eliminar usuarios de su misma organización
+      const target = await this.usersService.findById(id);
+      if (target.organization?.id !== requester.organization_id) {
+        return { success: false, message: 'No tenés permisos para eliminar este usuario' };
+      }
+    }
+
+    await this.usersService.remove(id);
+    return { success: true };
   }
 
   @Post('verify-email')

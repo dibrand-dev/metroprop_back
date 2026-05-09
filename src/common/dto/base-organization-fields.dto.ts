@@ -29,6 +29,11 @@ export class BaseOrganizationFieldsDto {
 
   @IsOptional()
   @IsString()
+  @MaxLength(100)
+  license_number?: string;
+
+  @IsOptional()
+  @IsString()
   @MaxLength(500)
   address?: string;
 
