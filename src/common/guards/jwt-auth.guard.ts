@@ -14,16 +14,15 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       return super.canActivate(context);
     }
 
-    // ── STEP 2: Somos local. ¿Viene bypass=true? Si NO → flujo normal. ───────
-    const bypassFlag =
-      req?.query?.bypass ??
-      req?.body?.bypass ??
-      req?.headers?.['x-bypass'];
+    // ── STEP 2: Somos local. ¿Viene x-bypass: true en el header? Si NO → flujo normal. ───────
+    // Se usa SOLO header para evitar que el ValidationPipe rechace query params desconocidos.
+    const bypassFlag = req?.headers?.['x-bypass'];
 
     if (String(bypassFlag ?? '').toLowerCase() !== 'true') {
       return super.canActivate(context);
     }
 
+    console.warn(`⚠️  JWT BYPASS ACTIVATED for IP ${ip} - injecting fake user and skipping auth guards. Remove 'x-bypass' header to disable.`);
     // ── STEP 3: Local + bypass activo → inyectar usuario fake, saltar Passport.
     req.user = {
       id: Number(process.env.DEV_BYPASS_USER_ID ?? 74),
@@ -31,6 +30,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
       role_id: Number(process.env.DEV_BYPASS_ROLE_ID ?? 1),
       organization_id: Number(process.env.DEV_BYPASS_ORGANIZATION_ID ?? 55),
     };
+    console.warn(`Injected fake user: ${JSON.stringify(req.user)}`);
     return true;
   }
 

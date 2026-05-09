@@ -36,8 +36,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   async findAll(@Query() filters: UserFiltersDto, @Req() request: Request) {
-
-    if ((request as any).user.role === UserRole.USER_ROL_ADMIN) {
+    if ((request as any).user.role_id === UserRole.USER_ROL_ADMIN) {
       filters.organization_id = (request as any).user.organization_id;
     }
 

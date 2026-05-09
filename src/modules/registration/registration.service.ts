@@ -15,7 +15,7 @@ import { Organization } from '../organizations/entities/organization.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { User } from '../users/entities/user.entity';
 import { Partner } from '../partners/entities/partner.entity';
-import { UserRole, ProfessionalType } from '../../common/enums';
+import { UserRole, ProfessionalType, FiscalCondition } from '../../common/enums';
 import { PASSWORD_DEFAULT } from "@/common/constants";
 
 @Injectable()
@@ -261,7 +261,7 @@ export class RegistrationService {
       external_reference?: string;
       tokko_key?: string;
       social_reason?: string;
-      fiscal_condition?: string;
+      fiscal_condition?: FiscalCondition;
     },
     adminUser: {
       name: string;

@@ -1,4 +1,5 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsString, MaxLength } from 'class-validator';
+import { FiscalCondition } from '@/common/enums';
+import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsString, MaxLength, IsEnum } from 'class-validator';
 
 export class ProfessionalRegistrationDto {
   @IsEmail()
@@ -30,5 +31,6 @@ export class ProfessionalRegistrationDto {
   cuit?: string;
 
   @IsOptional()
-  fiscal_condition?: string;
+  @IsEnum(FiscalCondition)
+  fiscal_condition?: FiscalCondition;
 }

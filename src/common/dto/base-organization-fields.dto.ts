@@ -13,7 +13,7 @@ import {
   IsEnum,
   IsPositive,
 } from 'class-validator';
-import { ProfessionalType } from '../enums';
+import { FiscalCondition, ProfessionalType } from '../enums';
 
 export class BaseOrganizationFieldsDto {
   @IsNotEmpty({ message: 'company_name es obligatorio' })
@@ -106,9 +106,8 @@ export class BaseOrganizationFieldsDto {
   social_reason?: string;
 
   @IsOptional()
-  @IsString()
-  @MaxLength(50)
-  fiscal_condition?: string;
+  @IsEnum(FiscalCondition)
+  fiscal_condition?: FiscalCondition;
 
   @IsOptional()
   @IsInt()
