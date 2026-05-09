@@ -88,7 +88,7 @@ export class BranchesService {
     return this.repo.find({
       where: {
         organization: { id: organizationId },
-        deleted: false,
+      //  deleted: false,
       } as any,
       relations: ['organization'],
     });

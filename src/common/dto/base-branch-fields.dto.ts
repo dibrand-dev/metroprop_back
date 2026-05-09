@@ -94,4 +94,8 @@ export class BaseBranchFieldsDto {
   @IsOptional()
   @IsString()
   external_reference?: string;
+
+  @IsOptional()
+  @IsInt()
+  deleted?: boolean;
 }
