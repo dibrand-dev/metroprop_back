@@ -11,8 +11,9 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  Request,
+  Req
 } from '@nestjs/common';
+
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -34,7 +35,12 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
-  async findAll(@Query() filters: UserFiltersDto) {
+  async findAll(@Query() filters: UserFiltersDto, @Req() request: Request) {
+
+    if ((request as any).user.role === UserRole.USER_ROL_ADMIN) {
+      filters.organization_id = (request as any).user.organization_id;
+    }
+
     const result = await this.usersService.findAll(filters);
     return {
       data: result.users,
