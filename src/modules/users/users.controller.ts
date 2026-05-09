@@ -33,7 +33,7 @@ export class UsersController {
 
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   async findAll(@Query() filters: UserFiltersDto) {
     const result = await this.usersService.findAll(filters);
     return {
@@ -46,6 +46,7 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.usersService.findById(id);
   }

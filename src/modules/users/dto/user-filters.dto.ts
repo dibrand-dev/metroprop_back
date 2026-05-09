@@ -35,4 +35,9 @@ export class UserFiltersDto {
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   organization_id?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
+  branch_id?: number;
 }
