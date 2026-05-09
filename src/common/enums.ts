@@ -245,3 +245,11 @@ export enum BannerPlacement {
   HEADER = 1,
   FOOTER = 2,
 }
+
+export enum FiscalCondition {
+  RESPONSABLE_INSCRIPTO = 'Responsable inscripto',
+  MONOTRIBUTO = 'Monotributo',
+  EXENTO = 'Exento',
+  CONSUMIDOR_FINAL = 'Consumidor final',
+  NO_RESPONSABLE = 'No responsable',
+}

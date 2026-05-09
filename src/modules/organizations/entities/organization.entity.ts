@@ -12,7 +12,8 @@ import {
 import { Branch } from '../../branches/entities/branch.entity';
 import { User } from '../../users/entities/user.entity';
 import { Partner } from '../../partners/entities/partner.entity';
-import { ProfessionalType } from '../../../common/enums';
+import { FiscalCondition, ProfessionalType } from '../../../common/enums';
+import e from 'express';
 
 @Entity('organizations')
 @Index('idx_organizations_cuit_unique', ['cuit'], { unique: true, where: 'deleted = false' })
@@ -93,8 +94,13 @@ export class Organization {
   @Column({ type: 'varchar', nullable: true })
   cuit?: string;
 
-  @Column({ type: 'varchar', nullable: true })
-  fiscal_condition?: string;
+  @Column({ 
+    type: 'enum', 
+    enum: FiscalCondition, 
+    enumName: 'organizations_fiscal_condition_enum', 
+    nullable: true 
+  })
+  fiscal_condition?: FiscalCondition;
 
   // ========== Partner API: referencia externa ==========
   @Column({ type: 'varchar', length: 255, nullable: true })

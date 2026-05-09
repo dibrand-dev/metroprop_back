@@ -356,6 +356,7 @@
     <a href="#enum-operation-type">OperationType</a>
     <a href="#enum-currency">Currency</a>
     <a href="#enum-professional-type">ProfessionalType</a>
+    <a href="#enum-fiscal-condition">FiscalCondition</a>
     <a href="#enum-brightness">Brightness</a>
     <a href="#enum-garage-coverage">GarageCoverage</a>
     <a href="#enum-surface-measurement">SurfaceMeasurement</a>
@@ -483,7 +484,7 @@
       <tr><td><code>professional_type</code></td><td>enum</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum">ProfessionalType</span> Tipo de profesional: <code>inmobiliario</code>, <code>inversor</code> u <code>otros</code></td></tr>
       <tr><td><code>cuit</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>CUIT de la empresa. Formato requerido: <code>XX-XXXXXXXX-X</code> (ej: <code>30-71234567-9</code>). Debe ser único en el sistema.</td></tr>
       <tr><td><code>social_reason</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Razón social o denominación legal de la empresa</td></tr>
-      <tr><td><code>fiscal_condition</code></td><td>string(255)</td><td><span class="badge badge-optional">opcional</span></td><td>Condición fiscal ante AFIP (ej: Responsable Inscripto, Monotributista)</td></tr>
+      <tr><td><code>fiscal_condition</code></td><td>enum</td><td><span class="badge badge-optional">opcional</span></td><td><span class="badge badge-enum"><a href="#enum-fiscal-condition" style="color:inherit;text-decoration:none;">FiscalCondition</a></span> Condición fiscal ante AFIP. Ver valores aceptados en <a href="#enum-fiscal-condition">Enum: FiscalCondition</a>.</td></tr>
       <tr><td colspan="4" style="background:#f8fafc;font-weight:600;color:var(--text);">Ubicación &mdash; <em>los IDs se obtienen desde la <a href="#ep-loc-countries" style="color:var(--primary);">API de Locations</a></em></td></tr>
       <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país. Obtener con <a href="#ep-loc-countries"><code>GET /locations/countries</code></a></td></tr>
       <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia o estado. Obtener con <a href="#ep-loc-states"><code>GET /locations/states?countryId=</code></a></td></tr>
@@ -1376,6 +1377,16 @@
     <div class="enum-item"><span>Inmobiliario</span><span class="value">inmobiliario</span></div>
     <div class="enum-item"><span>Inversor</span><span class="value">inversor</span></div>
     <div class="enum-item"><span>Otros</span><span class="value">otros</span></div>
+  </div>
+
+  <h2 id="enum-fiscal-condition">Enum: FiscalCondition</h2>
+  <p>Condición fiscal ante AFIP de la organización. Enviar como string exacto.</p>
+  <div class="enum-grid">
+    <div class="enum-item"><span>Responsable Inscripto</span><span class="value">Responsable inscripto</span></div>
+    <div class="enum-item"><span>Monotributo</span><span class="value">Monotributo</span></div>
+    <div class="enum-item"><span>Exento</span><span class="value">Exento</span></div>
+    <div class="enum-item"><span>Consumidor Final</span><span class="value">Consumidor final</span></div>
+    <div class="enum-item"><span>No Responsable</span><span class="value">No responsable</span></div>
   </div>
 
   <h2 id="enum-brightness">Enum: Brightness</h2>
