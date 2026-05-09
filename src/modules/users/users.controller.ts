@@ -139,18 +139,18 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard)
   async changeEmail(
-    @Request() req: any,
+    @Req() req: Request,
     @Body()
     body: {
       oldEmail: string;
       newEmail: string;
     },
   ) {
-    if (req.user.email !== body.oldEmail) {
+    if ((req as any).user.user.email !== body.oldEmail) {
       return { success: false, message: 'El email actual no coincide con tu cuenta' };
     }
 
-    const result = await this.usersService.changeEmail(req.user.id, body.newEmail);
+    const result = await this.usersService.changeEmail((req as any).user.id, body.newEmail);
 
     if (result.success && result.newEmail && result.name) {
       try {
@@ -169,7 +169,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   async updatePassword(
-    @Request() req: any,
+    @Req() req: any,
     @Body()
     body: {
       user_id: number;
