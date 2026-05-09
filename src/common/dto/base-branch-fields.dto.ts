@@ -11,6 +11,7 @@ import {
   MaxLength,
   MinLength,
   Matches,
+  IsBoolean,
 } from 'class-validator';
 
 export class BaseBranchFieldsDto {
@@ -96,6 +97,6 @@ export class BaseBranchFieldsDto {
   external_reference?: string;
 
   @IsOptional()
-  @IsInt()
+  @IsBoolean()
   deleted?: boolean;
 }
