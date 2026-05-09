@@ -1,9 +1,10 @@
 import { BRANCH_IMAGE_FOLDER } from '../../common/constants';
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { MediaService } from '../../common/media/media.service';
 import { Branch } from './entities/branch.entity';
+import { Property } from '../properties/entities/property.entity';
 import { CreateBranchDto } from './dto/create-branch.dto';
 import { UpdateBranchDto } from './dto/update-branch.dto';
 
@@ -63,13 +64,58 @@ export class BranchesService {
     data: UpdateBranchDto | (Partial<Branch> & { organizationId?: number }),
     file?: Express.Multer.File,
   ): Promise<Branch> {
-    const branch = await this.findOne(id);
-    const { organizationId, ...rest } = data as any;
-    Object.assign(branch, rest);
-    if (organizationId !== undefined) {
-      (branch as any).organization = organizationId ? { id: organizationId } : null;
-    }
-    const updatedBranch = await this.repo.save(branch as Branch);
+    const shouldReassignProperties = (data as any)?.deleted === true;
+
+    const updatedBranch = await this.repo.manager.transaction(async (manager) => {
+      const branchRepo = manager.getRepository(Branch);
+      const propertyRepo = manager.getRepository(Property);
+
+      const branch = await branchRepo.findOne({ where: { id }, relations: ['organization'] });
+      if (!branch) throw new NotFoundException('Branch not found');
+
+      const { organizationId, ...rest } = data as any;
+      Object.assign(branch, rest);
+      if (organizationId !== undefined) {
+        (branch as any).organization = organizationId ? { id: organizationId } : null;
+      }
+
+      const savedBranch = await branchRepo.save(branch as Branch);
+
+      if (shouldReassignProperties) {
+        const orgId = organizationId ?? branch.organization?.id;
+        if (!orgId) {
+          throw new BadRequestException('No se pudo determinar la organización para reasignar propiedades');
+        }
+
+        const replacementBranch = await branchRepo
+          .createQueryBuilder('b')
+          .leftJoin('b.organization', 'o')
+          .where('o.id = :orgId', { orgId })
+          .andWhere('b.deleted = :deleted', { deleted: false })
+          .andWhere('b.id != :currentBranchId', { currentBranchId: id })
+          .orderBy('b.id', 'ASC')
+          .getOne();
+
+        if (!replacementBranch) {
+          throw new BadRequestException(
+            'No existe otra sucursal activa en la organización para reasignar propiedades',
+          );
+        }
+
+        const reassignment = await propertyRepo
+          .createQueryBuilder()
+          .update(Property)
+          .set({ branch_id: replacementBranch.id })
+          .where('branch_id = :currentBranchId', { currentBranchId: id })
+          .execute();
+
+        this.logger.log(
+          `Branch ${id} marcado como deleted. Reasignadas ${reassignment.affected ?? 0} propiedades a branch ${replacementBranch.id}`,
+        );
+      }
+
+      return savedBranch;
+    });
 
     if (file) {
       await this.uploadLogoToS3(file, id);
@@ -104,4 +150,5 @@ export class BranchesService {
     });
     return result.url;
   }
+
 }
