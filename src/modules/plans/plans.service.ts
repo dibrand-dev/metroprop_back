@@ -41,11 +41,11 @@ export class PlansService {
 
   async create(dto: CreatePlanDto): Promise<Plan> {
     const existing = await this.repo.findOne({
-      where: { plan_type: dto.plan_type, deleted: false },
+      where: { plan_name: dto.plan_name, deleted: false },
     });
     if (existing) {
       throw new ConflictException(
-        `A plan with plan_type ${dto.plan_type} already exists`,
+        `A plan with plan_name ${dto.plan_name} already exists`,
       );
     }
     const plan = this.repo.create(dto);
