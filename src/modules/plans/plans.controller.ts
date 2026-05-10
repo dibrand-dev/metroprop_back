@@ -83,6 +83,15 @@ export class PlansController {
     return this.plansService.disable(id);
   }
 
+  
+
+  @Patch(':id/enable')
+  @HttpCode(HttpStatus.OK)
+  enable(@Param('id', ParseIntPipe) id: number) {
+    return this.plansService.enable(id);
+  }
+
+
   @Patch(':id')
   update(
     @Param('id', ParseIntPipe) id: number,

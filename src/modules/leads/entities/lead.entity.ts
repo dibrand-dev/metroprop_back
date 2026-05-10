@@ -10,6 +10,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity';
+import { User } from '../../users/entities/user.entity';
 import { LeadProperty } from './lead-property.entity';
 
 @Entity('leads')
@@ -36,6 +37,10 @@ export class Lead {
   @ManyToOne(() => Organization, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'organization_id' })
   organization?: Organization;
+
+  @Column({ type: 'integer', nullable: true })
+  owner_user_id?: number;
+
 
   @OneToMany(() => LeadProperty, (leadProperty) => leadProperty.lead, {
     eager: false,

@@ -62,6 +62,12 @@ export class PlansService {
     const plan = await this.findOne(id);
     plan.is_active = false;
     return this.repo.save(plan);
+  } 
+
+  async enable(id: number): Promise<Plan> {
+    const plan = await this.findOne(id);
+    plan.is_active = true;
+    return this.repo.save(plan);
   }
 
   async remove(id: number): Promise<{ message: string }> {

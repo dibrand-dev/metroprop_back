@@ -37,4 +37,10 @@ export class CreateLeadDto {
   @IsInt()
   @Min(1)
   organization_id!: number;
+
+  @IsOptional()
+  @Transform(({ value }) => Number(value))
+  @IsInt()
+  @Min(1)
+  owner_user_id?: number;
 }

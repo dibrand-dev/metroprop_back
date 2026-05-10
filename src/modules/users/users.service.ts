@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like, EntityManager, FindOptionsWhere } from 'typeorm';
+import { Repository, EntityManager, FindOptionsWhere } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
@@ -56,48 +56,54 @@ export class UsersService {
       email,
       is_verified,
       deleted = false,
-      organization_id
+      organization_id,
+      branch_id,
     } = filters;
 
-    const whereConditions: any = {
-      deleted
-    };
+    const qb = this.usersRepository
+      .createQueryBuilder('user')
+      .select([
+        'user.id',
+        'user.name',
+        'user.email',
+        'user.document',
+        'user.role_id',
+        'user.is_verified',
+        'user.created_at',
+        'user.updated_at',
+        'user.organization_id',
+      ])
+      .leftJoinAndSelect('user.branches', 'branch')
+      .where('user.deleted = :deleted', { deleted })
+      .orderBy('user.created_at', 'DESC')
+      .take(limit)
+      .skip(offset);
 
     if (id !== undefined) {
-      whereConditions.id = id;
+      qb.andWhere('user.id = :id', { id });
     }
 
     if (email) {
-      whereConditions.email = Like(`%${email}%`);
+      qb.andWhere('user.email ILIKE :email', { email: `%${email}%` });
     }
 
     if (is_verified !== undefined) {
-      whereConditions.is_verified = is_verified;
+      qb.andWhere('user.is_verified = :is_verified', { is_verified });
     }
 
     if (organization_id !== undefined) {
-      whereConditions.organization = { id: organization_id };
+      qb.andWhere('user.organization_id = :organization_id', { organization_id });
     }
 
-    const [users, total] = await this.usersRepository.findAndCount({
-      where: whereConditions,
-      skip: offset,
-      take: limit,
-      select: [
-        'id',
-        'name',
-        'email',
-        'document',
-        'role_id',
-        'is_verified',
-        'created_at',
-        'updated_at',
-      ],
-      order: {
-        created_at: 'DESC'
-      }
-    });
+    if (branch_id !== undefined) {
+      // Subquery sobre la tabla de unión para no afectar qué branches se cargan
+      qb.andWhere(
+        'user.id IN (SELECT ub.user_id FROM users_branches ub WHERE ub.branch_id = :branch_id)',
+        { branch_id },
+      );
+    }
 
+    const [users, total] = await qb.getManyAndCount();
     return { users, total };
   }
 

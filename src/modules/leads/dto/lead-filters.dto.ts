@@ -32,6 +32,11 @@ export class LeadFiltersDto {
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
+  owner_user_id?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => parseInt(value))
+  @IsNumber()
   limit?: number = 20;
 
   @IsOptional()

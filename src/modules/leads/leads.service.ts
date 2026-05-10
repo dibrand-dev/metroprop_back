@@ -27,6 +27,7 @@ export class LeadsService {
       phone,
       property_id,
       organization_id,
+      owner_user_id,
       limit = 20,
       offset = 0,
     } = filters;
@@ -73,6 +74,10 @@ export class LeadsService {
       });
     }
 
+    if (owner_user_id !== undefined) {
+      queryBuilder.andWhere('lead.owner_user_id = :owner_user_id', { owner_user_id });
+    }
+
     return queryBuilder.getMany();
   }
 
@@ -107,6 +112,7 @@ export class LeadsService {
         country_code: createLeadDto.country_code,
         phone: createLeadDto.phone,
         organization_id: createLeadDto.organization_id,
+        owner_user_id: createLeadDto.owner_user_id,
       });
       lead = await this.leadsRepository.save(lead);
     }
@@ -143,6 +149,7 @@ export class LeadsService {
       country_code: updateLeadDto.country_code ?? lead.country_code,
       phone: updateLeadDto.phone ?? lead.phone,
       organization_id: nextOrganizationId,
+      owner_user_id: updateLeadDto.owner_user_id !== undefined ? updateLeadDto.owner_user_id : lead.owner_user_id,
     });
 
     await this.leadsRepository.save(lead);
