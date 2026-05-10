@@ -742,7 +742,7 @@ CREATE INDEX IF NOT EXISTS idx_branches_external_reference ON public.branches US
 
 CREATE TABLE IF NOT EXISTS public.plans (
 	id              serial4      NOT NULL,
-	plan_type       int4         NOT NULL,
+	plan_name       varchar(100)         NOT NULL,
 	price           int4         NOT NULL DEFAULT 0,
 	currency        varchar(3)   NOT NULL DEFAULT 'USD',
 	property_limit  int4         NOT NULL DEFAULT 0,
@@ -754,7 +754,7 @@ CREATE TABLE IF NOT EXISTS public.plans (
 	updated_at      timestamp    NOT NULL DEFAULT now(),
 	CONSTRAINT pk_plans PRIMARY KEY (id)
 );
-CREATE UNIQUE INDEX IF NOT EXISTS uk_plans_plan_type ON public.plans (plan_type) WHERE (deleted = false);
+CREATE UNIQUE INDEX IF NOT EXISTS uk_plans_plan_name ON public.plans (plan_name) WHERE (deleted = false);
 
 
 -- public.ads_banners definition

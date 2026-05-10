@@ -2,13 +2,14 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  IsString,
   Min,
 } from 'class-validator';
-import { Currency, PlanName } from '../../../common/enums';
+import { Currency } from '../../../common/enums';
 
 export class CreatePlanDto {
-  @IsEnum(PlanName)
-  plan_type!: PlanName;
+  @IsString()
+  plan_name!: string;
 
   @IsInt()
   @Min(0)

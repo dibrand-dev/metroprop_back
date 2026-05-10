@@ -5,16 +5,15 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Currency, PlanName } from '../../../common/enums';
+import { Currency } from '../../../common/enums';
 
 @Entity('plans')
 export class Plan {
   @PrimaryGeneratedColumn()
   id!: number;
 
-  /** PlanName enum: 1=GRATUITO, 2=PREMIUM */
-  @Column({ type: 'int' })
-  plan_type!: PlanName;
+  @Column({ type: 'varchar', length: 255 })
+  plan_name!: string;
 
   /** Price in the given currency */
   @Column({ type: 'int', default: 0 })

@@ -29,7 +29,7 @@ export class PlansService {
   findAll(): Promise<Plan[]> {
     return this.repo.find({
       where: { deleted: false },
-      order: { plan_type: 'ASC' },
+      order: { plan_name: 'ASC' },
     });
   }
 
