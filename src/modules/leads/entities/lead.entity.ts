@@ -31,10 +31,10 @@ export class Lead {
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone?: string;
 
-  @Column({ type: 'integer' })
-  organization_id!: number;
+  @Column({ type: 'integer', nullable: true })
+  organization_id?: number;
 
-  @ManyToOne(() => Organization, { nullable: false, onDelete: 'CASCADE' })
+  @ManyToOne(() => Organization, { nullable: true, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'organization_id' })
   organization?: Organization;
 

@@ -33,10 +33,11 @@ export class CreateLeadDto {
   @Min(1)
   property_id!: number;
 
+  @IsOptional()
   @Transform(({ value }) => Number(value))
   @IsInt()
   @Min(1)
-  organization_id!: number;
+  organization_id?: number;
 
   @IsOptional()
   @Transform(({ value }) => Number(value))

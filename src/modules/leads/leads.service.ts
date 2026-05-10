@@ -95,10 +95,12 @@ export class LeadsService {
   }
 
   async create(createLeadDto: CreateLeadDto): Promise<Lead> {
-    await this.validatePropertyBelongsToOrganization(
-      createLeadDto.property_id,
-      createLeadDto.organization_id,
-    );
+    if (createLeadDto.organization_id && createLeadDto.property_id) {
+      await this.validatePropertyBelongsToOrganization(
+        createLeadDto.property_id,
+        createLeadDto.organization_id,
+      );
+    }
 
     let lead = await this.findByEmailAndOrganization(
       createLeadDto.email,
@@ -173,7 +175,7 @@ export class LeadsService {
     }
   }
 
-  private async findByEmailAndOrganization(email: string, organizationId: number): Promise<Lead | null> {
+  private async findByEmailAndOrganization(email: string, organizationId?: number): Promise<Lead | null> {
     return this.leadsRepository.findOne({
       where: {
         email,
@@ -184,7 +186,7 @@ export class LeadsService {
 
   private async validatePropertyBelongsToOrganization(
     propertyId: number,
-    organizationId: number,
+    organizationId?: number,
   ): Promise<void> {
     const property = await this.propertyRepository.findOne({
       where: { id: propertyId },
@@ -195,7 +197,7 @@ export class LeadsService {
       throw new NotFoundException('Property not found');
     }
 
-    if (property.organization_id !== organizationId) {
+    if (organizationId !== undefined && property.organization_id !== organizationId) {
       throw new BadRequestException('Property does not belong to the provided organization');
     }
   }

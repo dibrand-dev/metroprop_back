@@ -31,8 +31,16 @@ export class LeadsController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.leadsService.findOne(id);
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SELLER)
+  async findOne(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
+    let  lead = await this.leadsService.findOne(id);
+    if (lead && ((request as any).user.role_id === UserRole.USER_ROL_SUPER_ADMIN || 
+      ((request as any).user.organization_id !== undefined && lead.organization_id == (request as any).user.organization_id) || 
+        (lead.owner_user_id == (request as any).user.id))) {
+      return lead;
+    }
+    return null;
   }
 
   @Post()
