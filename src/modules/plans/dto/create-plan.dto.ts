@@ -11,6 +11,10 @@ export class CreatePlanDto {
   @IsString()
   plan_name!: string;
 
+  @IsOptional()
+  @IsString()
+  plan_description?: string;
+
   @IsInt()
   @Min(0)
   price!: number;

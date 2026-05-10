@@ -743,9 +743,10 @@ CREATE INDEX IF NOT EXISTS idx_branches_external_reference ON public.branches US
 CREATE TABLE IF NOT EXISTS public.plans (
 	id              serial4      NOT NULL,
 	plan_name       varchar(100)         NOT NULL,
+	plan_description varchar(500) NULL,
 	price           int4         NOT NULL DEFAULT 0,
 	currency        varchar(3)   NOT NULL DEFAULT 'USD',
-	property_limit  int4         NOT NULL DEFAULT 0,
+	property_limit  int4         NULL DEFAULT 0,
 	highlight_limit int4         NOT NULL DEFAULT 0,
 	is_active       bool         NOT NULL DEFAULT true,
 	deleted         bool         NOT NULL DEFAULT false,

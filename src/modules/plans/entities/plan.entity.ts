@@ -15,6 +15,9 @@ export class Plan {
   @Column({ type: 'varchar', length: 255 })
   plan_name!: string;
 
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  plan_description?: string;
+
   /** Price in the given currency */
   @Column({ type: 'int', default: 0 })
   price!: number;
