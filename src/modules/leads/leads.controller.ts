@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, Get, NotFoundException, Param, ParseIntPipe, Post, Put, Query, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { NoFilesInterceptor } from '@nestjs/platform-express';
 import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
@@ -8,7 +8,6 @@ import { UserRole } from '@/common/enums';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
-import { User } from '../users/entities/user.entity';
 
 @Controller('leads')
 export class LeadsController {
@@ -48,7 +47,7 @@ export class LeadsController {
   create(@Body() createLeadDto: CreateLeadDto) {
     return this.leadsService.create(createLeadDto);
   }
-
+/*
   @Put(':id')
   @UseInterceptors(NoFilesInterceptor())
   update(
@@ -57,22 +56,54 @@ export class LeadsController {
   ) {
     return this.leadsService.update(id, updateLeadDto);
   }
-
+*/
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   @Delete(':id')
-  remove(@Param('id', ParseIntPipe) id: number) {
-    return this.leadsService.remove(id);
+  async remove(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
+    let  lead = await this.leadsService.findOne(id);
+    if (!lead) {
+      throw new NotFoundException('Lead not found');
+    }
+
+    if ((request as any).user.role_id === UserRole.USER_ROL_SUPER_ADMIN || 
+      ((request as any).user.organization_id !== undefined && lead.organization_id == (request as any).user.organization_id) || 
+        (lead.owner_user_id == (request as any).user.id)) {
+          return this.leadsService.remove(id);
+    } 
+    return false;
   }
  
 
   // get all leads by property id
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   @Get('property/:propertyId')
-  findAllByProperty(@Param('propertyId', ParseIntPipe) propertyId: number) {
-    return this.leadsService.findAll({ property_id: propertyId });
+  findAllByProperty(@Param('propertyId', ParseIntPipe) propertyId: number, @Req() request: Request) {
+    let  filters: LeadFiltersDto = { property_id: propertyId };
+    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+      if((request as any).user.organization_id !== undefined) {
+        filters.organization_id = (request as any).user.organization_id;
+      } else {
+        filters.owner_user_id = (request as any).user.id;
+      }
+    }
+
+    return this.leadsService.findAll(filters);
   }
 
   // get all leads by email @Get('email/:email')
-  findAllByEmail(@Param('email') email: string) {
-    return this.leadsService.findAll({ email });
+  findAllByEmail(@Param('email') email: string, @Req() request: Request) {
+    let  filters: LeadFiltersDto = { email };
+    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+      if((request as any).user.organization_id !== undefined) {
+        filters.organization_id = (request as any).user.organization_id;
+      } else {
+        filters.owner_user_id = (request as any).user.id;
+      }
+    }
+
+    return this.leadsService.findAll(filters);
   }
 
 }
