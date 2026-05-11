@@ -17,13 +17,15 @@ export class LeadsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SELLER)
   findAll(@Query() filters: LeadFiltersDto, @Req() request: Request) {
+    const user = (request as any).user;
 
-    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-      if((request as any).user.organization_id !== undefined) {
-        filters.organization_id = (request as any).user.organization_id;
-      } else {
-        filters.owner_user_id = (request as any).user.id;
-      }
+    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
+      // ve todo
+    } else if (user.role_id === UserRole.USER_ROL_ADMIN && user.organization_id !== undefined) {
+      filters.organization_id = user.organization_id;
+    } else {
+      // SELLER o ADMIN sin org → solo sus propios leads
+      filters.owner_user_id = user.id;
     }
 
     return this.leadsService.findAll(filters);
@@ -80,13 +82,15 @@ export class LeadsController {
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   @Get('property/:propertyId')
   findAllByProperty(@Param('propertyId', ParseIntPipe) propertyId: number, @Req() request: Request) {
-    let  filters: LeadFiltersDto = { property_id: propertyId };
-    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-      if((request as any).user.organization_id !== undefined) {
-        filters.organization_id = (request as any).user.organization_id;
-      } else {
-        filters.owner_user_id = (request as any).user.id;
-      }
+    const user = (request as any).user;
+    const filters: LeadFiltersDto = { property_id: propertyId };
+
+    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
+      // ve todo
+    } else if (user.role_id === UserRole.USER_ROL_ADMIN && user.organization_id !== undefined) {
+      filters.organization_id = user.organization_id;
+    } else {
+      filters.owner_user_id = user.id;
     }
 
     return this.leadsService.findAll(filters);
