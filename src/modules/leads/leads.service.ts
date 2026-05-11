@@ -280,7 +280,8 @@ export class LeadsService {
         select: ['id', 'name'],
       });
 
-      if (partner) {
+      // Por ahora, deshabilitado
+      if (partner && 1 > 2) {
         switch (partner.name) {
           case TOKKO_PARTNER_NAME:
             await notifyTokkoContact({
