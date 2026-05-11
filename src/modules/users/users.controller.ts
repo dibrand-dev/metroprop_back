@@ -11,7 +11,8 @@ import {
   HttpCode,
   HttpStatus,
   UseGuards,
-  Req
+  Req,
+  NotFoundException
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
@@ -42,13 +43,12 @@ export class UsersController {
       } else {
         filters.id = (request as any).user.id;
       }
-      
     }
 
     const result = await this.usersService.findAll(filters);
     return {
-      data: result.users,
-      total: result.total,
+      data: result.users || [],
+      total: result.total || 0,
       limit: filters.limit,
       offset: filters.offset,
     };
@@ -56,9 +56,38 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.usersService.findById(id);
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SELLER)
+  async findOne(@Param('id', ParseIntPipe) id: number, @Req() request: any) {
+    const requester = (request as any).user;
+    const where: any = { id, deleted: false };
+    if( requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+
+      if (requester.role_id === UserRole.USER_ROL_ADMIN && requester.organization_id !== undefined) {
+        where.organization_id = requester.organization_id;
+      } else if (id !== requester.id) {
+          // Si no tiene organization, solo puede acceder a su propio usuario
+          throw new NotFoundException('User not found');
+      }
+    }
+
+    const user = await this.usersService.searchUserByCondition(where, undefined, [
+      'id',
+      'name',
+      'email',
+      'document',
+      'role_id',
+      'is_verified',
+      'organization_id',
+      'created_at',
+      'updated_at',
+      'branches'
+    ]);
+
+    if (!user) {
+      throw new NotFoundException('User not found');
+    }
+
+    return user;
   }
 
   @Post()
