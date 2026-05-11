@@ -1,6 +1,11 @@
 import { Transform } from 'class-transformer';
 import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
 
+const toOptionalInt = ({ value }: { value: unknown }) => {
+  if (value === null || value === undefined || value === '') return undefined;
+  return Number(value);
+};
+
 export class CreateLeadDto {
   @IsString()
   @IsNotEmpty()
@@ -34,13 +39,13 @@ export class CreateLeadDto {
   property_id!: number;
 
   @IsOptional()
-  @Transform(({ value }) => Number(value))
+  @Transform(toOptionalInt)
   @IsInt()
   @Min(1)
   organization_id?: number;
 
   @IsOptional()
-  @Transform(({ value }) => Number(value))
+  @Transform(toOptionalInt)
   @IsInt()
   @Min(1)
   owner_user_id?: number;

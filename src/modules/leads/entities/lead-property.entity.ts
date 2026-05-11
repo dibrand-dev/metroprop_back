@@ -24,6 +24,12 @@ export class LeadProperty {
   @Column({ type: 'text', nullable: true })
   message?: string;
 
+  @Column({ type: 'varchar', length: 10, nullable: true })
+  country_code?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  phone?: string;
+
   @ManyToOne(() => Lead, (lead) => lead.lead_properties, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'lead_id' })
   lead?: Lead;

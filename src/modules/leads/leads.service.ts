@@ -110,44 +110,53 @@ export class LeadsService {
   }
 
   async create(createLeadDto: CreateLeadDto): Promise<Lead> {
-    if (createLeadDto.organization_id && createLeadDto.property_id) {
-      await this.validatePropertyBelongsToOrganization(
-        createLeadDto.property_id,
+    let lead: Lead | null = null;
+
+    // 1. Buscar lead existente: por email+org o por email+owner_user
+    if (createLeadDto.organization_id) {
+      lead = await this.findByEmailAndOrganization(
+        createLeadDto.email,
         createLeadDto.organization_id,
       );
-    }
+    } else if (createLeadDto.owner_user_id !== undefined) {
 
-    let lead = await this.findByEmailAndOrganization(
-      createLeadDto.email,
-      createLeadDto.organization_id,
-    );
+      if (createLeadDto.owner_user_id !== undefined) {
+        await this.validateOwnerUserExists(createLeadDto.owner_user_id);
+      }
+      lead = await this.findByEmailAndOwnerUser(
+        createLeadDto.email,
+        createLeadDto.owner_user_id,
+      );
+    }
 
     if (!lead) {
       lead = this.leadsRepository.create({
         name: createLeadDto.name,
         email: createLeadDto.email,
-        country_code: createLeadDto.country_code,
-        phone: createLeadDto.phone,
+    //    country_code: createLeadDto.country_code,
+     //   phone: createLeadDto.phone,
         organization_id: createLeadDto.organization_id,
         owner_user_id: createLeadDto.owner_user_id,
       });
       lead = await this.leadsRepository.save(lead);
     }
 
+    // 4. Crear lead_property con el teléfono y el mensaje
     await this.createLeadPropertyRelation(
       lead.id,
       createLeadDto.property_id,
       createLeadDto.message,
+      createLeadDto.country_code,
+      createLeadDto.phone,
     );
 
-    let storedLead = await this.findOne(lead.id);
-    
+    const storedLead = await this.findOne(lead.id);
+
     this.notifyLead(storedLead).catch((err) =>
       this.logger.error('Error al notificar lead', err),
     );
 
     return storedLead;
-
   }
 
   async update(id: number, updateLeadDto: UpdateLeadDto): Promise<Lead> {
@@ -161,17 +170,22 @@ export class LeadsService {
     }
 
     if (updateLeadDto.property_id !== undefined) {
-      await this.validatePropertyBelongsToOrganization(
+      const propertyValid = await this.validatePropertyBelongsToOrganization(
         updateLeadDto.property_id,
         nextOrganizationId,
       );
+      if (!propertyValid) {
+        throw new BadRequestException('The property does not belong to the organization');
+      }
+    }
+
+    if (updateLeadDto.owner_user_id !== undefined) {
+      await this.validateOwnerUserExists(updateLeadDto.owner_user_id);
     }
 
     Object.assign(lead, {
       name: updateLeadDto.name ?? lead.name,
       email: nextEmail,
-      country_code: updateLeadDto.country_code ?? lead.country_code,
-      phone: updateLeadDto.phone ?? lead.phone,
       organization_id: nextOrganizationId,
       owner_user_id: updateLeadDto.owner_user_id !== undefined ? updateLeadDto.owner_user_id : lead.owner_user_id,
     });
@@ -183,6 +197,8 @@ export class LeadsService {
         lead.id,
         updateLeadDto.property_id,
         updateLeadDto.message,
+        updateLeadDto.country_code,
+        updateLeadDto.phone,
       );
     }
 
@@ -206,21 +222,37 @@ export class LeadsService {
     });
   }
 
+  private async findByEmailAndOwnerUser(email: string, ownerUserId: number): Promise<Lead | null> {
+    return this.leadsRepository.findOne({
+      where: {
+        email,
+        owner_user_id: ownerUserId,
+      },
+    });
+  }
+
   private async validatePropertyBelongsToOrganization(
     propertyId: number,
     organizationId?: number,
-  ): Promise<void> {
+  ): Promise<boolean> {
     const property = await this.propertyRepository.findOne({
       where: { id: propertyId },
       select: ['id', 'organization_id'],
     });
 
-    if (!property) {
-      throw new NotFoundException('Property not found');
-    }
+    if (!property) return false;
+    if (organizationId !== undefined && property.organization_id !== organizationId) return false;
+    return true;
+  }
 
-    if (organizationId !== undefined && property.organization_id !== organizationId) {
-      throw new BadRequestException('Property does not belong to the provided organization');
+  private async validateOwnerUserExists(ownerUserId: number): Promise<void> {
+    const ownerUser = await this.userRepository.findOne({
+      where: { id: ownerUserId },
+      select: ['id'],
+    });
+
+    if (!ownerUser) {
+      throw new BadRequestException('owner_user_id does not reference an existing user');
     }
   }
 
@@ -228,11 +260,15 @@ export class LeadsService {
     leadId: number,
     propertyId: number,
     message?: string,
+    country_code?: string,
+    phone?: string,
   ): Promise<LeadProperty> {
     const leadProperty = this.leadPropertyRepository.create({
       lead_id: leadId,
       property_id: propertyId,
       message,
+      country_code,
+      phone,
     });
 
     return this.leadPropertyRepository.save(leadProperty);
@@ -272,6 +308,8 @@ export class LeadsService {
     if (!organization) return;
 
     const message = leadProperty.message ?? '';
+    const contactCountryCode = leadProperty.country_code ?? lead.country_code;
+    const contactPhone = leadProperty.phone ?? lead.phone;
 
     // ── Con partner (ej: Tokko) ──────────────────────────────────────────────
     if (organization.source_partner_id) {
@@ -290,7 +328,7 @@ export class LeadsService {
               name: lead.name,
               mail: lead.email,
               comment: message,
-              phone: lead.phone ? `+${lead.country_code} ${lead.phone}` : undefined,
+              phone: contactPhone ? `+${contactCountryCode ?? ''} ${contactPhone}`.trim() : undefined,
               errorContext: { lead, leadProperty },
             });
             break;
@@ -322,8 +360,8 @@ export class LeadsService {
       lead: {
         name: lead.name,
         email: lead.email,
-        phone: lead.phone ?? undefined,
-        country_code: lead.country_code ?? undefined,
+        phone: contactPhone ?? undefined,
+        country_code: contactCountryCode ?? undefined,
       },
       message,
       contactsUrl,
