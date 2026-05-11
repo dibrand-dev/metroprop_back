@@ -9,6 +9,8 @@ import { LocationsService } from '../../modules/locations/locations.service';
 import { PropertyType, OperationType, SurfaceMeasurement, Orientation, Disposition, PropertyStatus, Currency, GarageCoverage, UserRole, ProfessionalType } from '../enums';
 import { CreatePropertyDto } from '../../modules/properties/dto/create-property.dto';
 import axios from 'axios';
+import * as fs from 'fs';
+import * as path from 'path';
 
 export interface TokkoPropertyResponse {
   id?: number;
@@ -1527,4 +1529,95 @@ export class TokkoHelperService {
       order_position: photo.order || 0,
     }));
   }
+}
+
+// ─── Tokko Contact Notification ─────────────────────────────────────────────
+
+const TOKKO_CONTACT_URL = 'http://tokkobroker.com/portals/simple_portal/api/v1/contact/';
+
+const TOKKO_CONTACT_ERROR_MESSAGES: Record<number, string> = {
+  100: 'Api key inválida',
+  200: 'No hay publicación con el publication_id proporcionado',
+  201: 'La empresa no tiene el portal activado',
+  300: 'Faltan argumentos requeridos en el JSON',
+};
+
+export interface TokkoContactParams {
+  api_key: string;
+  publication_id: string;
+  name: string;
+  mail: string;
+  comment: string;
+  phone?: string;
+  /** Contexto para el log de errores — no se envía a Tokko */
+  errorContext: {
+    lead: { id?: number; name: string; email: string; phone?: string; country_code?: string };
+    leadProperty: { id?: number; lead_id: number; property_id: number; message?: string };
+  };
+}
+
+function writeTokkoContactError(params: {
+  lead: TokkoContactParams['errorContext']['lead'];
+  leadProperty: TokkoContactParams['errorContext']['leadProperty'];
+  rawStatus?: string;
+  errorCode?: number;
+  errorReason?: string;
+}): void {
+  try {
+    const { lead, leadProperty, rawStatus, errorCode, errorReason } = params;
+    const logsDir = path.join(process.cwd(), 'logs');
+    if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
+
+    const dateStamp = new Date().toISOString().split('T')[0];
+    const logPath = path.join(logsDir, `tokko_contact_errors-${dateStamp}.log`);
+    const timestamp = new Date().toISOString();
+
+    const lines = [
+      `[${timestamp}] ERROR AL ENVIAR CONTACTO A TOKKO`,
+      `  Lead        : id=${lead.id ?? '?'} | name="${lead.name}" | email=${lead.email} | phone=${lead.country_code ?? ''}${lead.phone ?? '(sin teléfono)'}`,
+      `  LeadProperty: id=${leadProperty.id ?? '?'} | lead_id=${leadProperty.lead_id} | property_id=${leadProperty.property_id}`,
+      `  Mensaje     : ${leadProperty.message ?? '(vacío)'}`,
+      `  Respuesta   : status="${rawStatus ?? 'desconocido'}"${errorCode !== undefined ? ` | error_code=${errorCode}` : ''}`,
+      `  Motivo      : ${errorReason ?? 'No especificado'}`,
+      '',
+    ].join('\n');
+
+    fs.appendFileSync(logPath, lines, 'utf8');
+  } catch (err) {
+    console.error('[TokkoHelper] No se pudo escribir en tokko_contact_errors:', (err as Error).message);
+  }
+}
+
+/**
+ * Notifica a Tokko que se recibió un nuevo contacto sobre una propiedad.
+ * Analiza la respuesta (OK / ERROR) y si hay error lo registra automáticamente
+ * en logs/tokko_contact_errors-YYYY-MM-DD.log.
+ */
+export async function notifyTokkoContact(params: TokkoContactParams): Promise<void> {
+  const { errorContext, ...payload } = params;
+
+  const response = await axios.post(TOKKO_CONTACT_URL, payload, {
+    headers: { 'Content-Type': 'application/json' },
+    validateStatus: () => true,
+  });
+
+  const body = response.data as any;
+  const rawStatus: string = (body?.status ?? '').toString().trim().toUpperCase();
+
+  if (rawStatus === 'OK') return;
+
+  const errorCode: number | undefined =
+    body?.error_code !== undefined ? Number(body.error_code) : undefined;
+  const errorReason =
+    errorCode !== undefined && TOKKO_CONTACT_ERROR_MESSAGES[errorCode]
+      ? TOKKO_CONTACT_ERROR_MESSAGES[errorCode]
+      : body?.message ?? 'Error desconocido';
+
+  writeTokkoContactError({
+    lead: errorContext.lead,
+    leadProperty: errorContext.leadProperty,
+    rawStatus,
+    errorCode,
+    errorReason,
+  });
 }

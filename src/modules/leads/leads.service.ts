@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead } from './entities/lead.entity';
@@ -7,9 +7,17 @@ import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { Property } from '../properties/entities/property.entity';
 import { LeadFiltersDto } from './dto/lead-filters.dto';
+import { Organization } from '../organizations/entities/organization.entity';
+import { Partner } from '../partners/entities/partner.entity';
+import { User } from '../users/entities/user.entity';
+import { EmailService } from '../../common/email/email.service';
+import { notifyTokkoContact } from '../../common/helpers/tokko-helper';
+import { TOKKO_PARTNER_NAME, API_BASE_URL } from '../../common/constants';
 
 @Injectable()
 export class LeadsService {
+  private readonly logger = new Logger(LeadsService.name);
+
   constructor(
     @InjectRepository(Lead)
     private readonly leadsRepository: Repository<Lead>,
@@ -17,6 +25,13 @@ export class LeadsService {
     private readonly leadPropertyRepository: Repository<LeadProperty>,
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
+    @InjectRepository(Organization)
+    private readonly organizationRepository: Repository<Organization>,
+    @InjectRepository(Partner)
+    private readonly partnerRepository: Repository<Partner>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    private readonly emailService: EmailService,
   ) {}
 
   async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
@@ -125,7 +140,14 @@ export class LeadsService {
       createLeadDto.message,
     );
 
-    return this.findOne(lead.id);
+    let storedLead = await this.findOne(lead.id);
+    
+    this.notifyLead(storedLead).catch((err) =>
+      this.logger.error('Error al notificar lead', err),
+    );
+
+    return storedLead;
+
   }
 
   async update(id: number, updateLeadDto: UpdateLeadDto): Promise<Lead> {
@@ -221,6 +243,89 @@ export class LeadsService {
       where: { organization_id: organizationId },
       relations: ['lead_properties'],
       order: { created_at: 'DESC' },
+    });
+  }
+
+  private async notifyLead(lead: Lead): Promise<void> {
+    // Obtener el lead_property más reciente para extraer property y mensaje
+    const leadProperty = await this.leadPropertyRepository.findOne({
+      where: { lead_id: lead.id },
+      order: { created_at: 'DESC' },
+    });
+
+    if (!leadProperty) return;
+
+    // Obtener la propiedad con user_id y organization_id
+    const property = await this.propertyRepository.findOne({
+      where: { id: leadProperty.property_id },
+      select: ['id', 'reference_code', 'publication_id', 'user_id', 'organization_id', 'publication_title'],
+    });
+
+    if (!property) return;
+
+    // Obtener la organización para saber si tiene partner
+    const organization = await this.organizationRepository.findOne({
+      where: { id: property.organization_id },
+      select: ['id', 'source_partner_id', 'company_name'],
+    });
+
+    if (!organization) return;
+
+    const message = leadProperty.message ?? '';
+
+    // ── Con partner (ej: Tokko) ──────────────────────────────────────────────
+    if (organization.source_partner_id) {
+      const partner = await this.partnerRepository.findOne({
+        where: { id: organization.source_partner_id },
+        select: ['id', 'name'],
+      });
+
+      if (partner) {
+        switch (partner.name) {
+          case TOKKO_PARTNER_NAME:
+            await notifyTokkoContact({
+              api_key: organization.tokko_key ?? '',
+              publication_id: property.publication_id ?? property.reference_code,
+              name: lead.name,
+              mail: lead.email,
+              comment: message,
+              phone: lead.phone ? `+${lead.country_code} ${lead.phone}` : undefined,
+              errorContext: { lead, leadProperty },
+            });
+            break;
+
+          default:
+            this.logger.warn(`Partner "${partner.name}" sin handler de notificación implementado`);
+        }
+        return;
+      }
+    }
+
+    // ── Sin partner: org registrada en el sitio → email al user de la propiedad
+    if (!property.user_id) return;
+
+    const assignedUser = await this.userRepository.findOne({
+      where: { id: property.user_id },
+      select: ['id', 'email', 'name'],
+    });
+
+    if (!assignedUser?.email) return;
+
+    const propertyLabel = property.publication_title ?? property.reference_code ?? `#${property.id}`;
+    const contactsUrl = `${API_BASE_URL}/contactos`;
+
+    await this.emailService.sendLeadNotificationEmail({
+      to: assignedUser.email,
+      recipientName: assignedUser.name,
+      propertyLabel,
+      lead: {
+        name: lead.name,
+        email: lead.email,
+        phone: lead.phone ?? undefined,
+        country_code: lead.country_code ?? undefined,
+      },
+      message,
+      contactsUrl,
     });
   }
 }

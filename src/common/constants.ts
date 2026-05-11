@@ -423,3 +423,6 @@ export const IMAGE_SIZES = {
 } as const;
 
 export type ImageSizeKey = keyof typeof IMAGE_SIZES;
+
+
+export const TOKKO_PARTNER_NAME = 'Tokko';
