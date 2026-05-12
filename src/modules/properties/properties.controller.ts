@@ -34,6 +34,7 @@ import { PropertyOwnershipGuard } from '../../common/guards/property-ownership.g
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { Request } from 'express';
+import { User } from '../users/entities/user.entity';
 
 @Controller('properties')
 export class PropertiesController {
@@ -212,14 +213,12 @@ export class PropertiesController {
     @Req() request: Request,
   ) {
     const user = (request as any).user;
-    console.log("User in my-properties endpoint:", user);
-    if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN || user.role_id === UserRole.USER_ROL_ADMIN) {
-      searchDto.organization_id = user?.organization_id ?? user?.organization?.id;
-      if(searchDto.organization_id  === undefined) {
+    if(user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+      if( user.organization_id === undefined || user.role_id !== UserRole.USER_ROL_ADMIN) {
         searchDto.user_id = user.id;
+      } else {
+        searchDto.organization_id = user?.organization_id ?? user?.organization?.id;
       }
-    } else {
-      searchDto.user_id = user.id;
     }
 
     return this.propertiesService.searchPanelProperties(searchDto);
