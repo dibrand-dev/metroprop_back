@@ -49,4 +49,8 @@ export class CreateDraftPropertyDto {
   @IsEnum(Currency)
   @IsNotEmpty()
   currency: Currency = Currency.USD;
+
+  @IsBoolean()
+  @IsOptional()
+  is_development: boolean = false;
 }
