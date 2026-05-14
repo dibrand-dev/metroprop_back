@@ -8,10 +8,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
 import { BranchPlan } from './entities/branch-plan.entity';
+import { UserPlan } from './entities/user-plan.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { CreateBranchPlanDto } from './dto/create-branch-plan.dto';
+import { CreateUserPlanDto } from './dto/create-user-plan.dto';
 import { UserRole } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
 
@@ -24,6 +26,10 @@ export class PlansService {
     private readonly branchPlanRepo: Repository<BranchPlan>,
     @InjectRepository(Branch)
     private readonly branchRepo: Repository<Branch>,
+    @InjectRepository(UserPlan)
+    private readonly userPlanRepo: Repository<UserPlan>,
+    @InjectRepository(User)
+    private readonly userRepo: Repository<User>,
   ) {}
 
   findAll(): Promise<Plan[]> {
@@ -156,6 +162,70 @@ export class PlansService {
 
     return this.branchPlanRepo.find({
       where: { branch_id: branchId },
+      relations: ['plan'],
+      order: { created_at: 'DESC' },
+    });
+  }
+
+  // ─── User Plan methods ─────────────────────────────────────────────────────
+
+  async createUserPlan(
+    dto: CreateUserPlanDto,
+    requester: User,
+    userId: number,
+  ): Promise<UserPlan> {
+    const targetUser = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['organization'],
+    });
+    if (!targetUser) throw new NotFoundException('User not found');
+
+    const orgId = targetUser.organization?.id;
+    if (
+      requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
+      requester.organization_id !== orgId
+    ) {
+      throw new ForbiddenException(
+        'No tienes permisos para operar sobre este usuario',
+      );
+    }
+
+    const now = new Date();
+    const endDate = new Date(now);
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const userPlan = this.userPlanRepo.create({
+      user_id: userId,
+      plan_id: dto.plan_id,
+      amount_hired: dto.amount_hired,
+      start_date: now,
+      end_date: endDate,
+      active: true,
+      organization_id: orgId,
+    });
+
+    return this.userPlanRepo.save(userPlan);
+  }
+
+  async getUserPlans(userId: number, requester: any): Promise<UserPlan[]> {
+    const targetUser = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['organization'],
+    });
+    if (!targetUser) throw new NotFoundException('User not found');
+
+    const orgId = targetUser.organization?.id;
+    if (
+      requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
+      requester.organization_id !== orgId
+    ) {
+      throw new ForbiddenException(
+        'No tienes permisos para ver los planes de este usuario',
+      );
+    }
+
+    return this.userPlanRepo.find({
+      where: { user_id: userId },
       relations: ['plan'],
       order: { created_at: 'DESC' },
     });

@@ -959,3 +959,40 @@ ALTER TABLE public.branch_plan ALTER COLUMN id SET DEFAULT nextval('public.branc
 CREATE INDEX IF NOT EXISTS idx_branch_plan_branch_id       ON public.branch_plan USING btree (branch_id);
 CREATE INDEX IF NOT EXISTS idx_branch_plan_plan_id         ON public.branch_plan USING btree (plan_id);
 CREATE INDEX IF NOT EXISTS idx_branch_plan_organization_id ON public.branch_plan USING btree (organization_id);
+
+
+-- ============================================================
+-- user_plan table
+-- ============================================================
+
+DROP SEQUENCE IF EXISTS public.user_plan_id_seq;
+CREATE SEQUENCE public.user_plan_id_seq
+	INCREMENT BY 1
+	MINVALUE 1
+	MAXVALUE 2147483647
+	START 1
+	CACHE 1
+	NO CYCLE;
+
+CREATE TABLE IF NOT EXISTS public.user_plan (
+	id              serial4         NOT NULL,
+	user_id         int4            NOT NULL,
+	plan_id         int4            NOT NULL,
+	amount_hired    int4            NOT NULL DEFAULT 0,
+	start_date      timestamp       NOT NULL DEFAULT now(),
+	end_date        timestamp       NOT NULL,
+	active          bool            NOT NULL DEFAULT true,
+	organization_id int4            NOT NULL,
+	created_at      timestamp       NOT NULL DEFAULT now(),
+	updated_at      timestamp       NOT NULL DEFAULT now(),
+	CONSTRAINT pk_user_plan PRIMARY KEY (id),
+	CONSTRAINT fk_user_plan_user         FOREIGN KEY (user_id)         REFERENCES public.users(id)         ON DELETE CASCADE,
+	CONSTRAINT fk_user_plan_plan         FOREIGN KEY (plan_id)         REFERENCES public.plans(id)         ON DELETE CASCADE,
+	CONSTRAINT fk_user_plan_organization FOREIGN KEY (organization_id) REFERENCES public.organizations(id) ON DELETE CASCADE
+);
+
+ALTER TABLE public.user_plan ALTER COLUMN id SET DEFAULT nextval('public.user_plan_id_seq'::regclass);
+
+CREATE INDEX IF NOT EXISTS idx_user_plan_user_id         ON public.user_plan USING btree (user_id);
+CREATE INDEX IF NOT EXISTS idx_user_plan_plan_id         ON public.user_plan USING btree (plan_id);
+CREATE INDEX IF NOT EXISTS idx_user_plan_organization_id ON public.user_plan USING btree (organization_id);
