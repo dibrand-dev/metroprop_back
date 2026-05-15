@@ -1,9 +1,18 @@
-import { IsDate, IsInt, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import {
+  IsDate,
+  IsInt,
+  IsOptional,
+  Min,
+  ValidateNested,
+} from 'class-validator';
+import { MercadoPagoPurchaseDto } from './mercadopago-purchase.dto';
 
 export class CreateBranchPlanDto {
   @IsInt()
   plan_id!: number;
 
+  @IsOptional()
   @IsInt()
   branch_id!: number;
 
@@ -11,10 +20,15 @@ export class CreateBranchPlanDto {
   @Min(0)
   amount_hired!: number;
 
+  @IsOptional()
   @IsDate()
   start_date!: Date;
 
+  @IsOptional()
   @IsDate()
   end_date!: Date;
 
+  @ValidateNested()
+  @Type(() => MercadoPagoPurchaseDto)
+  mercadopago!: MercadoPagoPurchaseDto;
 }

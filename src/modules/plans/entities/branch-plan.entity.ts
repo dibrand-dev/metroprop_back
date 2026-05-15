@@ -24,6 +24,15 @@ export class BranchPlan {
   @Column({ type: 'int', default: 0 })
   amount_hired!: number;
 
+  @Column({ type: 'int', nullable: true })
+  plan_price_paid?: number;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  plan_name_hired?: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  mercadopago_response?: Record<string, unknown>;
+
   @Column({ type: 'timestamp' })
   start_date!: Date;
 
