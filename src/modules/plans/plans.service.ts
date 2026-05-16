@@ -15,11 +15,21 @@ import { UserPlan } from './entities/user-plan.entity';
 import { Branch } from '../branches/entities/branch.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
-import { CreateBranchPlanDto } from './dto/create-branch-plan.dto';
-import { CreateUserPlanDto } from './dto/create-user-plan.dto';
-import { MercadoPagoPurchaseDto } from './dto/mercadopago-purchase.dto';
+import { PlanPaymentDto } from './dto/mercadopago-purchase.dto';
 import { UserRole } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
+
+interface MercadoPagoErrorCause {
+  code: number | string;
+  description?: string;
+}
+
+interface MercadoPagoErrorResponse {
+  message?: string;
+  error?: string;
+  status?: number;
+  cause?: MercadoPagoErrorCause[];
+}
 
 interface MercadoPagoPaymentResponse {
   id: number;
@@ -104,7 +114,7 @@ export class PlansService {
   // ─── Branch Plan methods ───────────────────────────────────────────────────
 
   async createBranchPlan(
-    dto: CreateBranchPlanDto,
+    dto: PlanPaymentDto,
     user: User,
     branchId: number,
   ): Promise<BranchPlan> {
@@ -125,11 +135,11 @@ export class PlansService {
     }
 
     const plan = await this.repo.findOne({
-      where: { id: dto.plan_id, deleted: false },
+      where: { id: dto.planId, deleted: false },
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    const mpPayment = await this.validateMercadoPagoPayment(dto.mercadopago);
+    const mpPayment = await this.validateMercadoPagoPayment(dto);
 
     const now = new Date();
     const endDate = new Date(now);
@@ -137,8 +147,8 @@ export class PlansService {
 
     const branchPlan = this.branchPlanRepo.create({
       branch_id: branchId,
-      plan_id: dto.plan_id,
-      amount_hired: dto.amount_hired,
+      plan_id: dto.planId,
+      amount_hired: 1,
       plan_price_paid: plan.price,
       plan_name_hired: plan.plan_name,
       mercadopago_response: mpPayment,
@@ -148,8 +158,12 @@ export class PlansService {
       organization_id: branchOrgId,
     });
 
+    console.log("Creating BranchPlan with data:", branchPlan);
+
     return this.branchPlanRepo.save(branchPlan);
   }
+
+
 
   async endBranchPlan(branchPlanId: number, user: any): Promise<BranchPlan> {
     const branchPlan = await this.branchPlanRepo.findOne({
@@ -197,7 +211,7 @@ export class PlansService {
   // ─── User Plan methods ─────────────────────────────────────────────────────
 
   async createUserPlan(
-    dto: CreateUserPlanDto,
+    dto: PlanPaymentDto,
     requester: User,
     userId: number,
   ): Promise<UserPlan> {
@@ -218,20 +232,20 @@ export class PlansService {
     }
 
     const plan = await this.repo.findOne({
-      where: { id: dto.plan_id, deleted: false },
+      where: { id: dto.planId, deleted: false },
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    const mpPayment = await this.validateMercadoPagoPayment(dto.mercadopago);
-
+    const mpPayment = await this.validateMercadoPagoPayment(dto);
+console.log("MercadoPago payment validated successfully:", mpPayment);
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);
 
     const userPlan = this.userPlanRepo.create({
       user_id: userId,
-      plan_id: dto.plan_id,
-      amount_hired: dto.amount_hired,
+      plan_id: dto.planId,
+      amount_hired: 1,
       plan_price_paid: plan.price,
       plan_name_hired: plan.plan_name,
       mercadopago_response: mpPayment,
@@ -241,6 +255,7 @@ export class PlansService {
       organization_id: orgId,
     });
 
+    console.log("Creating UserPlan with data:", userPlan);
     return this.userPlanRepo.save(userPlan);
   }
 
@@ -269,22 +284,14 @@ export class PlansService {
   }
 
   private async validateMercadoPagoPayment(
-    mercadopagoDto: MercadoPagoPurchaseDto,
+    dto: PlanPaymentDto,
   ): Promise<MercadoPagoPaymentResponse> {
-    const payment = await this.mercadopagoPayment(mercadopagoDto);
+    const payment = await this.mercadopagoPayment(dto);
 
+    console.log("MercadoPago payment status:", payment);
     if (payment.status !== 'approved') {
       throw new BadRequestException(
         `Pago MercadoPago no aprobado. status=${payment.status}, detail=${payment.status_detail ?? 'n/a'}`,
-      );
-    }
-
-    if (
-      mercadopagoDto.external_reference &&
-      payment.external_reference !== mercadopagoDto.external_reference
-    ) {
-      throw new BadRequestException(
-        'El external_reference de MercadoPago no coincide con el enviado',
       );
     }
 
@@ -292,7 +299,7 @@ export class PlansService {
   }
 
   private async mercadopagoPayment(
-    params: MercadoPagoPurchaseDto,
+    params: PlanPaymentDto,
   ): Promise<MercadoPagoPaymentResponse> {
     const accessToken = this.configService.get<string>('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
@@ -301,19 +308,69 @@ export class PlansService {
       );
     }
 
-    const paymentUrl = `https://api.mercadopago.com/v1/payments/${params.payment_id}`;
+    const idempotencyKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const paymentUrl = `https://api.mercadopago.com/v1/payments`;
     const paymentResponse = await fetch(paymentUrl, {
-      method: 'GET',
+      method: 'POST',
       headers: {
+        'Content-Type': 'application/json',
         Authorization: `Bearer ${accessToken}`,
+        'X-Idempotency-Key': idempotencyKey,
       },
+      body: JSON.stringify({
+        transaction_amount: params.transaction_amount,
+        token: params.token,
+        description: params.description,
+        installments: params.installments,
+        payment_method_id: params.payment_method_id,
+        payer: params.payer,
+      }),
     });
+
+    console.log("RAW ENDPOINT:", {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+        'X-Idempotency-Key': idempotencyKey,
+      },
+      body: JSON.stringify({
+        transaction_amount: params.transaction_amount,
+        token: params.token,
+        description: params.description,
+        installments: params.installments,
+        payment_method_id: params.payment_method_id,
+        payer: params.payer,
+      }),
+    });
+
+    console.log("MercadoPago payment response status:", paymentResponse);
 
     if (!paymentResponse.ok) {
       const body = await paymentResponse.text();
-      throw new BadRequestException(
-        `No se pudo consultar MercadoPago (${paymentResponse.status}): ${body.slice(0, 500)}`,
-      );
+      let errorMessage = `No se pudo consultar MercadoPago (${paymentResponse.status})`;
+      try {
+        const errorBody = JSON.parse(body) as MercadoPagoErrorResponse;
+        const causeCode = errorBody.cause?.[0]?.code?.toString() ?? '';
+        if (causeCode === '205' || causeCode.includes('cardNumber')) {
+          errorMessage = 'El número de tarjeta no es válido';
+        } else if (causeCode === '208' || causeCode.includes('cardExpirationMonth')) {
+          errorMessage = 'Mes de vencimiento inválido';
+        } else if (causeCode === '209' || causeCode.includes('cardExpirationYear')) {
+          errorMessage = 'Año de vencimiento inválido';
+        } else if (causeCode === '214' || causeCode.includes('identificationNumber')) {
+          errorMessage = 'Número de documento inválido';
+        } else if (causeCode === '316' || causeCode.includes('cardholderName')) {
+          errorMessage = 'Nombre del titular inválido';
+        } else if (causeCode === 'E301' || causeCode.includes('securityCode')) {
+          errorMessage = 'Código de seguridad inválido';
+        } else if (errorBody.message) {
+          errorMessage = `Error al procesar el pago. Verifique los datos e intente nuevamente.`;
+        }
+      } catch {
+        // body is not JSON, keep generic message
+      }
+      throw new BadRequestException(errorMessage);
     }
 
     return (await paymentResponse.json()) as MercadoPagoPaymentResponse;

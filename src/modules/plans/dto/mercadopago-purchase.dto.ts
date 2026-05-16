@@ -1,24 +1,55 @@
-import { Allow, IsInt, IsObject, IsOptional, IsString, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsInt, IsNumber, IsString, ValidateNested } from 'class-validator';
 
-export class MercadoPagoPurchaseDto {
+export class PayerIdentificationDto {
+  @IsString()
+  type!: string;
+
+  @IsString()
+  number!: string;
+}
+
+export class PayerPhoneDto {
+  @IsString()
+  area_code!: string;
+
+  @IsString()
+  number!: string;
+}
+
+export class PayerDto {
+  @IsString()
+  email!: string;
+
+  @ValidateNested()
+  @Type(() => PayerIdentificationDto)
+  identification!: PayerIdentificationDto;
+
+  @ValidateNested()
+  @Type(() => PayerPhoneDto)
+  phone!: PayerPhoneDto;
+}
+
+export class PlanPaymentDto {
+  @IsNumber()
+  transaction_amount!: number;
+
+  @IsString()
+  token!: string;
+
+  @IsString()
+  description!: string;
+
   @IsInt()
-  @Min(1)
-  payment_id!: number;
+  installments!: number;
 
-  @IsOptional()
   @IsString()
-  external_reference?: string;
+  payment_method_id!: string;
 
-  @IsOptional()
-  @IsString()
-  preference_id?: string;
+  @ValidateNested()
+  @Type(() => PayerDto)
+  payer!: PayerDto;
 
-  @IsOptional()
-  @IsString()
-  merchant_order_id?: string;
-
-  @IsOptional()
-  @IsObject()
-  @Allow()
-  data?: Record<string, unknown>;
+  @IsInt()
+  planId!: number;
 }

@@ -15,8 +15,7 @@ import {
 import { PlansService } from './plans.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
-import { CreateBranchPlanDto } from './dto/create-branch-plan.dto';
-import { CreateUserPlanDto } from './dto/create-user-plan.dto';
+import { PlanPaymentDto } from './dto/mercadopago-purchase.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -50,7 +49,7 @@ export class PlansController {
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   async createBranchPlan(
     @Param('branchId', ParseIntPipe) branchId: number,
-    @Body() dto: CreateBranchPlanDto,
+    @Body() dto: PlanPaymentDto,
     @Request() req: any,
   ) {
     return this.plansService.createBranchPlan(dto, req.user, branchId);
@@ -71,7 +70,7 @@ export class PlansController {
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   createUserPlan(
     @Param('userId', ParseIntPipe) userId: number,
-    @Body() dto: CreateUserPlanDto,
+    @Body() dto: PlanPaymentDto,
     @Request() req: any,
   ) {
     return this.plansService.createUserPlan(dto, req.user, userId);
