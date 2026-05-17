@@ -237,7 +237,6 @@ export class PlansService {
     if (!plan) throw new NotFoundException('Plan not found');
 
     const mpPayment = await this.validateMercadoPagoPayment(dto);
-console.log("MercadoPago payment validated successfully:", mpPayment);
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);

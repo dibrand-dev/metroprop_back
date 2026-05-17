@@ -32,6 +32,8 @@ import {
 } from '../../common/enums';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
+import { CreateDevelopmentUnitDto } from './dto/create-development-unit.dto';
+import { UpdateDevelopmentUnitDto } from './dto/update-development-unit.dto';
 import { THUMB_PREFIX, COUNTRY_ARGENTINA_ID } from '@/common/constants';
 
 export interface RequestingUser {
@@ -172,6 +174,43 @@ export class PropertiesService {
   }
 
   /**
+   * Crea una unidad (child property) dentro de un emprendimiento.
+   * Los campos `is_development` y `development_id` se fijan automáticamente.
+   * La multimedia (imágenes/adjuntos como archivos) se gestiona externamente
+   * mediante `saveMultimedia` después de la creación.
+   */
+  async createDevelopmentUnit(
+    developmentId: number,
+    dto: CreateDevelopmentUnitDto,
+  ): Promise<{ data: Property; created: boolean; warnings?: string[] }> {
+    const parentDev = await this.propertyRepository.findOne({
+      where: { id: developmentId, is_development: true, deleted: false },
+    });
+    if (!parentDev) {
+      throw new NotFoundException(`Emprendimiento con ID ${developmentId} no encontrado`);
+    }
+
+    const { tags, images, videos, multimedia360, attached, is_development, development_id, ...propertyData } = dto as any;
+
+    const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
+      {
+        ...propertyData,
+        is_development: false,
+        development_id: developmentId,
+        organization_id: propertyData.organization_id ?? parentDev.organization_id,
+        branch_id: propertyData.branch_id ?? parentDev.branch_id,
+        deleted: false,
+      },
+      { tags },
+    );
+
+    const result = await this.findOne(savedProperty.id!);
+    return warnings.length > 0
+      ? { data: result, created: true, warnings }
+      : { data: result, created: true };
+  }
+
+  /**
    * Actualiza un emprendimiento existente.
    */
   async updateDevelopment(
@@ -204,6 +243,37 @@ export class PropertiesService {
     );
 
     const result = await this.findOne(id);
+    return warnings.length > 0 ? { data: result, warnings } : { data: result };
+  }
+
+  /**
+   * Actualiza una unidad (child property) existente dentro de un emprendimiento.
+   * Sólo actualiza campos escalares y tags; la multimedia se gestiona externamente
+   * mediante `saveMultimedia` para garantizar el tratamiento correcto de archivos.
+   */
+  async updateDevelopmentUnit(
+    developmentId: number,
+    unitId: number,
+    dto: UpdateDevelopmentUnitDto,
+  ): Promise<{ data: Property; warnings?: string[] }> {
+    const unit = await this.propertyRepository.findOne({
+      where: { id: unitId, development_id: developmentId, is_development: false, deleted: false },
+    });
+    if (!unit) {
+      throw new NotFoundException(
+        `Unidad con ID ${unitId} no encontrada en el emprendimiento ${developmentId}`,
+      );
+    }
+
+    const { tags, images, videos, multimedia360, attached, is_development, development_id, ...propertyData } = dto as any;
+
+    const { warnings } = await this.propertyWriteService.updatePropertyCore(
+      unit,
+      propertyData,
+      { tags },
+    );
+
+    const result = await this.findOne(unitId);
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
 

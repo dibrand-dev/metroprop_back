@@ -21,6 +21,8 @@ import { CreateDraftPropertyDto } from './dto/create-draft-property.dto';
 import { SearchPropertiesDto } from './dto/search-properties.dto';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
+import { CreateDevelopmentUnitDto } from './dto/create-development-unit.dto';
+import { UpdateDevelopmentUnitDto } from './dto/update-development-unit.dto';
 
 import { UploadedFiles, UseInterceptors } from '@nestjs/common';
 
@@ -161,6 +163,147 @@ export class PropertiesController {
     @Body() updateDevelopmentDto: UpdateDevelopmentDto,
   ) {
     return this.propertiesService.updateDevelopment(id, updateDevelopmentDto);
+  }
+
+  /**
+   * POST /properties/development/:developmentId/units
+   * Crear una nueva unidad dentro de un emprendimiento.
+   *
+   * El body debe incluir todos los campos de la propiedad (ver CreateDevelopmentUnitDto).
+   * La multimedia se envía como multipart/form-data:
+   *   - images[]: archivos de imagen
+   *   - attached[]: archivos adjuntos
+   *   - videos: JSON string con array de {url} para videos externos
+   *   - multimedia360: JSON string con array de {url} para tours 360
+   * Las URLs de imágenes/adjuntos ya existentes en S3 pueden enviarse
+   * como JSON en los campos `images` / `attached` del body.
+   */
+  @Post('development/:developmentId/units')
+  @HttpCode(HttpStatus.CREATED)
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    EnhancedFileFieldsInterceptor(
+      [{ name: 'images', maxCount: 20 }, { name: 'attached', maxCount: 20 }],
+      { endpointDescription: 'POST /properties/development/:developmentId/units' },
+    ),
+    new MultipartFormDataInterceptor(['videos', 'multimedia360', 'images', 'attached', 'tags']),
+  )
+  async createDevelopmentUnit(
+    @Param('developmentId', ParseIntPipe) developmentId: number,
+    @Body() createDevelopmentUnitDto: CreateDevelopmentUnitDto,
+    @UploadedFiles() files?: {
+      images?: Express.Multer.File[];
+      attached?: Express.Multer.File[];
+    },
+  ) {
+    const safeFiles = files ?? {};
+
+    // 1. Validate any uploaded files
+    this.propertiesService.validateUploadedFiles(safeFiles);
+
+    // 2. Create the unit (scalar fields + tags only; multimedia handled below)
+    const { data: unit, created, warnings } = await this.propertiesService.createDevelopmentUnit(
+      developmentId,
+      createDevelopmentUnitDto,
+    );
+
+    // 3. Build SaveMultimediaDto from URL-based multimedia present in the body
+    const saveMultimediaDto: SaveMultimediaDto = {
+      videos: (createDevelopmentUnitDto.videos ?? []).map((v) => v.url),
+      multimedia360: (createDevelopmentUnitDto.multimedia360 ?? []).map((v) => v.url),
+      images: (createDevelopmentUnitDto.images ?? []).map((i) => i.url).filter(Boolean) as string[],
+      attached: (createDevelopmentUnitDto.attached ?? []).map((a) => a.file_url).filter(Boolean) as string[],
+    };
+
+    const hasMultimedia =
+      safeFiles.images?.length ||
+      safeFiles.attached?.length ||
+      saveMultimediaDto.videos!.length ||
+      saveMultimediaDto.multimedia360!.length ||
+      saveMultimediaDto.images!.length ||
+      saveMultimediaDto.attached!.length;
+
+    let multimediaResult;
+    if (hasMultimedia) {
+      multimediaResult = await this.propertiesService.saveMultimedia(unit.id!, saveMultimediaDto, safeFiles);
+    }
+
+    return {
+      data: unit,
+      created,
+      warnings: warnings?.length ? warnings : undefined,
+      ...(multimediaResult ? { multimedia: multimediaResult } : {}),
+    };
+  }
+
+  /**
+   * PATCH /properties/development/:developmentId/units/:unitId
+   * Actualizar una unidad dentro de un emprendimiento.
+   *
+   * Todos los campos son opcionales. La multimedia se envía igual que en el POST:
+   *   - images[]: archivos de imagen a subir
+   *   - attached[]: archivos adjuntos a subir
+   *   - videos: JSON string con array de {url} para videos externos
+   *   - multimedia360: JSON string con array de {url} para tours 360
+   *   - images / attached en el body: URLs ya existentes a conservar
+   * Si no se envía ninguna multimedia, el estado actual de la unidad no cambia.
+   */
+  @Patch('development/:developmentId/units/:unitId')
+  @UseGuards(JwtAuthGuard)
+  @UseInterceptors(
+    EnhancedFileFieldsInterceptor(
+      [{ name: 'images', maxCount: 20 }, { name: 'attached', maxCount: 20 }],
+      { endpointDescription: 'PATCH /properties/development/:developmentId/units/:unitId' },
+    ),
+    new MultipartFormDataInterceptor(['videos', 'multimedia360', 'images', 'attached', 'tags']),
+  )
+  async updateDevelopmentUnit(
+    @Param('developmentId', ParseIntPipe) developmentId: number,
+    @Param('unitId', ParseIntPipe) unitId: number,
+    @Body() updateDevelopmentUnitDto: UpdateDevelopmentUnitDto,
+    @UploadedFiles() files?: {
+      images?: Express.Multer.File[];
+      attached?: Express.Multer.File[];
+    },
+  ) {
+    const safeFiles = files ?? {};
+
+    // 1. Validate any uploaded files
+    this.propertiesService.validateUploadedFiles(safeFiles);
+
+    // 2. Update scalar fields + tags
+    const { data, warnings } = await this.propertiesService.updateDevelopmentUnit(
+      developmentId,
+      unitId,
+      updateDevelopmentUnitDto,
+    );
+
+    // 3. Build SaveMultimediaDto from URL-based multimedia in the body
+    const saveMultimediaDto: SaveMultimediaDto = {
+      videos: (updateDevelopmentUnitDto.videos ?? []).map((v) => v.url),
+      multimedia360: (updateDevelopmentUnitDto.multimedia360 ?? []).map((v) => v.url),
+      images: (updateDevelopmentUnitDto.images ?? []).map((i) => i.url).filter(Boolean) as string[],
+      attached: (updateDevelopmentUnitDto.attached ?? []).map((a) => a.file_url).filter(Boolean) as string[],
+    };
+
+    const hasMultimedia =
+      safeFiles.images?.length ||
+      safeFiles.attached?.length ||
+      saveMultimediaDto.videos!.length ||
+      saveMultimediaDto.multimedia360!.length ||
+      saveMultimediaDto.images!.length ||
+      saveMultimediaDto.attached!.length;
+
+    let multimediaResult;
+    if (hasMultimedia) {
+      multimediaResult = await this.propertiesService.saveMultimedia(unitId, saveMultimediaDto, safeFiles);
+    }
+
+    return {
+      data,
+      warnings: warnings?.length ? warnings : undefined,
+      ...(multimediaResult ? { multimedia: multimediaResult } : {}),
+    };
   }
 
   /**

@@ -27,7 +27,7 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     req.user = {
       id: Number(process.env.DEV_BYPASS_USER_ID ?? 76),
       email: process.env.DEV_BYPASS_USER_EMAIL ?? 'dev-bypass@local.test',
-      role_id: Number(process.env.DEV_BYPASS_ROLE_ID ?? 4),
+      role_id: Number(process.env.DEV_BYPASS_ROLE_ID ?? 2),
       organization_id: Number(process.env.DEV_BYPASS_ORGANIZATION_ID ?? null),
     };
     console.warn(`Injected fake user: ${JSON.stringify(req.user)}`);
