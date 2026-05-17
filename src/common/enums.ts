@@ -209,6 +209,20 @@ export enum TemporalRentPeriod {
 export enum DevelopmentType {
   VERTICAL = 1,    // Desarrollo vertical
   HORIZONTAL = 2,  // Desarrollo horizontal
+  EDIFICIO_DE_OFICINAS = 3,     // Edificio de oficinas
+  EDIFICIO = 4,                 // Edificio
+  COUNTRY = 5,                  // Country
+  BARRIO_PRIVADO = 6,           // Barrio Privado
+  NAUTICO = 7,                  // Náutico
+  RURAL = 8,                    // Rural
+  EDIFICIO_DE_COCHERAS = 9,     // Edificio de Cocheras
+  CONDOMINIO_INDUSTRIAL = 10,    // Condominio Industrial
+  CENTRO_LOGISTICO = 11,         // Centro Logístico
+  CONDOMINIO = 12,              // Condominio
+  OTRO = 13,                    // Otro
+  COMERCIAL = 14,               // Comercial
+  HOTEL = 15,                   // Hotel
+  BARRIO_ABIERTO = 16,          // Barrio abierto
 }
 
 /**

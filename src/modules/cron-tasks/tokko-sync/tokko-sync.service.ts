@@ -15,7 +15,7 @@ import { PartnersService } from '../../partners/partners.service';
 import { TokkoHelperService } from '../../../common/helpers/tokko-helper';
 import { BranchesService } from '../../branches/branches.service';
 import { UsersService } from '../../users/users.service';
-import { MediaUploadStatus, UserRole } from '../../../common/enums';
+import { MediaUploadStatus, PropertyStatus, UserRole } from '../../../common/enums';
 import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
 import { PASSWORD_DEFAULT } from '@/common/constants';
 import { PropertyWriteService } from '@/modules/properties/property-write.service';
@@ -141,7 +141,7 @@ export class TokkoSyncService implements OnModuleInit {
 	async syncOrganization(
 		apiKey: string,
 		tokkoOrganizationId: string,
-		limit: number = 500,
+		limit: number = 2000,
 		offset: number = 0,
 	): Promise<{
 		message: string;
@@ -152,13 +152,14 @@ export class TokkoSyncService implements OnModuleInit {
 		updated: number;
 		skipped: number;
 		failed: number;
+		depublished: number;
 	}> {
 		const partnerId = await this.resolveTokkoPartnerId();
 		if (!partnerId) {
 			return {
 				message: 'Partner "tokko" not configured. Sync skipped.',
 				processed: 0, total: 0, pending: 0,
-				created: 0, updated: 0, skipped: 0, failed: 0,
+				created: 0, updated: 0, skipped: 0, failed: 0, depublished: 0,
 			};
 		}
 
@@ -169,7 +170,7 @@ export class TokkoSyncService implements OnModuleInit {
 			apiKey,
 			limit,
 			offset,
-			'2000-01-01T00:00:00',
+			null,
 			tokkoOrganizationId,
 		);
 
@@ -182,7 +183,14 @@ export class TokkoSyncService implements OnModuleInit {
 
 		const { objects, meta } = result;
 		const totalCount: number = meta.total_count ?? objects.length;
-		const stats = { created: 0, updated: 0, skipped: 0, failed: 0 };
+		const stats = { created: 0, updated: 0, skipped: 0, failed: 0, depublished: 0 };
+
+		// Track all publication_ids present in this feed response
+		const feedPublicationIds = new Set<string>(
+			objects
+				.map((item: any) => item?.publication_id != null ? String(item.publication_id) : null)
+				.filter((id): id is string => id !== null),
+		);
 
 		for (const item of objects) {
 			const pubId = item?.publication_id != null ? String(item.publication_id) : 'N/A';
@@ -205,6 +213,41 @@ export class TokkoSyncService implements OnModuleInit {
 		const processed = objects.length;
 		const pending = Math.max(0, totalCount - offset - processed);
 
+		// Depublish properties that belong to this org, are currently DISPONIBLE,
+		// came from Tokko (have a publication_id) but are no longer in the feed.
+		const org = await this.organizationRepo.findOne({
+			where: { external_reference: tokkoOrganizationId, deleted: false } as any,
+		});
+
+		if (org) {
+			const feedIds = [...feedPublicationIds];
+
+			if (feedIds.length > 0) {
+				const updateResult = await this.propertyRepo
+					.createQueryBuilder()
+					.update()
+					.set({ status: PropertyStatus.NO_DISPONIBLE })
+					.where('organization_id = :orgId', { orgId: org.id })
+					.andWhere('status = :status', { status: PropertyStatus.DISPONIBLE })
+					.andWhere('deleted = false')
+					.andWhere('publication_id IS NOT NULL')
+					.andWhere('publication_id NOT IN (:...feedIds)', { feedIds })
+					.execute();
+
+				stats.depublished = updateResult.affected ?? 0;
+
+				if (stats.depublished > 0) {
+					this.logger.log(
+						`[TokkoSync] syncOrganization depublished ${stats.depublished} properties not in feed`,
+					);
+					this.fileLogger.orgInfo(
+						tokkoOrganizationId,
+						`ORG_SYNC_DEPUBLISHED count=${stats.depublished}`,
+					);
+				}
+			}
+		}
+
 		const message = pending > 0
 			? `${processed} de ${totalCount} procesadas, ${pending} pendientes`
 			: `${processed} de ${totalCount} procesadas`;
@@ -212,7 +255,7 @@ export class TokkoSyncService implements OnModuleInit {
 		this.logger.log(`[TokkoSync] syncOrganization done — ${message}`);
 		this.fileLogger.orgInfo(
 			tokkoOrganizationId,
-			`ORG_SYNC_DONE ${message} created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} failed=${stats.failed}`,
+			`ORG_SYNC_DONE ${message} created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} failed=${stats.failed} depublished=${stats.depublished}`,
 		);
 		return { message, processed, total: totalCount, pending, ...stats };
 	}
@@ -618,7 +661,8 @@ export class TokkoSyncService implements OnModuleInit {
 				branch = await this.branchesService.create({
 					branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
 					email: seller.email ?? org.email,
-					phone: seller.phone ?? '',
+					phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+					alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 					address: seller.address ?? '',
 					external_reference: branchExtRef ?? undefined,
 					organizationId: org.id!,
@@ -695,8 +739,8 @@ export class TokkoSyncService implements OnModuleInit {
 			company_name: seller.company_name ?? 'Unknown',
 			email: seller.email ?? '',
 			address: seller.address ?? '',
-			phone: seller.phone ?? '',
-			alternative_phone: seller.alternative_phone ?? '',
+			phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+			alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 			contact_time: seller.contact_time ?? '',
 			geo_lat: seller.geo_lat ?? undefined,
 			geo_long: seller.geo_long ?? undefined,
@@ -750,6 +794,21 @@ export class TokkoSyncService implements OnModuleInit {
 
 		this.tokkoPartnerId = tokkoPartner.id;
 		return this.tokkoPartnerId;
+	}
+
+	// ─── Phone Helpers ─────────────────────────────────────────────────────────────
+
+	/**
+	 * Concatenates Tokko's split phone parts (country_code + area_code + number)
+	 * into a single string, omitting empty segments.
+	 * e.g. buildTokkoPhone('+549', '11', '65209938') → '+549 11 65209938'
+	 *      buildTokkoPhone('', '011', '48712777')   → '011 48712777'
+	 */
+	private buildTokkoPhone(countryCode?: string, areaCode?: string, number?: string): string {
+		return [countryCode, areaCode, number]
+			.filter((s): s is string => !!s && s.trim() !== '')
+			.join(' ')
+			.trim();
 	}
 
 	// ─── Image Smart-Sync ────────────────────────────────────────────────────────
