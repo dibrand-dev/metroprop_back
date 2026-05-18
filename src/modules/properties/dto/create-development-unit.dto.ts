@@ -76,4 +76,13 @@ export class CreateDevelopmentUnitDto extends BasePropertyFieldsDto {
   @Type(() => CreateAttachedDto)
   attached?: CreateAttachedDto[];
 
+  @ApiPropertyOptional({
+    description: 'Cantidad de unidades disponibles en el emprendimiento',
+    example: 10,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  development_available_unit_count?: number;
+
 }
