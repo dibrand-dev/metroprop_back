@@ -21,10 +21,6 @@ async function bootstrap() {
       transformOptions: {
         enableImplicitConversion: true,
       },
-      exceptionFactory: (errors) => {
-        const { BadRequestException } = require('@nestjs/common');
-        return new BadRequestException(errors.map((e) => Object.values(e.constraints ?? {}).join(', ')).join('; '));
-      },
     }),
   );
 

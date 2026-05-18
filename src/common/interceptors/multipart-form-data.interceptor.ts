@@ -15,7 +15,6 @@ import { Request } from 'express';
 @Injectable()
 export class MultipartFormDataInterceptor implements NestInterceptor {
   private readonly jsonFields: string[];
-  private readonly allowedFileFields: string[] = ['images', 'attached'];
 
   constructor(jsonFields: string[] = []) {
     this.jsonFields = jsonFields;
@@ -23,12 +22,11 @@ export class MultipartFormDataInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
     const request: Request = context.switchToHttp().getRequest();
-    
+
     if (request.body && this.jsonFields.length > 0) {
-      // Solo procesamos los campos JSON especificados
-      // No validamos campos del body que multer pueda haber agregado
-      
-      // Parsear campos JSON especificados
+      // Parsear únicamente los campos JSON especificados.
+      // La validación de campos desconocidos la maneja el ValidationPipe global
+      // con whitelist + forbidNonWhitelisted, por lo que no se duplica aquí.
       for (const field of this.jsonFields) {
         if (request.body[field] !== undefined) {
           if (typeof request.body[field] === 'string') {
@@ -42,23 +40,6 @@ export class MultipartFormDataInterceptor implements NestInterceptor {
             }
           }
         }
-      }
-      
-      // Validar campos no esperados: solo los que NO están en jsonFields ni allowedFileFields
-      const allowedFields = [...this.jsonFields, ...this.allowedFileFields];
-      const bodyFieldNames = Object.keys(request.body).filter(
-        key => key !== '__proto__' && key !== 'constructor'
-      );
-      const unexpectedFields = bodyFieldNames.filter(
-        field => !allowedFields.includes(field)
-      );
-      
-      if (unexpectedFields.length > 0) {
-        const fieldsList = unexpectedFields.join(', ');
-        const allowedList = allowedFields.join(', ');
-        throw new BadRequestException(
-          `Campo(s) no permitido(s): ${fieldsList}. Campos permitidos: ${allowedList}`
-        );
       }
     }
 

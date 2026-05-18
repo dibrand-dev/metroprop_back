@@ -76,11 +76,4 @@ export class CreateDevelopmentUnitDto extends BasePropertyFieldsDto {
   @Type(() => CreateAttachedDto)
   attached?: CreateAttachedDto[];
 
-  // ========== CAMPOS INTERNOS (no exponer al partner) ==========
-
-  /** development_id es resuelto por el servidor; no lo acepta el cliente. */
-  development_id?: number;
-
-  /** Siempre false para unidades; no lo acepta el cliente. */
-  is_development?: boolean;
 }
