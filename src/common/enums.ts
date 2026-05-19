@@ -261,9 +261,9 @@ export enum BannerPlacement {
 }
 
 export enum FiscalCondition {
-  RESPONSABLE_INSCRIPTO = 'Responsable inscripto',
+  RESPONSABLE_INSCRIPTO = 'Responsable Inscripto',
   MONOTRIBUTO = 'Monotributo',
   EXENTO = 'Exento',
-  CONSUMIDOR_FINAL = 'Consumidor final',
-  NO_RESPONSABLE = 'No responsable',
+  CONSUMIDOR_FINAL = 'Consumidor Final',
+  NO_RESPONSABLE = 'No Responsable',
 }
