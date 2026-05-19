@@ -82,6 +82,8 @@ export class PlansController {
   // ─── Dynamic :id routes ───────────────────────────────────────────────────
 
   @Get(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   findOne(@Param('id', ParseIntPipe) id: number) {
     return this.plansService.findOne(id);
   }
@@ -96,7 +98,7 @@ export class PlansController {
   @Patch(':planId/end')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   endBranchPlan(
     @Param('planId', ParseIntPipe) planId: number,
     @Request() req: any,
@@ -107,7 +109,7 @@ export class PlansController {
   @Patch(':id/disable')
   @HttpCode(HttpStatus.OK)
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   disable(@Param('id', ParseIntPipe) id: number) {
     return this.plansService.disable(id);
   }
