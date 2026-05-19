@@ -22,14 +22,13 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 
 @Controller('plans')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.USER_ROL_SUPER_ADMIN)
 export class PlansController {
   constructor(
     private readonly plansService: PlansService,
   ) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   findAll() {
     return this.plansService.findAll();
   }
@@ -37,6 +36,7 @@ export class PlansController {
   // ─── Branch-plan routes (static segments before dynamic :id) ──────────────
 
   @Get('branch/:branchId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   getBranchPlans(
     @Param('branchId', ParseIntPipe) branchId: number,
@@ -46,6 +46,7 @@ export class PlansController {
   }
 
   @Post('branch/:branchId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   async createBranchPlan(
     @Param('branchId', ParseIntPipe) branchId: number,
@@ -58,6 +59,7 @@ export class PlansController {
   // ─── User-plan routes ─────────────────────────────────────────────────────
 
   @Get('user/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   getUserPlans(
     @Param('userId', ParseIntPipe) userId: number,
@@ -67,6 +69,7 @@ export class PlansController {
   }
 
   @Post('user/:userId')
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   createUserPlan(
     @Param('userId', ParseIntPipe) userId: number,
@@ -90,6 +93,7 @@ export class PlansController {
 
   @Patch(':planId/end')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   endBranchPlan(
     @Param('planId', ParseIntPipe) planId: number,
@@ -100,6 +104,8 @@ export class PlansController {
 
   @Patch(':id/disable')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   disable(@Param('id', ParseIntPipe) id: number) {
     return this.plansService.disable(id);
   }
@@ -108,6 +114,8 @@ export class PlansController {
 
   @Patch(':id/enable')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   enable(@Param('id', ParseIntPipe) id: number) {
     return this.plansService.enable(id);
   }
