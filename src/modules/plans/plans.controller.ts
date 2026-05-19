@@ -87,6 +87,8 @@ export class PlansController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   create(@Body() dto: CreatePlanDto) {
     return this.plansService.create(dto);
   }
@@ -122,6 +124,8 @@ export class PlansController {
 
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   update(
     @Param('id', ParseIntPipe) id: number,
     @Body() dto: UpdatePlanDto,
@@ -130,6 +134,8 @@ export class PlansController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.plansService.remove(id);
   }
