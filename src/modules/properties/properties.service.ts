@@ -278,6 +278,24 @@ export class PropertiesService {
   }
 
   /**
+   * Obtiene una unidad (child property) específica dentro de un emprendimiento.
+   */
+  async getDevelopmentUnit(developmentId: number, unitId: number): Promise<Property> {
+    const unit = await this.propertyRepository.findOne({
+      where: { id: unitId, development_id: developmentId, is_development: false, deleted: false },
+      select: ['id'],
+    });
+
+    if (!unit) {
+      throw new NotFoundException(
+        `Unidad con ID ${unitId} no encontrada en el emprendimiento ${developmentId}`,
+      );
+    }
+
+    return this.findOne(unitId);
+  }
+
+  /**
    * Guarda multimedia para una propiedad específica
    * 
    * @param propertyId ID de la propiedad

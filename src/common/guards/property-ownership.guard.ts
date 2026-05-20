@@ -36,7 +36,8 @@ export class PropertyOwnershipGuard implements CanActivate {
     if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) return true;
 
     const params = request.params;
-    const rawId = params.propertyId ?? params.id;
+    // propertyId (multimedia/upload endpoints) → unitId (unit endpoints) → id (generic)
+    const rawId = params.propertyId ?? params.unitId ?? params.id;
     const propertyId = parseInt(rawId, 10);
 
     if (!propertyId || isNaN(propertyId)) {

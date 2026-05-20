@@ -237,6 +237,19 @@ export class PropertiesController {
   }
 
   /**
+   * GET /properties/development/:developmentId/units/:unitId
+   * Obtener una unidad específica dentro de un emprendimiento.
+   */
+  @Get('development/:developmentId/units/:unitId')
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
+  getDevelopmentUnit(
+    @Param('developmentId', ParseIntPipe) developmentId: number,
+    @Param('unitId', ParseIntPipe) unitId: number,
+  ) {
+    return this.propertiesService.getDevelopmentUnit(developmentId, unitId);
+  }
+
+  /**
    * PATCH /properties/development/:developmentId/units/:unitId
    * Actualizar una unidad dentro de un emprendimiento.
    *
@@ -249,7 +262,7 @@ export class PropertiesController {
    * Si no se envía ninguna multimedia, el estado actual de la unidad no cambia.
    */
   @Patch('development/:developmentId/units/:unitId')
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   @UseInterceptors(
     EnhancedFileFieldsInterceptor(
       [{ name: 'images', maxCount: 20 }, { name: 'attached', maxCount: 20 }],
@@ -396,6 +409,7 @@ export class PropertiesController {
    * Obtener propiedad por ID
    */
   @Get(':id')
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Query('format') format?: string

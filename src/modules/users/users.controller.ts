@@ -12,7 +12,8 @@ import {
   HttpStatus,
   UseGuards,
   Req,
-  NotFoundException
+  NotFoundException,
+  ForbiddenException
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
@@ -56,7 +57,6 @@ export class UsersController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SELLER)
   async findOne(@Param('id', ParseIntPipe) id: number, @Req() request: any) {
     const requester = (request as any).user;
     const where: any = { id, deleted: false };
@@ -99,13 +99,23 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
-  update( 
-    @Param('id', ParseIntPipe) id: number, 
-    @Body() updateUserDto: UpdateUserDto
+  @UseGuards(JwtAuthGuard)
+  async update( 
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateUserDto: UpdateUserDto,
+    @Req() req: any
   ) {
-    return this.usersService.update(id, updateUserDto);
+    const requester = req.user;
+
+    if (requester.role_id === UserRole.USER_ROL_SUPER_ADMIN || id === requester.id ) {
+      return this.usersService.update(id, updateUserDto);
+    } else if (requester.role_id === UserRole.USER_ROL_ADMIN  && requester.organization_id !== undefined) {
+        const target = await this.usersService.findById(id);
+        if (target?.organization_id === requester.organization_id) {
+          return this.usersService.update(id, updateUserDto);
+        }
+    }
+    throw new ForbiddenException('No tenés permiso para acceder a este recurso');
   }
 
   @Delete(':id')
