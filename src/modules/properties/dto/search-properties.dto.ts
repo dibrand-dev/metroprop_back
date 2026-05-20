@@ -58,7 +58,6 @@ export class SearchPropertiesDto {
   @Type(() => Number)
   @IsInt()
   user_id?: number;
-
   // ========== Ubicación ==========
 
   @IsOptional()

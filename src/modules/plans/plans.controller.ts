@@ -38,7 +38,6 @@ export class PlansController {
 
   @Get('branch/:branchId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   getBranchPlans(
     @Param('branchId', ParseIntPipe) branchId: number,
     @Request() req: any,
