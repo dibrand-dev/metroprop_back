@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
   Request,
+  ForbiddenException,
 } from '@nestjs/common';
 import { PlansService } from './plans.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
@@ -59,23 +60,39 @@ export class PlansController {
   // ─── User-plan routes ─────────────────────────────────────────────────────
 
   @Get('user/:userId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  @UseGuards(JwtAuthGuard)
   getUserPlans(
     @Param('userId', ParseIntPipe) userId: number,
     @Request() req: any,
   ) {
+    const requester = req.user;
+    const isAdmin =
+      requester.role_id === UserRole.USER_ROL_SUPER_ADMIN ||
+      requester.role_id === UserRole.USER_ROL_ADMIN;
+
+    if (!isAdmin && requester.id !== userId) {
+      throw new ForbiddenException('No tenés permiso para acceder a este recurso');
+    }
+
     return this.plansService.getUserPlans(userId, req.user);
   }
 
   @Post('user/:userId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  @UseGuards(JwtAuthGuard)
   createUserPlan(
     @Param('userId', ParseIntPipe) userId: number,
     @Body() dto: PlanPaymentDto,
     @Request() req: any,
   ) {
+    const requester = req.user;
+    const isAdmin =
+      requester.role_id === UserRole.USER_ROL_SUPER_ADMIN ||
+      requester.role_id === UserRole.USER_ROL_ADMIN;
+
+    if (!isAdmin && requester.id !== userId) {
+      throw new ForbiddenException('No tenés permiso para acceder a este recurso');
+    }
+
     return this.plansService.createUserPlan(dto, req.user, userId);
   }
 
