@@ -295,6 +295,20 @@ export class PropertiesService {
     return this.findOne(unitId);
   }
 
+  async deleteDevelopmentUnit(developmentId: number, unitId: number): Promise<void> {
+    const unit = await this.propertyRepository.findOne({
+      where: { id: unitId, development_id: developmentId, is_development: false, deleted: false },
+    });
+
+    if (!unit) {
+      throw new NotFoundException(
+        `Unidad con ID ${unitId} no encontrada en el emprendimiento ${developmentId}`,
+      );
+    }
+
+    await this.propertyRepository.update(unitId, { deleted: true });
+  }
+
   /**
    * Guarda multimedia para una propiedad específica
    * 

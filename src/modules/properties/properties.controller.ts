@@ -36,7 +36,6 @@ import { PropertyOwnershipGuard } from '../../common/guards/property-ownership.g
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { Request } from 'express';
-import { User } from '../users/entities/user.entity';
 
 @Controller('properties')
 export class PropertiesController {
@@ -317,6 +316,17 @@ export class PropertiesController {
       warnings: warnings?.length ? warnings : undefined,
       ...(multimediaResult ? { multimedia: multimediaResult } : {}),
     };
+  }
+
+  // DELETE UNITS
+  @Delete('development/:developmentId/units/:unitId')
+  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
+  async deleteDevelopmentUnit(
+    @Param('developmentId', ParseIntPipe) developmentId: number,
+    @Param('unitId', ParseIntPipe) unitId: number,
+  ) {
+    await this.propertiesService.deleteDevelopmentUnit(developmentId, unitId);
+    return { message: 'Unidad eliminada correctamente.' };
   }
 
   /**
