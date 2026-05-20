@@ -27,7 +27,7 @@ export class BranchesController {
   // get all branches by organization id
   @Get('organization/:orgId')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_COLLABORATOR, UserRole.USER_ROL_SELLER)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_COLLABORATOR, UserRole.USER_ROL_SUPERVISOR)
   getByOrganization(@Request() req: any, @Param('orgId') orgId: number) {
     if (
       req.user.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&

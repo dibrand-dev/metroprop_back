@@ -709,7 +709,7 @@ export class TokkoSyncService implements OnModuleInit {
 						name: seller.company_name ?? 'Admin',
 						email: seller.email ?? '',
 						password: PASSWORD_DEFAULT,
-						role_id: UserRole.USER_ROL_SELLER,
+						role_id: UserRole.USER_ROL_COLLABORATOR,
 						organizationId: org.id,
 					} as any);
 					adminUserId = newUser.id;

@@ -1017,7 +1017,7 @@ export class PropertiesService {
       select: ['id', 'user_id', 'organization_id'],
     });
 
-    if (user.role_id === UserRole.USER_ROL_ADMIN) {
+    if (user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) {
       const userOrgId = user.organization_id ?? user.organization?.id;
       const forbidden = properties.find((p) => p.organization_id !== userOrgId);
       if (forbidden) {
@@ -1029,7 +1029,6 @@ export class PropertiesService {
     }
 
     if (
-      user.role_id === UserRole.USER_ROL_SELLER ||
       user.role_id === UserRole.USER_ROL_COLLABORATOR
     ) {
       const forbidden = properties.find((p) => p.user_id !== user.id);

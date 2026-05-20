@@ -15,13 +15,13 @@ export class LeadsController {
  
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SELLER)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR)
   findAll(@Query() filters: LeadFiltersDto, @Req() request: Request) {
     const user = (request as any).user;
 
     if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
       // ve todo
-    } else if (user.role_id === UserRole.USER_ROL_ADMIN && user.organization_id !== undefined) {
+    } else if ((user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) && user.organization_id !== undefined) {
       filters.organization_id = user.organization_id;
     } else {
       // SELLER o ADMIN sin org → solo sus propios leads
@@ -33,7 +33,7 @@ export class LeadsController {
 
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SELLER)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR)
   async findOne(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
     let  lead = await this.leadsService.findOne(id);
     if (lead && ((request as any).user.role_id === UserRole.USER_ROL_SUPER_ADMIN || 

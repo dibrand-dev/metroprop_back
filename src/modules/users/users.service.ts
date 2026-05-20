@@ -32,7 +32,7 @@ export class UsersService {
     const user = this.usersRepository.create({
       ...createUserDto,
       password: hashedPassword,
-      role_id: createUserDto.role_id ?? UserRole.USER_ROL_SELLER,
+      role_id: createUserDto.role_id ?? UserRole.USER_ROL_COLLABORATOR,
       organization: createUserDto.organizationId
         ? ({ id: createUserDto.organizationId } as Organization)
         : undefined,

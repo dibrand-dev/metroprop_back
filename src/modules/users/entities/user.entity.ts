@@ -90,7 +90,7 @@ export class User {
   @Column({
     type: 'integer',
     nullable: false,
-    default: UserRole.USER_ROL_SELLER,
+    default: UserRole.USER_ROL_COLLABORATOR,
   })
   role_id!: UserRole;
 

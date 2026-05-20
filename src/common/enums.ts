@@ -239,7 +239,7 @@ export enum PublicationPlan {
  */
 export enum UserRole {
   USER_ROL_ADMIN = 1,
-  USER_ROL_SELLER = 2,
+  USER_ROL_SUPERVISOR = 2,
   USER_ROL_COLLABORATOR = 3,
   USER_ROL_SUPER_ADMIN = 4,
 }
