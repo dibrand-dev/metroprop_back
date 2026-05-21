@@ -96,17 +96,12 @@ export class LeadsController {
     return this.leadsService.findAll(filters);
   }
 
-  // get all leads by email @Get('email/:email')
-  findAllByEmail(@Param('email') email: string, @Req() request: Request) {
-    let  filters: LeadFiltersDto = { email };
-    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-      if((request as any).user.organization_id !== undefined) {
-        filters.organization_id = (request as any).user.organization_id;
-      } else {
-        filters.owner_user_id = (request as any).user.id;
-      }
-    }
-
+  // get all leads by email of the authenticated user
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Get('my-contacts')
+  findMyContacts(@Req() request: Request) {
+    const user = (request as any).user;
+    const filters: LeadFiltersDto = { email: user.email };
     return this.leadsService.findAll(filters);
   }
 
