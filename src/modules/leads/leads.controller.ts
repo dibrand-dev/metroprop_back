@@ -31,6 +31,15 @@ export class LeadsController {
     return this.leadsService.findAll(filters);
   }
 
+  // get all leads by email of the authenticated user
+  @UseGuards(JwtAuthGuard)
+  @Get('my-contacts')
+  findMyContacts(@Req() request: Request) {
+    const user = (request as any).user;
+    const filters: LeadFiltersDto = { email: user.email };
+    return this.leadsService.findAll(filters);
+  }
+
   @Get(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR)
@@ -96,13 +105,5 @@ export class LeadsController {
     return this.leadsService.findAll(filters);
   }
 
-  // get all leads by email of the authenticated user
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Get('my-contacts')
-  findMyContacts(@Req() request: Request) {
-    const user = (request as any).user;
-    const filters: LeadFiltersDto = { email: user.email };
-    return this.leadsService.findAll(filters);
-  }
 
 }

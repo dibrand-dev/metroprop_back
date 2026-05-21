@@ -713,6 +713,8 @@ export class PropertiesService {
       // Usar QueryBuilder para traer campos seleccionados y la relación organization
       property = await this.propertyRepository.createQueryBuilder('property')
         .leftJoinAndSelect('property.organization', 'organization')
+        .leftJoinAndSelect('property.units', 'units')
+        .leftJoinAndSelect('units.images', 'unitImages')
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
         .select([
@@ -724,8 +726,11 @@ export class PropertiesService {
           'property.street',
           'property.room_amount',
           'property.surface',
+          'property.is_development',
           'organization.company_name',
           'organization.company_logo',
+          'units',
+          'unitImages',
         ])
         .getOne();
 
@@ -1186,6 +1191,7 @@ export class PropertiesService {
         'p.geo_long',
         'p.created_at',
         'p_org.id',
+        'p.is_development',
         'p_org.company_name',
         'p_org.company_logo',
         'usr.id',
@@ -1205,6 +1211,8 @@ export class PropertiesService {
         )`,
       )
       .leftJoinAndSelect('p.organization', 'p_org')
+      .leftJoinAndSelect('p.units', 'units')
+      .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
       .where('p.id IN (:...ids)', { ids })
       .andWhere('p.deleted = false');
@@ -1225,6 +1233,7 @@ export class PropertiesService {
       images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
       lat: p.geo_lat,
       long: p.geo_long,
+      is_development: p.is_development,
       organization: p.organization ? {
         id: p.organization.id,
         company_name: p.organization.company_name,
@@ -1236,6 +1245,13 @@ export class PropertiesService {
         email: p.user.email,
         phone: p.user.phone,
       } : undefined,
+      units: p.units ? p.units.map((unit) => ({
+        id: unit.id,
+        publication_title: unit.publication_title,
+        price: unit.price,
+        price_square_meter: unit.price_square_meter,
+        images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
+      })) : undefined,
     }));
   }
 
@@ -1266,6 +1282,8 @@ export class PropertiesService {
       const qb = baseQb.clone();
       qb.leftJoinAndSelect('p.images', 'img')
         .leftJoinAndSelect('p.organization', 'p_org')
+        .leftJoinAndSelect('p.units', 'units')
+        .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
         .addOrderBy('img.order_position', 'ASC')
         .skip(offset)
@@ -1287,12 +1305,19 @@ export class PropertiesService {
           'p.currency',
           'p.price',
           'p.price_square_meter',
+          'p.is_development',
           'p.geo_lat',
           'p.geo_long',
           'p.created_at',
           'p_org.id',
           'p_org.company_name',
           'p_org.company_logo',
+          'units.id',
+          'units.publication_title',
+          'units.price',
+          'units.price_square_meter',
+          'unitImages',
+          'unitImages',
       //    'usr.id',
       //    'usr.name',
       //    'usr.email',
@@ -1310,6 +1335,8 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org')
+        .leftJoinAndSelect('p.units', 'units')
+        .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
         .orderBy(orderBy, orderDirection)
         .skip(offset)
@@ -1328,9 +1355,17 @@ export class PropertiesService {
         currency: p.currency,
         price: p.price,
         price_square_meter: p.price_square_meter,
+        is_development: p.is_development,
         images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
         lat: p.geo_lat,
         long: p.geo_long,
+        units: p.units ? p.units.map((unit) => ({
+          id: unit.id,
+          publication_title: unit.publication_title,
+          price: unit.price,
+          price_square_meter: unit.price_square_meter,
+          images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
+        })) : undefined,
         organization: p.organization ? {
           id: p.organization.id,
           company_name: p.organization.company_name,
@@ -1481,7 +1516,8 @@ export class PropertiesService {
           ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
           LIMIT 1
         )`,
-      )
+      ).leftJoinAndSelect('p.units', 'units')
+      .leftJoinAndSelect('units.images', 'unitImages')
       .skip(offset)
       .take(filters.limit);
 
