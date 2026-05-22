@@ -35,6 +35,7 @@ import { UpdateDevelopmentDto } from './dto/update-development.dto';
 import { CreateDevelopmentUnitDto } from './dto/create-development-unit.dto';
 import { UpdateDevelopmentUnitDto } from './dto/update-development-unit.dto';
 import { THUMB_PREFIX, COUNTRY_ARGENTINA_ID } from '@/common/constants';
+import { Location } from '../locations/entities/location.entity';
 
 export interface RequestingUser {
   id: number;
@@ -1234,6 +1235,7 @@ export class PropertiesService {
       lat: p.geo_lat,
       long: p.geo_long,
       is_development: p.is_development,
+      delivery_date: p.development_delivery_date,
       organization: p.organization ? {
         id: p.organization.id,
         company_name: p.organization.company_name,
@@ -1250,6 +1252,13 @@ export class PropertiesService {
         publication_title: unit.publication_title,
         price: unit.price,
         price_square_meter: unit.price_square_meter,
+        street: p.street,
+        total_surface: p.total_surface,
+        room_amount: p.room_amount,
+        bathroom_amount: p.bathroom_amount,
+        toilet_amount: unit.toilet_amount,
+        state_id: unit.state_id,
+        location_id: unit.location_id,
         images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
       })) : undefined,
     }));
@@ -1306,6 +1315,7 @@ export class PropertiesService {
           'p.price',
           'p.price_square_meter',
           'p.is_development',
+          'p.development_delivery_date',
           'p.geo_lat',
           'p.geo_long',
           'p.created_at',
@@ -1316,7 +1326,12 @@ export class PropertiesService {
           'units.publication_title',
           'units.price',
           'units.price_square_meter',
-          'unitImages',
+          'units.state_id',
+          'units.location_id',
+          'units.room_amount',
+          'units.bathroom_amount',
+          'units.toilet_amount',
+          'units.surface',
           'unitImages',
       //    'usr.id',
       //    'usr.name',
@@ -1356,6 +1371,7 @@ export class PropertiesService {
         price: p.price,
         price_square_meter: p.price_square_meter,
         is_development: p.is_development,
+        delivery_date: p.development_delivery_date,
         images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
         lat: p.geo_lat,
         long: p.geo_long,
@@ -1364,6 +1380,12 @@ export class PropertiesService {
           publication_title: unit.publication_title,
           price: unit.price,
           price_square_meter: unit.price_square_meter,
+          state_id: unit.state_id,
+          location_id: unit.location_id,
+          room_amount: unit.room_amount,
+          bathroom_amount: unit.bathroom_amount,
+          toilet_amount: unit.toilet_amount,
+          surface: unit.surface,
           images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
         })) : undefined,
         organization: p.organization ? {
