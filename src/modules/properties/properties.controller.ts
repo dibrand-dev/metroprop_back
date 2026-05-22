@@ -419,7 +419,6 @@ export class PropertiesController {
    * Obtener propiedad por ID
    */
   @Get(':id')
-  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Query('format') format?: string
