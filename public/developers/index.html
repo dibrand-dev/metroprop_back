@@ -489,7 +489,7 @@
       <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país. Obtener con <a href="#ep-loc-countries"><code>GET /locations/countries</code></a></td></tr>
       <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia o estado. Obtener con <a href="#ep-loc-states"><code>GET /locations/states?countryId=</code></a></td></tr>
       <tr><td><code>location_id</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad o ciudad. Obtener con <a href="#ep-loc-cities"><code>GET /locations/cities?stateId=</code></a></td></tr>
-      <tr><td><code>sublocation_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio o sublocalidad. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
+      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio o sublocalidad. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
       <tr><td><code>full_location</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>Texto libre con la ubicación completa (ej: <em>"Buenos Aires, Argentina"</em>)</td></tr>
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
@@ -521,7 +521,7 @@
   <span class="key">"country_id"</span>: <span class="number">1</span>,
   <span class="key">"state_id"</span>: <span class="number">146</span>,
   <span class="key">"location_id"</span>: <span class="string">24728</span>,
-  <span class="key">"sublocation_id"</span>: <span class="number">24731</span>,
+  <span class="key">"sub_location_id"</span>: <span class="number">24731</span>,
   <span class="key">"full_location"</span>: <span class="string">"Buenos Aires, Argentina"</span>,
   <span class="key">"geo_lat"</span>: <span class="number">-34.6037</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.3816</span>
@@ -1283,7 +1283,7 @@
   </div>
   <p>
     Retorna barrios o sublocalidades de una localidad dado su <code>locationId</code>.
-    Usar el <code>id</code> del resultado como <code>sub_location_id</code> / <code>sublocation_id</code>.
+    Usar el <code>id</code> del resultado como <code>sub_location_id</code> / <code>sub_location_id</code>.
   </p>
   <table class="field-table" style="max-width:400px">
   <div class="code-block"><span class="comment">// Request Body — todos los campos posibles</span>

@@ -54,7 +54,7 @@ export class PartnerApiController {
   @ApiTags('Locations')
   @ApiOperation({
     summary: 'Obtener lista de países',
-    description: 'Retorna todos los países disponibles para usar en location_id, state_id, country_id y sublocation_id.',
+    description: 'Retorna todos los países disponibles para usar en location_id, state_id, country_id y sub_location_id.',
   })
   @ApiResponse({ status: 200, description: 'Lista de países' })
   getCountries() {
@@ -87,7 +87,7 @@ export class PartnerApiController {
   @ApiTags('Locations')
   @ApiOperation({
     summary: 'Obtener sublocalidades/barrios de una localidad',
-    description: 'Retorna sublocalidades o barrios (sublocation_id) de una localidad dado su locationId.',
+    description: 'Retorna sublocalidades o barrios (sub_location_id) de una localidad dado su locationId.',
   })
   @ApiResponse({ status: 200, description: 'Lista de sublocalidades/barrios' })
   getLocationChildrens(@Query('locationId') locationId: number) {

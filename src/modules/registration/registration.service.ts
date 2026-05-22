@@ -220,7 +220,7 @@ export class RegistrationService {
       country_id: dto.country_id,
       state_id: dto.state_id,
       location_id: dto.location_id?.toString(),
-      sub_location_id: dto.sublocation_id,
+      sub_location_id: dto.sub_location_id,
       professional_type: dto.professional_type,
       cuit: dto.cuit,
       external_reference: dto.external_reference,

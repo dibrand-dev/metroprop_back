@@ -16,7 +16,7 @@
     "country_id": 1,
     "state_id": 1,
     "location_id": 1,
-    "sublocation_id": 1,
+    "sub_location_id": 1,
     "professional_type": "inmobiliario",
     "cuit": "30-71234567-9",
     "admin_name": "Juan Pérez",
