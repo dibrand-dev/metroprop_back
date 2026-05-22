@@ -200,6 +200,10 @@ export class PropertiesService {
         development_id: developmentId,
         organization_id: propertyData.organization_id ?? parentDev.organization_id,
         branch_id: propertyData.branch_id ?? parentDev.branch_id,
+        country_id: propertyData.country_id ?? parentDev.country_id,
+        state_id: propertyData.state_id ?? parentDev.state_id,
+        location_id: propertyData.location_id ?? parentDev.location_id,
+        sub_location_id: propertyData.sub_location_id ?? parentDev.sub_location_id,
         deleted: false,
       },
       { tags },
@@ -715,7 +719,7 @@ export class PropertiesService {
       property = await this.propertyRepository.createQueryBuilder('property')
         .leftJoinAndSelect('property.organization', 'organization')
         .leftJoinAndSelect('property.units', 'units')
-        .leftJoinAndSelect('units.images', 'unitImages')
+      //  .leftJoinAndSelect('units.images', 'unitImages')
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
         .select([
@@ -732,7 +736,7 @@ export class PropertiesService {
           'organization.company_name',
           'organization.company_logo',
           'units',
-          'unitImages',
+        //  'unitImages',
         ])
         .getOne();
 
@@ -1216,7 +1220,7 @@ export class PropertiesService {
       )
       .leftJoinAndSelect('p.organization', 'p_org')
       .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
-      .leftJoinAndSelect('units.images', 'unitImages')
+  //  .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
       .where('p.id IN (:...ids)', { ids })
       .andWhere('p.deleted = false');
@@ -1263,9 +1267,9 @@ export class PropertiesService {
         room_amount: p.room_amount,
         bathroom_amount: p.bathroom_amount,
         toilet_amount: unit.toilet_amount,
-        location_id: unit.location_id,
-        sub_location_id: unit.sub_location_id,
-        images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
+        location_id: p.location_id,
+        sub_location_id: p.sub_location_id,
+      //  images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
       })) : undefined,
     }));
   }
@@ -1298,7 +1302,7 @@ export class PropertiesService {
       qb.leftJoinAndSelect('p.images', 'img')
         .leftJoinAndSelect('p.organization', 'p_org')
         .leftJoinAndSelect('p.units', 'units')
-        .leftJoinAndSelect('units.images', 'unitImages')
+      //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
         .addOrderBy('img.order_position', 'ASC')
         .skip(offset)
@@ -1341,7 +1345,7 @@ export class PropertiesService {
           'units.bathroom_amount',
           'units.toilet_amount',
           'units.surface',
-          'unitImages',
+      //    'unitImages',
       //    'usr.id',
       //    'usr.name',
       //    'usr.email',
@@ -1360,7 +1364,7 @@ export class PropertiesService {
         )
         .leftJoinAndSelect('p.organization', 'p_org')
         .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
-        .leftJoinAndSelect('units.images', 'unitImages')
+      //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
         .orderBy(orderBy, orderDirection)
         .skip(offset)
@@ -1392,13 +1396,13 @@ export class PropertiesService {
           price: unit.price,
           currency: unit.currency,
           price_square_meter: unit.price_square_meter,
-          location_id: unit.location_id,
-          sub_location_id: unit.sub_location_id,
+          location_id: p.location_id,
+          sub_location_id: p.sub_location_id,
           room_amount: unit.room_amount,
           bathroom_amount: unit.bathroom_amount,
           toilet_amount: unit.toilet_amount,
           surface: unit.surface,
-          images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
+      //  images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
         })) : undefined,
         organization: p.organization ? {
           id: p.organization.id,
@@ -1552,7 +1556,7 @@ export class PropertiesService {
         )`,
       )
       .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
-      .leftJoinAndSelect('units.images', 'unitImages')
+   //   .leftJoinAndSelect('units.images', 'unitImages')
       .skip(offset)
       .take(filters.limit);
 

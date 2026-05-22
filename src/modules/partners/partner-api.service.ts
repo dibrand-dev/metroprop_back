@@ -656,6 +656,10 @@ export class PartnerApiService {
       development_id: parentDev.id,
       organization_id: organizationId,
       branch_id: branchId,
+      country_id: propertyData.country_id ?? parentDev.country_id,
+      state_id: propertyData.state_id ?? parentDev.state_id,
+      location_id: propertyData.location_id ?? parentDev.location_id,
+      sub_location_id: propertyData.sub_location_id ?? parentDev.sub_location_id,
     };
 
     if (existing) {
