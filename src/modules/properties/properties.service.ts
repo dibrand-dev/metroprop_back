@@ -1214,7 +1214,22 @@ export class PropertiesService {
         )`,
       )
       .leftJoinAndSelect('p.organization', 'p_org')
-      .leftJoinAndSelect('p.units', 'units')
+      .leftJoinAndSelect(
+        'p.units',
+        'units',
+        `p.is_development = true
+        AND units.deleted = false
+        AND units.status = ${PropertyStatus.DISPONIBLE}
+        AND units.id = (
+          SELECT u.id
+          FROM properties u
+          WHERE u."development_id" = p.id
+            AND u.deleted = false
+            AND u.status = ${PropertyStatus.DISPONIBLE}
+          ORDER BY u.price ASC
+          LIMIT 1
+        )`,
+      )
       .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
       .where('p.id IN (:...ids)', { ids })
@@ -1237,7 +1252,8 @@ export class PropertiesService {
       lat: p.geo_lat,
       long: p.geo_long,
       is_development: p.is_development,
-      ...(p.sub_location_id != null ? { sub_location_id: p.sub_location_id } : { location_id: p.location_id}),
+      location_id: p.location_id,
+      sub_location_id: p.sub_location_id,
       delivery_date: p.development_delivery_date,
       organization: p.organization ? {
         id: p.organization.id,
@@ -1259,8 +1275,9 @@ export class PropertiesService {
         total_surface: p.total_surface,
         room_amount: p.room_amount,
         bathroom_amount: p.bathroom_amount,
-        toilet_amount: unit.toilet_amount, 
-        ...(unit.sub_location_id != null ? { sub_location_id: unit.sub_location_id } : { location_id: unit.location_id}),
+        toilet_amount: unit.toilet_amount,
+        location_id: unit.location_id,
+        sub_location_id: unit.sub_location_id,
         images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
       })) : undefined,
     }));
@@ -1354,7 +1371,22 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org')
-        .leftJoinAndSelect('p.units', 'units')
+        .leftJoinAndSelect(
+          'p.units',
+          'units',
+          `p.is_development = true
+          AND units.deleted = false
+          AND units.status = ${PropertyStatus.DISPONIBLE}
+          AND units.id = (
+            SELECT u.id
+            FROM properties u
+            WHERE u."development_id" = p.id
+              AND u.deleted = false
+              AND u.status = ${PropertyStatus.DISPONIBLE}
+            ORDER BY u.price ASC
+            LIMIT 1
+          )`,
+        )
         .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
         .orderBy(orderBy, orderDirection)
@@ -1375,7 +1407,8 @@ export class PropertiesService {
         price: p.price,
         price_square_meter: p.price_square_meter,
         is_development: p.is_development,
-        ...(p.sub_location_id != null ? { sub_location_id: p.sub_location_id } : { location_id: p.location_id}),
+        location_id: p.location_id,
+        sub_location_id: p.sub_location_id,
         delivery_date: p.development_delivery_date,
         images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
         lat: p.geo_lat,
@@ -1385,7 +1418,8 @@ export class PropertiesService {
           publication_title: unit.publication_title,
           price: unit.price,
           price_square_meter: unit.price_square_meter,
-          ...(unit.sub_location_id != null ? { sub_location_id: unit.sub_location_id } : { location_id: unit.location_id}),
+          location_id: unit.location_id,
+          sub_location_id: unit.sub_location_id,
           room_amount: unit.room_amount,
           bathroom_amount: unit.bathroom_amount,
           toilet_amount: unit.toilet_amount,
@@ -1542,7 +1576,23 @@ export class PropertiesService {
           ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
           LIMIT 1
         )`,
-      ).leftJoinAndSelect('p.units', 'units')
+      )
+      .leftJoinAndSelect(
+        'p.units',
+        'units',
+        `p.is_development = true
+        AND units.deleted = false
+        AND units.status = ${PropertyStatus.DISPONIBLE}
+        AND units.id = (
+          SELECT u.id
+          FROM properties u
+          WHERE u."development_id" = p.id
+            AND u.deleted = false
+            AND u.status = ${PropertyStatus.DISPONIBLE}
+          ORDER BY u.price ASC
+          LIMIT 1
+        )`,
+      )
       .leftJoinAndSelect('units.images', 'unitImages')
       .skip(offset)
       .take(filters.limit);
