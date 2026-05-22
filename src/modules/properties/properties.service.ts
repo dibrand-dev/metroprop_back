@@ -1215,22 +1215,7 @@ export class PropertiesService {
         )`,
       )
       .leftJoinAndSelect('p.organization', 'p_org')
-      .leftJoinAndSelect(
-        'p.units',
-        'units',
-        `p.is_development = true
-        AND units.deleted = false
-        AND units.status = ${PropertyStatus.DISPONIBLE}
-        AND units.id = (
-          SELECT u.id
-          FROM properties u
-          WHERE u."development_id" = p.id
-            AND u.deleted = false
-            AND u.status = ${PropertyStatus.DISPONIBLE}
-          ORDER BY u.price ASC
-          LIMIT 1
-        )`,
-      )
+      .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
       .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
       .where('p.id IN (:...ids)', { ids })
@@ -1374,22 +1359,7 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org')
-        .leftJoinAndSelect(
-          'p.units',
-          'units',
-          `p.is_development = true
-          AND units.deleted = false
-          AND units.status = ${PropertyStatus.DISPONIBLE}
-          AND units.id = (
-            SELECT u.id
-            FROM properties u
-            WHERE u."development_id" = p.id
-              AND u.deleted = false
-              AND u.status = ${PropertyStatus.DISPONIBLE}
-            ORDER BY u.price ASC
-            LIMIT 1
-          )`,
-        )
+        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
         .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
         .orderBy(orderBy, orderDirection)
@@ -1581,22 +1551,7 @@ export class PropertiesService {
           LIMIT 1
         )`,
       )
-      .leftJoinAndSelect(
-        'p.units',
-        'units',
-        `p.is_development = true
-        AND units.deleted = false
-        AND units.status = ${PropertyStatus.DISPONIBLE}
-        AND units.id = (
-          SELECT u.id
-          FROM properties u
-          WHERE u."development_id" = p.id
-            AND u.deleted = false
-            AND u.status = ${PropertyStatus.DISPONIBLE}
-          ORDER BY u.price ASC
-          LIMIT 1
-        )`,
-      )
+      .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
       .leftJoinAndSelect('units.images', 'unitImages')
       .skip(offset)
       .take(filters.limit);
