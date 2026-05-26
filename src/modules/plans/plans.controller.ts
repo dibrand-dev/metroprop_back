@@ -36,6 +36,15 @@ export class PlansController {
 
   // ─── Branch-plan routes (static segments before dynamic :id) ──────────────
 
+  @Get('branch/:branchId/availability')
+  @UseGuards(JwtAuthGuard)
+  getBranchPlanAvailability(
+    @Param('branchId', ParseIntPipe) branchId: number,
+    @Request() req: any,
+  ) {
+    return this.plansService.getBranchPlanAvailability(branchId, req.user);
+  }
+
   @Get('branch/:branchId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   getBranchPlans(

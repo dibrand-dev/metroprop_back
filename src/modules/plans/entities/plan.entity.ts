@@ -26,9 +26,8 @@ export class Plan {
   @Column({ type: 'varchar', length: 3, default: Currency.USD })
   currency!: Currency;
 
-  /** Max number of properties allowed (0 = unlimited) */
   @Column({ type: 'int', default: 0 })
-  property_limit!: number;
+  visibility!: number;
 
   /** Max number of highlighted properties (destaques) allowed (0 = unlimited) */
   @Column({ type: 'int', default: 0 })

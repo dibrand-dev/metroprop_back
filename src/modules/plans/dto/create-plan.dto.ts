@@ -22,10 +22,9 @@ export class CreatePlanDto {
   @IsEnum(Currency)
   currency!: Currency;
 
-  /** Max properties (0 = unlimited) */
   @IsInt()
   @Min(0)
-  property_limit!: number;
+  visibility!: number;
 
   /** Max highlights/destaques (0 = unlimited) */
   @IsInt()

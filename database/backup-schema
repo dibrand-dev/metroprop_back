@@ -746,7 +746,7 @@ CREATE TABLE IF NOT EXISTS public.plans (
 	plan_description varchar(500) NULL,
 	price           int4         NOT NULL DEFAULT 0,
 	currency        varchar(3)   NOT NULL DEFAULT 'USD',
-	property_limit  int4         NULL DEFAULT 0,
+	visibility  int4         NULL DEFAULT 0,
 	highlight_limit int4         NOT NULL DEFAULT 0,
 	is_active       bool         NOT NULL DEFAULT true,
 	deleted         bool         NOT NULL DEFAULT false,

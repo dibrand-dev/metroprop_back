@@ -13,10 +13,11 @@ import { Plan } from './entities/plan.entity';
 import { BranchPlan } from './entities/branch-plan.entity';
 import { UserPlan } from './entities/user-plan.entity';
 import { Branch } from '../branches/entities/branch.entity';
+import { Property } from '../properties/entities/property.entity';
 import { CreatePlanDto } from './dto/create-plan.dto';
 import { UpdatePlanDto } from './dto/update-plan.dto';
 import { PlanPaymentDto } from './dto/mercadopago-purchase.dto';
-import { UserRole } from '../../common/enums';
+import { UserRole, PropertyStatus } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
 
 interface MercadoPagoErrorCause {
@@ -57,6 +58,8 @@ export class PlansService {
     private readonly userPlanRepo: Repository<UserPlan>,
     @InjectRepository(User)
     private readonly userRepo: Repository<User>,
+    @InjectRepository(Property)
+    private readonly propertyRepo: Repository<Property>,
   ) {}
 
   findAll(): Promise<Plan[]> {
@@ -182,6 +185,73 @@ export class PlansService {
 
     branchPlan.active = false;
     return this.branchPlanRepo.save(branchPlan);
+  }
+
+  async getBranchPlanAvailability(branchId: number, user: any) {
+    const branch = await this.branchRepo.findOne({
+      where: { id: branchId },
+      relations: ['organization'],
+    });
+    if (!branch) throw new NotFoundException('Branch not found');
+
+    if (
+      user.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
+      user.organization_id !== branch.organization?.id
+    ) {
+      throw new ForbiddenException(
+        'No tienes permisos para ver la disponibilidad de esta branch',
+      );
+    }
+
+    const rows = await this.branchPlanRepo
+      .createQueryBuilder('bp')
+      .innerJoin('bp.plan', 'p')
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('prop.hired_plan_id', 'hpid')
+            .addSelect('COUNT(prop.id)', 'cnt')
+            .from(Property, 'prop')
+            .where('prop.branch_id = :branchId')
+            .andWhere('prop.deleted = false')
+            .andWhere('prop.status NOT IN (:...excludedStatuses)')
+            .groupBy('prop.hired_plan_id'),
+        'prop_counts',
+        'prop_counts.hpid = p.id',
+      )
+      .select('p.id', 'plan_id')
+      .addSelect('p.plan_name', 'plan_name')
+      .addSelect('p.highlight_limit', 'highlight_limit')
+      .addSelect('ARRAY_AGG(bp.id)', 'branch_plan_ids')
+      .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
+      .where('bp.branch_id = :branchId', { branchId })
+      .andWhere('bp.active = true')
+      .andWhere('bp.end_date >= :now', { now: new Date() })
+      .andWhere('p.deleted = false')
+      .andWhere('p.is_active = true')
+      .groupBy('p.id')
+      .addGroupBy('p.plan_name')
+      .addGroupBy('p.highlight_limit')
+      .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
+      .getRawMany<{
+        plan_id: number;
+        plan_name: string;
+        highlight_limit: number;
+        branch_plan_ids: number[];
+        used: string;
+      }>();
+
+    return rows.map((r) => {
+      const used = parseInt(r.used, 10);
+      return {
+        plan_id: r.plan_id,
+        plan_name: r.plan_name,
+        highlight_limit: r.highlight_limit,
+        branch_plan_ids: r.branch_plan_ids,
+        used,
+        available: Math.max(0, r.highlight_limit - used),
+      };
+    });
   }
 
   async getBranchPlans(branchId: number, user: any): Promise<BranchPlan[]> {

@@ -311,7 +311,7 @@ export class PropertiesService {
       );
     }
 
-    await this.propertyRepository.update(unitId, { deleted: true });
+    await this.propertyRepository.update(unitId, { deleted: true, hired_plan_id: 0 });
   }
 
   /**
@@ -924,12 +924,22 @@ export class PropertiesService {
       await this.assertBulkOwnership(requestingUser, targetIds);
     }
 
+
     let affected = 0;
     if (targetIds.length > 0) {
+
+    
+
+
+      const updateFields: Partial<Property> = { status };
+      if (status !== PropertyStatus.DISPONIBLE) {
+        updateFields.hired_plan_id = 0;
+      }
+
       const updateResult = await this.propertyRepository
         .createQueryBuilder()
         .update(Property)
-        .set({ status })
+        .set(updateFields)
         .where('id IN (:...targetIds)', { targetIds })
         .andWhere('deleted = :deleted', { deleted: false })
         .execute();
@@ -1108,6 +1118,7 @@ export class PropertiesService {
 
     property.deleted = true;
     property.deleted_at = new Date();
+    property.hired_plan_id = 0;
 
     await this.propertyRepository.save(property);
 
