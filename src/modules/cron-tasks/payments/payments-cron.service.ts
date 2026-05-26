@@ -4,7 +4,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { In, LessThan, Repository } from 'typeorm';
 import { BranchPlan } from '../../plans/entities/branch-plan.entity';
 import { Property } from '../../properties/entities/property.entity';
-import { PublicationPlan } from '../../../common/enums';
 
 @Injectable()
 export class PaymentsCronService {
@@ -49,7 +48,7 @@ export class PaymentsCronService {
       { hired_plan_id: In(expiredIds) },
       {
         hired_plan_id: null as unknown as number,
-        selected_plan: PublicationPlan.PUBLICATION_FREE,
+        visibility: 0, 
       },
     );
 

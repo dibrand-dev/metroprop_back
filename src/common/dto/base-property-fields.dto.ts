@@ -21,7 +21,6 @@ import {
   SurfaceMeasurement,
   Brightness,
   GarageCoverage,
-  PublicationPlan,
 } from '../enums';
 
 /**
@@ -315,8 +314,9 @@ export class BasePropertyFieldsDto {
 
   // --- Plan de publicación ---
   @IsOptional()
-  @IsEnum(PublicationPlan)
-  selected_plan?: PublicationPlan;
+  @IsNumber()
+  @Min(0) 
+  visibility?: number;
 
   // --- Precio por metro cuadrado ---
   @IsOptional()

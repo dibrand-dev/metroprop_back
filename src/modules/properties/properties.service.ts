@@ -27,7 +27,6 @@ import {
   MediaUploadStatus,
   Currency,
   PropertyType,
-  PublicationPlan,
   UserRole,
 } from '../../common/enums';
 import { CreateDevelopmentDto } from './dto/create-development.dto';
@@ -35,8 +34,7 @@ import { UpdateDevelopmentDto } from './dto/update-development.dto';
 import { CreateDevelopmentUnitDto } from './dto/create-development-unit.dto';
 import { UpdateDevelopmentUnitDto } from './dto/update-development-unit.dto';
 import { THUMB_PREFIX, COUNTRY_ARGENTINA_ID } from '@/common/constants';
-import { Location } from '../locations/entities/location.entity';
-
+import { Plan } from '../plans/entities/plan.entity';
 export interface RequestingUser {
   id: number;
   role_id: number;
@@ -959,17 +957,14 @@ export class PropertiesService {
   async changeSelectedPlan(
     body: {
       ids: number | number[];
-      selected_plan: number;
+      hired_plan_id: number;
     },
     requestingUser?: RequestingUser,
-  ): Promise<{ message: string; updated: number; ids: number[]; selected_plan: PublicationPlan }> {
-    const { ids, selected_plan } = body;
+  ): Promise<{ message: string; updated: number; ids: number[]; hired_plan_id: number }> {
+    const { ids, hired_plan_id } = body;
 
-    const validPlans = Object.values(PublicationPlan).filter(
-      (value): value is PublicationPlan => typeof value === 'number',
-    );
-    if (!Number.isInteger(selected_plan) || !validPlans.includes(selected_plan as PublicationPlan)) {
-      throw new BadRequestException('selected_plan debe ser un valor valido de PublicationPlan');
+    if (!Number.isInteger(hired_plan_id)) {
+      throw new BadRequestException('hired_plan_id debe ser un valor valido');
     }
 
     const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
@@ -983,7 +978,7 @@ export class PropertiesService {
       const updateResult = await this.propertyRepository
         .createQueryBuilder()
         .update(Property)
-        .set({ selected_plan })
+        .set({ hired_plan_id })
         .where('id IN (:...targetIds)', { targetIds })
         .andWhere('deleted = :deleted', { deleted: false })
         .execute();
@@ -996,7 +991,7 @@ export class PropertiesService {
         : 'Plan actualizado correctamente',
       updated: affected,
       ids: targetIds,
-      selected_plan: selected_plan as PublicationPlan,
+      hired_plan_id: hired_plan_id as number,
     };
   }
 
@@ -1468,9 +1463,9 @@ export class PropertiesService {
       bathroom_amount: Array<{ value: number | null; count: number }>;
       suite_amount: Array<{ value: number | null; count: number }>;
       property_type: Array<{ value: number | null; count: number }>;
-      selected_plan: Array<{ value: number | null; count: number }>;
+      hired_plan_id: Array<{ value: number | null; count: number; plan_name?: string }>;
       operation_type: Array<{ value: number | null; count: number }>;
-      users: Array<{ value: number | null; count: number }>;
+      users: Array<{ value: number | null; count: number; user_name?: string }>;
       location_id: Array<{ value: number | null; count: number }>;
     };
   }> {
@@ -1492,7 +1487,7 @@ export class PropertiesService {
       bathroomRaw,
       suiteRaw,
       propertyTypeRaw,
-      selectedPlanRaw,
+      hiredPlanRaw,
       operationTypeRaw,
       usersRaw,
       locationRaw,
@@ -1527,11 +1522,14 @@ export class PropertiesService {
         .orderBy('p.property_type', 'ASC')
         .getRawMany<{ value: number | null; count: string }>(),
       baseQb.clone()
-        .select('p.selected_plan', 'value')
+        .select('p.hired_plan_id', 'value')
         .addSelect('COUNT(p.id)', 'count')
-        .groupBy('p.selected_plan')
-        .orderBy('p.selected_plan', 'ASC')
-        .getRawMany<{ value: number | null; count: string }>(),
+        .addSelect('pl.plan_name', 'plan_name')
+        .leftJoin(Plan, 'pl', 'pl.id = p.hired_plan_id')
+        .groupBy('p.hired_plan_id')
+        .addGroupBy('pl.plan_name')
+        .orderBy('p.hired_plan_id', 'ASC')
+        .getRawMany<{ value: number | null; count: string; plan_name: string | null }>(),
       baseQb.clone()
         .select('p.operation_type', 'value')
         .addSelect('COUNT(p.id)', 'count')
@@ -1541,9 +1539,12 @@ export class PropertiesService {
       baseQb.clone()
         .select('p.user_id', 'user_id')
         .addSelect('COUNT(p.id)', 'count')
+        .addSelect('u.name', 'user_name')
+        .leftJoin('users', 'u', 'u.id = p.user_id')
         .groupBy('p.user_id')
+        .addGroupBy('u.name')
         .orderBy('count', 'DESC')
-        .getRawMany<{ user_id: number | null; count: string }>(),
+        .getRawMany<{ user_id: number | null; count: string; user_name: string | null }>(),
       baseQb.clone()
         .select('p.location_id', 'value')
         .addSelect('COUNT(p.id)', 'count')
@@ -1566,7 +1567,7 @@ export class PropertiesService {
           LIMIT 1
         )`,
       )
-      .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
+       .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
    //   .leftJoinAndSelect('units.images', 'unitImages')
       .skip(offset)
       .take(filters.limit);
@@ -1590,9 +1591,13 @@ export class PropertiesService {
         bathroom_amount: toFacet(bathroomRaw),
         suite_amount: toFacet(suiteRaw),
         property_type: toFacet(propertyTypeRaw),
-        selected_plan: toFacet(selectedPlanRaw),
+        hired_plan_id: hiredPlanRaw.map((r) => ({
+          value: r.value,
+          count: parseInt(r.count, 10),
+          plan_name: r.plan_name ?? undefined,
+        })),
         operation_type: toFacet(operationTypeRaw),
-        users: usersRaw.map((r) => ({ value: r.user_id, count: parseInt(r.count, 10) })),
+        users: usersRaw.map((r) => ({ value: r.user_id, count: parseInt(r.count, 10), user_name: r.user_name ?? undefined })),
         location_id: toFacet(locationRaw),
       },
     };

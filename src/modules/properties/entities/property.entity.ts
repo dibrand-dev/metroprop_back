@@ -25,7 +25,6 @@ import {
   TemporalRentPeriod,
   Brightness,
   GarageCoverage,
-  PublicationPlan,
   PropertySubtype,
   DevelopmentType,
 } from '../../../common/enums';
@@ -239,8 +238,8 @@ export class Property {
   @Column({ type: 'integer', nullable: true })
   period?: TemporalRentPeriod;
 
-  @Column({ type: 'integer', nullable: true, default: PublicationPlan.PUBLICATION_FREE })
-  selected_plan?: PublicationPlan;
+  @Column({ type: 'integer', nullable: true, default: 0 })
+  visibility?: number;
 
   @Column({ type: 'integer', nullable: true })
   hired_plan_id?: number;

@@ -33,7 +33,7 @@
   "roofed_surface_measurement": "m2",
   "expenses": 500,
   "currency_expenses": "ARS",
-  "selected_plan": 1,
+  "visibility": 0,
   "images": [
     {
       "url": "https://example.com/images/property-001-front.jpg",

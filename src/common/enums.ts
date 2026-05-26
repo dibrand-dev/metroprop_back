@@ -226,15 +226,6 @@ export enum DevelopmentType {
 }
 
 /**
- * Plan de publicación para una propiedad.
- */
-export enum PublicationPlan {
-  PUBLICATION_DRAFT = 0,    // Borrador (oculto para usuarios)
-  PUBLICATION_FREE = 1,     // Plan gratuito
-  PUBLICATION_PREMIUM = 2,  // Plan premium
-}
-
-/**
  * Roles de usuario.
  */
 export enum UserRole {

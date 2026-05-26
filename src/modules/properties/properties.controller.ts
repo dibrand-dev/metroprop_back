@@ -453,7 +453,7 @@ export class PropertiesController {
 
   /**
    * PATCH /properties/republish
-   * Cambiar el plan de publicación (selected_plan) de una o varias propiedades
+   * Cambiar el plan de publicación (hired_plan_id) de una o varias propiedades
    */
   @Patch('republish')
   @UseGuards(JwtAuthGuard)
@@ -461,7 +461,7 @@ export class PropertiesController {
     @Body()
     body: {
       ids: number | number[];
-      selected_plan: number;
+      hired_plan_id: number;
     },
     @Req() req: Request,
   ) {

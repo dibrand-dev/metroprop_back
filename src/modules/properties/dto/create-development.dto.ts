@@ -13,10 +13,9 @@ import {
   IsEnum,
   IsNumber,
   IsDateString,
-  isNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { PropertyStatus, DevelopmentType, PropertyType, OperationType, PublicationPlan } from '../../../common/enums';
+import { PropertyStatus, DevelopmentType, PropertyType, OperationType } from '../../../common/enums';
 import { CreateImageDto, CreateVideoDto, CreateMultimedia360Dto, CreateAttachedDto } from './create-property.dto';
 import { CreateDevelopmentUnitDto } from './create-development-unit.dto';
 
@@ -132,8 +131,9 @@ export class CreateDevelopmentDto {
   postal_code?: string;
 
   @IsOptional()
-  @IsEnum(PublicationPlan)
-  selected_plan?: PublicationPlan;
+  @IsNumber()
+  @Min(0)
+  visibility?: number;
 
   // ========== Emprendimiento ==========
 
