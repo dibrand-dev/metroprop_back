@@ -222,6 +222,7 @@ export class PlansService {
       .select('p.id', 'plan_id')
       .addSelect('p.plan_name', 'plan_name')
       .addSelect('p.highlight_limit', 'highlight_limit')
+      .addSelect('p.visibility', 'visibility')
       .addSelect('ARRAY_AGG(bp.id)', 'branch_plan_ids')
       .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
       .where('bp.branch_id = :branchId', { branchId })
@@ -236,6 +237,7 @@ export class PlansService {
       .getRawMany<{
         plan_id: number;
         plan_name: string;
+        visibility: string;
         highlight_limit: number;
         branch_plan_ids: number[];
         used: string;
@@ -246,6 +248,7 @@ export class PlansService {
       return {
         plan_id: r.plan_id,
         plan_name: r.plan_name,
+        plan_visibility: r.visibility,
         highlight_limit: r.highlight_limit,
         branch_plan_ids: r.branch_plan_ids,
         used,
@@ -364,6 +367,7 @@ export class PlansService {
       .select('p.id', 'plan_id')
       .addSelect('p.plan_name', 'plan_name')
       .addSelect('p.highlight_limit', 'highlight_limit')
+      .addSelect('p.visibility', 'visibility')
       .addSelect('ARRAY_AGG(up.id)', 'user_plan_ids')
       .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
       .where('up.user_id = :userId', { userId })
@@ -379,6 +383,7 @@ export class PlansService {
         plan_id: number;
         plan_name: string;
         highlight_limit: number;
+        visibility: string;
         user_plan_ids: number[];
         used: string;
       }>();
@@ -388,6 +393,7 @@ export class PlansService {
       return {
         plan_id: r.plan_id,
         plan_name: r.plan_name,
+        plan_visibility: r.visibility,
         highlight_limit: r.highlight_limit,
         user_plan_ids: r.user_plan_ids,
         used,
