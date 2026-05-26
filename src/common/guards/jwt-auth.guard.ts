@@ -25,10 +25,10 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
     console.warn(`⚠️  JWT BYPASS ACTIVATED for IP ${ip} - injecting fake user and skipping auth guards. Remove 'x-bypass' header to disable.`);
     // ── STEP 3: Local + bypass activo → inyectar usuario fake, saltar Passport.
     req.user = {
-      id: Number(process.env.DEV_BYPASS_USER_ID ?? 76),
-      email: process.env.DEV_BYPASS_USER_EMAIL ?? 'huerta.em@gmail.com',
-      role_id: Number(process.env.DEV_BYPASS_ROLE_ID ?? 2),
-      organization_id: Number(process.env.DEV_BYPASS_ORGANIZATION_ID ?? null),
+      id: Number(process.env.DEV_BYPASS_USER_ID ?? 77),
+      email: process.env.DEV_BYPASS_USER_EMAIL ?? 'rocio-britos@hotmail.com',
+      role_id: Number(process.env.DEV_BYPASS_ROLE_ID ?? 1),
+      organization_id: Number(process.env.DEV_BYPASS_ORGANIZATION_ID ?? 56),
     };
     console.warn(`Injected fake user: ${JSON.stringify(req.user)}`);
     return true;

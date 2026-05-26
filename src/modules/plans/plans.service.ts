@@ -328,6 +328,74 @@ export class PlansService {
     return this.userPlanRepo.save(userPlan);
   }
 
+  async getUserPlanAvailability(userId: number, requester: any) {
+    const targetUser = await this.userRepo.findOne({
+      where: { id: userId },
+      relations: ['organization'],
+    });
+    if (!targetUser) throw new NotFoundException('User not found');
+
+    const orgId = targetUser.organization?.id;
+    if (
+      requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
+      requester.organization_id !== orgId
+    ) {
+      throw new ForbiddenException(
+        'No tienes permisos para ver la disponibilidad de este usuario',
+      );
+    }
+
+    const rows = await this.userPlanRepo
+      .createQueryBuilder('up')
+      .innerJoin('up.plan', 'p')
+      .leftJoin(
+        (qb) =>
+          qb
+            .select('prop.hired_plan_id', 'hpid')
+            .addSelect('COUNT(prop.id)', 'cnt')
+            .from(Property, 'prop')
+            .where('prop.user_id = :userId')
+            .andWhere('prop.deleted = false')
+            .andWhere('prop.status NOT IN (:...excludedStatuses)')
+            .groupBy('prop.hired_plan_id'),
+        'prop_counts',
+        'prop_counts.hpid = p.id',
+      )
+      .select('p.id', 'plan_id')
+      .addSelect('p.plan_name', 'plan_name')
+      .addSelect('p.highlight_limit', 'highlight_limit')
+      .addSelect('ARRAY_AGG(up.id)', 'user_plan_ids')
+      .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
+      .where('up.user_id = :userId', { userId })
+      .andWhere('up.active = true')
+      .andWhere('up.end_date >= :now', { now: new Date() })
+      .andWhere('p.deleted = false')
+      .andWhere('p.is_active = true')
+      .groupBy('p.id')
+      .addGroupBy('p.plan_name')
+      .addGroupBy('p.highlight_limit')
+      .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
+      .getRawMany<{
+        plan_id: number;
+        plan_name: string;
+        highlight_limit: number;
+        user_plan_ids: number[];
+        used: string;
+      }>();
+
+    return rows.map((r) => {
+      const used = parseInt(r.used, 10);
+      return {
+        plan_id: r.plan_id,
+        plan_name: r.plan_name,
+        highlight_limit: r.highlight_limit,
+        user_plan_ids: r.user_plan_ids,
+        used,
+        available: Math.max(0, r.highlight_limit - used),
+      };
+    });
+  }
+
   async getUserPlans(userId: number, requester: any): Promise<UserPlan[]> {
     const targetUser = await this.userRepo.findOne({
       where: { id: userId },
