@@ -13,6 +13,7 @@ import { User } from '../users/entities/user.entity';
 import { EmailService } from '../../common/email/email.service';
 import { notifyTokkoContact } from '../../common/helpers/tokko-helper';
 import { TOKKO_PARTNER_NAME, API_BASE_URL } from '../../common/constants';
+import { PropertiesService, PropertyCard } from '../properties/properties.service';
 
 @Injectable()
 export class LeadsService {
@@ -32,6 +33,7 @@ export class LeadsService {
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
     private readonly emailService: EmailService,
+    private readonly propertiesService: PropertiesService,
   ) {}
 
   async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
@@ -98,6 +100,25 @@ export class LeadsService {
     const leads = await queryBuilder.getMany();
 
     return leads;
+  }
+
+  async getLeadProperties(filters: { email: string }): Promise<PropertyCard[]> {
+    const leads = await this.leadsRepository.find({
+      where: { email: filters.email },
+      relations: ['lead_properties'],
+    });
+
+    if (!leads.length) return [];
+
+    const propertyIds = [
+      ...new Set(
+        leads.flatMap((l) => l.lead_properties?.map((lp) => lp.property_id) ?? []),
+      ),
+    ];
+
+    if (!propertyIds.length) return [];
+
+    return this.propertiesService.getPropertiesCardsByIds(propertyIds);
   }
 
   async findOne(id: number): Promise<Lead> {

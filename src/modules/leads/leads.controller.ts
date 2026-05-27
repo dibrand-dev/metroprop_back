@@ -36,8 +36,7 @@ export class LeadsController {
   @Get('my-contacts')
   findMyContacts(@Req() request: Request) {
     const user = (request as any).user;
-    const filters: LeadFiltersDto = { email: user.email };
-    return this.leadsService.findAll(filters);
+    return this.leadsService.getLeadProperties({ email: user.email });
   }
 
   @Get(':id')
