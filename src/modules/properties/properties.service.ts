@@ -1225,6 +1225,8 @@ export class PropertiesService {
         'p.currency',
         'p.price',
         'p.price_square_meter',
+        'p.is_development',
+        'p.development_delivery_date',
         'p.geo_lat',
         'p.geo_long',
         'p.created_at',
