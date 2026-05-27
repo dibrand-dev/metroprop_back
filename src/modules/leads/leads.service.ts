@@ -50,6 +50,8 @@ export class LeadsService {
     const queryBuilder = this.leadsRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.lead_properties', 'leadProperty')
+      .leftJoinAndSelect('leadProperty.property', 'property')
+      .leftJoinAndSelect('property.images', 'propertyImages')
       .orderBy('lead.created_at', 'DESC')
       .take(limit)
       .skip(offset)
@@ -93,7 +95,9 @@ export class LeadsService {
       queryBuilder.andWhere('lead.owner_user_id = :owner_user_id', { owner_user_id });
     }
 
-    return queryBuilder.getMany();
+    const leads = await queryBuilder.getMany();
+
+    return leads;
   }
 
   async findOne(id: number): Promise<Lead> {
