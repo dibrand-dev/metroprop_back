@@ -805,6 +805,24 @@ export class PropertiesService {
           }
         }
       }
+
+      // Si es una unidad de emprendimiento, cargar el emprendimiento padre con sus imágenes y unidades
+      if (property?.development_id) {
+        const development = await this.propertyRepository.createQueryBuilder('dev')
+          .leftJoinAndSelect('dev.images', 'devImages')
+          .leftJoinAndSelect('dev.units', 'devUnits', 'devUnits.deleted = false')
+          .where('dev.id = :devId', { devId: property.development_id })
+          .andWhere('dev.deleted = false')
+          .select(['dev', 'devImages', 'devUnits'])
+          .getOne();
+
+        if (development) {
+          if (development.images?.length) {
+            development.images = prependImagePrefixToUrls('', development.images);
+          }
+          (property as any).development = development;
+        }
+      }
     }
 
     if (!property) {
@@ -954,13 +972,15 @@ export class PropertiesService {
     };
   }
 
-  async changeSelectedPlan(
+  async republishProperty(
     body: {
       ids: number | number[];
       hired_plan_id: number;
+      branch_id?: number;
+      user_id?: number;
     },
     requestingUser?: RequestingUser,
-  ): Promise<{ message: string; updated: number; ids: number[]; hired_plan_id: number }> {
+  ): Promise<{ message: string; updated: number; ids: number[]; hired_plan_id: number; branch_id?: number; user_id?: number }> {
     const { ids, hired_plan_id } = body;
 
     if (!Number.isInteger(hired_plan_id)) {
@@ -975,10 +995,14 @@ export class PropertiesService {
 
     let affected = 0;
     if (targetIds.length > 0) {
+      const fieldsToUpdate: Partial<Property> = { hired_plan_id };
+      if (body.branch_id !== undefined) fieldsToUpdate.branch_id = body.branch_id;
+      if (body.user_id !== undefined) fieldsToUpdate.user_id = body.user_id;
+
       const updateResult = await this.propertyRepository
         .createQueryBuilder()
         .update(Property)
-        .set({ hired_plan_id })
+        .set(fieldsToUpdate)
         .where('id IN (:...targetIds)', { targetIds })
         .andWhere('deleted = :deleted', { deleted: false })
         .execute();
@@ -992,6 +1016,8 @@ export class PropertiesService {
       updated: affected,
       ids: targetIds,
       hired_plan_id: hired_plan_id as number,
+      branch_id: body.branch_id,
+      user_id: body.user_id,
     };
   }
 
@@ -1465,7 +1491,7 @@ export class PropertiesService {
       property_type: Array<{ value: number | null; count: number }>;
       hired_plan_id: Array<{ value: number | null; count: number; plan_name?: string }>;
       operation_type: Array<{ value: number | null; count: number }>;
-      users: Array<{ value: number | null; count: number; user_name?: string }>;
+      user_id: Array<{ value: number | null; count: number; user_name?: string }>;
       location_id: Array<{ value: number | null; count: number }>;
     };
   }> {
@@ -1597,7 +1623,7 @@ export class PropertiesService {
           plan_name: r.plan_name ?? undefined,
         })),
         operation_type: toFacet(operationTypeRaw),
-        users: usersRaw.map((r) => ({ value: r.user_id, count: parseInt(r.count, 10), user_name: r.user_name ?? undefined })),
+        user_id: usersRaw.map((r) => ({ value: r.user_id, count: parseInt(r.count, 10), user_name: r.user_name ?? undefined })),
         location_id: toFacet(locationRaw),
       },
     };

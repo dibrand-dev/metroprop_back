@@ -457,15 +457,17 @@ export class PropertiesController {
    */
   @Patch('republish')
   @UseGuards(JwtAuthGuard)
-  changeSelectedPlan(
+  republishProperty(
     @Body()
     body: {
       ids: number | number[];
       hired_plan_id: number;
+      branch_id?: number;
+      user_id?: number;
     },
     @Req() req: Request,
   ) {
-    return this.propertiesService.changeSelectedPlan(body, (req as any).user);
+    return this.propertiesService.republishProperty(body, (req as any).user);
   }
 
 
