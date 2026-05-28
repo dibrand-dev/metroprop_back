@@ -85,13 +85,20 @@ export class LeadsController {
   }
  
 
-  // get all leads by property id
+  // search leads by property_id and/or lead email
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
-  @Get('property/:propertyId')
-  findAllByProperty(@Param('propertyId', ParseIntPipe) propertyId: number, @Req() request: Request) {
+  @Get('search')
+  findFiltered(
+    @Query('property_id') propertyIdRaw: string | undefined,
+    @Query('email') email: string | undefined,
+    @Req() request: Request,
+  ) {
     const user = (request as any).user;
-    const filters: LeadFiltersDto = { property_id: propertyId };
+    const filters: LeadFiltersDto = {};
+
+    if (propertyIdRaw !== undefined) filters.property_id = parseInt(propertyIdRaw, 10);
+    if (email) filters.email = email;
 
     if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
       // ve todo
