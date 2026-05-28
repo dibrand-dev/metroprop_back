@@ -63,10 +63,9 @@ export class PropertyOwnershipGuard implements CanActivate {
   ): void {
     if (user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) {
       const userOrgId = user.organization_id ?? user.organization?.id;
-      if (property.organization_id !== userOrgId) {
-        throw new ForbiddenException('No tenés permiso para acceder a esta propiedad');
-      }
-      return;
+      if (userOrgId !== undefined && property.organization_id === userOrgId) return;
+      if (property.user_id === user.id) return;
+      throw new ForbiddenException('No tenés permiso para acceder a esta propiedad');
     }
 
     if (

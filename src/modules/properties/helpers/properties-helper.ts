@@ -39,36 +39,42 @@ export async function calculateSquareMetterPrice(
   input: number | Record<string, any>,
   propertyRepo: Repository<Property>
 ): Promise<number | undefined> {
-  let surface: number | undefined;
-  let price: number | undefined;
   let data: any = input;
 
   if (typeof input === 'number') {
-    // Buscar property por id
     const prop = await propertyRepo.findOne({
       where: { id: input },
-      select: ['surface', 'total_surface', 'roofed_surface', 'price'],
+      select: ['roofed_surface', 'semiroofed_surface', 'unroofed_surface', 'total_surface', 'surface','price'],
     });
     if (!prop) return undefined;
     data = prop;
   }
 
-  // Obtener surface por prioridad
-  surface =
-    data.surface !== undefined && data.surface !== null
-      ? data.surface
-      : data.total_surface !== undefined && data.total_surface !== null
-      ? data.total_surface
-      : data.roofed_surface !== undefined && data.roofed_surface !== null
-      ? data.roofed_surface
-      : undefined;
-  const surfaceNum = surface !== undefined && surface !== null ? Number(surface) : NaN;
-  price = data.price !== undefined && data.price !== null ? data.price : undefined;
-  const priceNum = price !== undefined && price !== null ? Number(price) : NaN;
+  const priceNum = data.price !== undefined && data.price !== null ? Number(data.price) : NaN;
+  if (isNaN(priceNum) || priceNum <= 0) return undefined;
 
-  if (!isNaN(surfaceNum) && surfaceNum > 0 && !isNaN(priceNum) && priceNum > 0) {
-    return priceNum / surfaceNum;
+  const halfPriceNum = priceNum / 2;
+
+  let roofedNum = data.roofed_surface !== undefined && data.roofed_surface !== null ? Number(data.roofed_surface) : NaN;
+  const semiroofedNum = data.semiroofed_surface !== undefined && data.semiroofed_surface !== null ? Number(data.semiroofed_surface) : 0;
+
+  // Fallback: if roofed is missing, derive it from total_surface - semiroofed - unroofed
+  if (isNaN(roofedNum) || roofedNum <= 0) {
+    const totalNum = data.total_surface !== undefined && data.total_surface !== null ? Number(data.total_surface) : NaN;
+    if (!isNaN(totalNum) && totalNum > 0) {
+      const unroofedNum = data.unroofed_surface !== undefined && data.unroofed_surface !== null ? Number(data.unroofed_surface) : 0;
+      roofedNum = totalNum - (isNaN(semiroofedNum) ? 0 : semiroofedNum) - (isNaN(unroofedNum) ? 0 : unroofedNum);
+    }
   }
 
-  return undefined;
+  let roofedValue = 0;
+  if (!isNaN(roofedNum) && roofedNum > 0) {
+    roofedValue = priceNum / roofedNum;
+  }
+  let semiroofedValue = 0;
+  if (!isNaN(semiroofedNum) && semiroofedNum > 0) {
+    semiroofedValue = halfPriceNum / semiroofedNum;
+  }
+
+  return roofedValue + semiroofedValue;
 }
