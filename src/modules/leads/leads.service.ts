@@ -89,7 +89,7 @@ export class LeadsService {
     return queryBuilder.getMany();
   }
 
-  async getLeadProperties(filters: { email: string }): Promise<PropertyCard[]> {
+  async getLeadProperties(filters: { email: string }): Promise<(PropertyCard & { lead_date: Date })[]> {
     const leads = await this.leadsRepository.find({
       where: { email: filters.email },
       relations: ['lead_properties'],
@@ -97,15 +97,26 @@ export class LeadsService {
 
     if (!leads.length) return [];
 
-    const propertyIds = [
-      ...new Set(
-        leads.flatMap((l) => l.lead_properties?.map((lp) => lp.property_id) ?? []),
-      ),
-    ];
+    // Map property_id → most recent lead_property created_at
+    const dateByPropertyId = new Map<number, Date>();
+    for (const lead of leads) {
+      for (const lp of lead.lead_properties ?? []) {
+        const existing = dateByPropertyId.get(lp.property_id);
+        if (!existing || lp.created_at > existing) {
+          dateByPropertyId.set(lp.property_id, lp.created_at);
+        }
+      }
+    }
 
+    const propertyIds = [...dateByPropertyId.keys()];
     if (!propertyIds.length) return [];
 
-    return this.propertiesService.getPropertiesCardsByIds(propertyIds);
+    const cards = await this.propertiesService.getPropertiesCardsByIds(propertyIds);
+
+    return cards.map((card) => ({
+      ...card,
+      lead_date: dateByPropertyId.get(card.id)!,
+    }));
   }
 
   async findOne(id: number): Promise<Lead> {
