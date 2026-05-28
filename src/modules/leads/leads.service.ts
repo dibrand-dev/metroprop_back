@@ -36,7 +36,7 @@ export class LeadsService {
     private readonly propertiesService: PropertiesService,
   ) {}
 
-  async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
+  async findAll(filters: LeadFiltersDto = {}): Promise<LeadProperty[]> {
     const {
       id,
       email,
@@ -49,57 +49,44 @@ export class LeadsService {
       offset = 0,
     } = filters;
 
-    const queryBuilder = this.leadsRepository
-      .createQueryBuilder('lead')
-      .leftJoinAndSelect('lead.lead_properties', 'leadProperty')
-      .leftJoinAndSelect('leadProperty.property', 'property')
-      .leftJoinAndSelect('property.images', 'propertyImages')
-      .orderBy('lead.created_at', 'DESC')
+    const queryBuilder = this.leadPropertyRepository
+      .createQueryBuilder('leadProperty')
+      .leftJoin('leadProperty.property', 'property')
+      .addSelect(['property.id', 'property.publication_title', 'property.street', 'property.status'])
+      .leftJoinAndSelect('leadProperty.lead', 'lead')
+      .orderBy('leadProperty.created_at', 'DESC')
       .take(limit)
-      .skip(offset)
-      .distinct(true);
+      .skip(offset);
 
     if (id !== undefined) {
       queryBuilder.andWhere('lead.id = :id', { id });
     }
 
     if (organization_id !== undefined) {
-      queryBuilder.andWhere('lead.organization_id = :organization_id', {
-        organization_id,
-      });
+      queryBuilder.andWhere('lead.organization_id = :organization_id', { organization_id });
     }
 
     if (property_id !== undefined) {
-      queryBuilder.andWhere('leadProperty.property_id = :property_id', {
-        property_id,
-      });
+      queryBuilder.andWhere('leadProperty.property_id = :property_id', { property_id });
     }
 
     if (email) {
-      queryBuilder.andWhere('lead.email ILIKE :email', {
-        email: `%${email}%`,
-      });
+      queryBuilder.andWhere('lead.email ILIKE :email', { email: `%${email}%` });
     }
 
     if (name) {
-      queryBuilder.andWhere('lead.name ILIKE :name', {
-        name: `%${name}%`,
-      });
+      queryBuilder.andWhere('lead.name ILIKE :name', { name: `%${name}%` });
     }
 
     if (phone) {
-      queryBuilder.andWhere('lead.phone ILIKE :phone', {
-        phone: `%${phone}%`,
-      });
+      queryBuilder.andWhere('lead.phone ILIKE :phone', { phone: `%${phone}%` });
     }
 
     if (owner_user_id !== undefined) {
       queryBuilder.andWhere('lead.owner_user_id = :owner_user_id', { owner_user_id });
     }
 
-    const leads = await queryBuilder.getMany();
-
-    return leads;
+    return queryBuilder.getMany();
   }
 
   async getLeadProperties(filters: { email: string }): Promise<PropertyCard[]> {
