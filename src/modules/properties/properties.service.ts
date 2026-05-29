@@ -35,6 +35,7 @@ import { CreateDevelopmentUnitDto } from './dto/create-development-unit.dto';
 import { UpdateDevelopmentUnitDto } from './dto/update-development-unit.dto';
 import { THUMB_PREFIX, COUNTRY_ARGENTINA_ID } from '@/common/constants';
 import { Plan } from '../plans/entities/plan.entity';
+import Stream from 'stream';
 export interface RequestingUser {
   id: number;
   role_id: number;
@@ -198,6 +199,7 @@ export class PropertiesService {
         development_id: developmentId,
         organization_id: propertyData.organization_id ?? parentDev.organization_id,
         branch_id: propertyData.branch_id ?? parentDev.branch_id,
+        street: propertyData.street ?? parentDev.street,
         country_id: propertyData.country_id ?? parentDev.country_id,
         state_id: propertyData.state_id ?? parentDev.state_id,
         location_id: propertyData.location_id ?? parentDev.location_id,
@@ -1339,10 +1341,11 @@ export class PropertiesService {
         .leftJoinAndSelect('p.units', 'units')
       //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
-        .addOrderBy('img.order_position', 'ASC')
-        .skip(offset)
+          .skip(offset)
         .take(limit)
-        .orderBy(orderBy, orderDirection);
+        .orderBy('p.visibility', 'DESC')
+        .addOrderBy(orderBy, orderDirection)
+        .addOrderBy('img.order_position', 'ASC');
       [data, total] = await qb.getManyAndCount();
     } else {
       // Modo card: SELECT solo las columnas necesarias + join de imágenes y organización
@@ -1401,7 +1404,8 @@ export class PropertiesService {
         .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
       //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
-        .orderBy(orderBy, orderDirection)
+        .orderBy('p.visibility', 'DESC')
+        .addOrderBy(orderBy, orderDirection)
         .skip(offset)
         .take(limit);
 
@@ -1502,7 +1506,7 @@ export class PropertiesService {
     filters.page = filters.page ?? 1;
     const offset = (filters.page - 1) * filters.limit;
 
-    const { qb: baseQb } = await this.buildAdvancedSearchQuery(filters, {
+    const { qb: baseQb, orderBy, orderDirection } = await this.buildAdvancedSearchQuery(filters, {
       includeStatusFilter: true,
     });
 
@@ -1598,6 +1602,8 @@ export class PropertiesService {
       )
        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
    //   .leftJoinAndSelect('units.images', 'unitImages')
+      .orderBy('p.visibility', 'DESC')
+      .addOrderBy(orderBy, orderDirection)
       .skip(offset)
       .take(filters.limit);
 

@@ -30,13 +30,19 @@ export class MultipartFormDataInterceptor implements NestInterceptor {
       for (const field of this.jsonFields) {
         if (request.body[field] !== undefined) {
           if (typeof request.body[field] === 'string') {
-            try {
-              request.body[field] = JSON.parse(request.body[field]);
-            } catch (error) {
-              const errorMessage = error instanceof Error ? error.message : 'Parse error';
-              throw new BadRequestException(
-                `Formato JSON inválido en el campo '${field}': ${errorMessage}. Asegúrate de enviar un JSON válido.`
-              );
+            const trimmed = (request.body[field] as string).trim();
+            if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+              try {
+                request.body[field] = JSON.parse(trimmed);
+              } catch (error) {
+                const errorMessage = error instanceof Error ? error.message : 'Parse error';
+                throw new BadRequestException(
+                  `Formato JSON inválido en el campo '${field}': ${errorMessage}. Asegúrate de enviar un JSON válido.`
+                );
+              }
+            } else {
+              // Valor plano (ej: URL directa) — envolver en array
+              request.body[field] = [trimmed];
             }
           }
         }
