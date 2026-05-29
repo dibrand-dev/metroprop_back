@@ -1369,6 +1369,7 @@ export class PropertiesService {
           'p.geo_lat',
           'p.geo_long',
           'p.created_at',
+          'p.visibility',
           'p_org.id',
           'p_org.company_name',
           'p_org.company_logo',
