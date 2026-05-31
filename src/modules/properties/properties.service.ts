@@ -199,6 +199,7 @@ export class PropertiesService {
         development_id: developmentId,
         organization_id: propertyData.organization_id ?? parentDev.organization_id,
         branch_id: propertyData.branch_id ?? parentDev.branch_id,
+        user_id: propertyData.user_id ?? parentDev.user_id,
         street: propertyData.street ?? parentDev.street,
         country_id: propertyData.country_id ?? parentDev.country_id,
         state_id: propertyData.state_id ?? parentDev.state_id,
@@ -1075,7 +1076,7 @@ export class PropertiesService {
       select: ['id', 'user_id', 'organization_id'],
     });
 
-    if (user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) {
+    if (user.organization_id && (user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) ) {
       const userOrgId = user.organization_id ?? user.organization?.id;
       const forbidden = properties.find((p) => p.organization_id !== userOrgId);
       if (forbidden) {
@@ -1086,19 +1087,12 @@ export class PropertiesService {
       return;
     }
 
-    if (
-      user.role_id === UserRole.USER_ROL_COLLABORATOR
-    ) {
-      const forbidden = properties.find((p) => p.user_id !== user.id);
-      if (forbidden) {
-        throw new ForbiddenException(
-          `No tenés permiso para modificar la propiedad ${forbidden.id}`,
-        );
-      }
-      return;
+    const forbidden = properties.find((p) => p.user_id !== user.id);
+    if (forbidden) {
+      throw new ForbiddenException(
+        `No tenés permiso para modificar la propiedad ${forbidden.id}`,
+      );
     }
-
-    throw new ForbiddenException('No tenés permiso para realizar esta acción');
   }
 
   private async resolveTargetIds(
