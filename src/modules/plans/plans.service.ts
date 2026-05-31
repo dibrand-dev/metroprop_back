@@ -338,16 +338,6 @@ export class PlansService {
     });
     if (!targetUser) throw new NotFoundException('User not found');
 
-    const orgId = targetUser.organization?.id;
-    if (
-      requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
-      requester.organization_id !== orgId
-    ) {
-      throw new ForbiddenException(
-        'No tienes permisos para ver la disponibilidad de este usuario',
-      );
-    }
-
     const rows = await this.userPlanRepo
       .createQueryBuilder('up')
       .innerJoin('up.plan', 'p')

@@ -198,6 +198,7 @@ export class PropertiesService {
         is_development: false,
         development_id: developmentId,
         organization_id: propertyData.organization_id ?? parentDev.organization_id,
+        direct_owner: propertyData.direct_owner ?? parentDev.direct_owner,
         branch_id: propertyData.branch_id ?? parentDev.branch_id,
         user_id: propertyData.user_id ?? parentDev.user_id,
         street: propertyData.street ?? parentDev.street,
