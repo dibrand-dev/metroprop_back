@@ -190,11 +190,18 @@ export class UsersService {
 
     Object.assign(user, updateUserDto);
     if (updateUserDto.branchIds) {
-      await this.usersRepository
+      const relationQb = this.usersRepository
         .createQueryBuilder()
         .relation(User, 'branches')
-        .of(user)
-        .set(updateUserDto.branchIds);
+        .of(user);
+
+      const current = await relationQb.loadMany<{ id: number }>();
+      if (current.length > 0) {
+        await relationQb.remove(current.map((b) => b.id));
+      }
+      if (updateUserDto.branchIds.length > 0) {
+        await relationQb.add(updateUserDto.branchIds);
+      }
     }
 
     return this.usersRepository.save(user);
