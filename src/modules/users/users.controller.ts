@@ -37,14 +37,17 @@ export class UsersController {
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   async findAll(@Query() filters: UserFiltersDto, @Req() request: Request) {
-    
-    
-    if ((request as any).user.role_id === UserRole.USER_ROL_ADMIN && 
-          (request as any).user.organization_id !== undefined) {
-        filters.organization_id = (request as any).user.organization_id;
-    } else if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-        // Si no es admin ni super admin, solo puede ver su propio usuario
+
+    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+      if ((request as any).user.organization_id !== undefined) {
+          filters.organization_id = (request as any).user.organization_id;
+      } 
+      
+      if ((request as any).user.role_id === UserRole.USER_ROL_COLLABORATOR 
+      || ((request as any).user.role_id === UserRole.USER_ROL_ADMIN && (request as any).user.organization_id === undefined)) {
+
         filters.id = (request as any).user.id;
+      }
     }
 
     const result = await this.usersService.findAll(filters);
