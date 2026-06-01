@@ -240,11 +240,18 @@ export class PropertyWriteService {
     // Campos que nunca se pueden sobreescribir en un update
     const { reference_code, organization_id, development_id, deleted, ...restScalars } = scalars;
     const updateData: any = { ...restScalars };
+
     if (context?.organizationId) updateData.organization_id = context.organizationId;
     if (context?.branchId) updateData.branch_id = context.branchId;
     if (context?.userId) updateData.user_id = context.userId;
 
     Object.assign(property, updateData);
+
+    // Si viene un nuevo userId, pisar la relación cargada en memoria para que TypeORM
+    // no use el objeto user anterior como referencia del FK al hacer save()
+    if (updateData?.user_id) {
+      (property as any).user = { id: updateData.user_id };
+    }
     // Calcular y setear price_square_meter usando la función unificada
     property.price_square_meter = await calculateSquareMetterPrice({ ...property, ...updateData }, this.propertyRepo);
 
