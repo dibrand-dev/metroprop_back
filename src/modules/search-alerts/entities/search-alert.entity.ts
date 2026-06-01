@@ -10,10 +10,6 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-export enum SearchAlertStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
-}
 
 @Entity('search_alerts')
 @Index('idx_search_alerts_user_id', ['user_id'])
@@ -32,11 +28,10 @@ export class SearchAlert {
   title!: string;
 
   @Column({
-    type: 'varchar',
-    length: 50,
-    default: SearchAlertStatus.ACTIVE,
+    type: 'boolean',
+    default: true,
   })
-  status!: SearchAlertStatus;
+  status!: boolean;
 
   @Column({ type: 'timestamp', nullable: true })
   last_email_sent?: Date | null;

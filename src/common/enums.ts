@@ -258,3 +258,9 @@ export enum FiscalCondition {
   CONSUMIDOR_FINAL = 'Consumidor Final',
   NO_RESPONSABLE = 'No Responsable',
 }
+
+
+export enum SearchAlertStatus {
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
+}

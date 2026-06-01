@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SearchAlert, SearchAlertStatus } from './entities/search-alert.entity';
+import { SearchAlert } from './entities/search-alert.entity';
 import { CreateSearchAlertDto } from './dto/create-search-alert.dto';
 import { UpdateSearchAlertDto } from './dto/update-search-alert.dto';
 
@@ -21,7 +21,7 @@ export class SearchAlertsService {
       user_id: userId,
       title: dto.title,
       filters: dto.filters,
-      status: SearchAlertStatus.ACTIVE,
+      status: true,
     });
     return this.searchAlertRepository.save(alert);
   }

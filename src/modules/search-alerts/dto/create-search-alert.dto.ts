@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator';
+import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateSearchAlertDto {
   @IsString()
@@ -9,4 +9,14 @@ export class CreateSearchAlertDto {
   @IsString()
   @IsNotEmpty()
   filters!: string; // JSON string con los filtros
+
+
+  @IsNotEmpty()
+  @IsInt()
+  user_id?: number;
+
+  
+  @IsOptional()
+  @IsBoolean()
+  status?: boolean;
 }

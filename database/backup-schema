@@ -905,7 +905,7 @@ CREATE TABLE public.search_alerts (
 	user_id     integer NOT NULL,
 	filters     text    NOT NULL,
 	title       varchar(200) NOT NULL,
-	status      varchar(50)  NOT NULL DEFAULT 'active',
+	status      bool  NOT NULL DEFAULT 1,
 	last_email_sent timestamp NULL,
 	created_at  timestamp NOT NULL DEFAULT now(),
 	updated_at  timestamp NOT NULL DEFAULT now(),

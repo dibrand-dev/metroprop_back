@@ -1,5 +1,4 @@
-import { IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
-import { SearchAlertStatus } from '../entities/search-alert.entity';
+import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateSearchAlertDto {
   @IsString()
@@ -11,7 +10,7 @@ export class UpdateSearchAlertDto {
   @IsOptional()
   filters?: string; // JSON string con los filtros
 
-  @IsEnum(SearchAlertStatus)
+  @IsBoolean()
   @IsOptional()
-  status?: SearchAlertStatus;
+  status?: boolean;
 }

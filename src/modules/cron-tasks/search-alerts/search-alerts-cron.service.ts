@@ -2,7 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { SearchAlert, SearchAlertStatus } from '../../search-alerts/entities/search-alert.entity';
+import { SearchAlert } from '../../search-alerts/entities/search-alert.entity';
 import { User } from '../../users/entities/user.entity';
 import { EmailService } from '../../../common/email/email.service';
 import { PropertiesService } from '../../properties/properties.service';
@@ -38,7 +38,7 @@ export class SearchAlertsCronService {
     // Traer alertas activas cuyo last_email_sent es null o anterior al cutoff
     const alerts = await this.searchAlertRepo
       .createQueryBuilder('alert')
-      .where('alert.status = :status', { status: SearchAlertStatus.ACTIVE })
+      .where('alert.status = :status', { status: true })
       .andWhere(
         '(alert.last_email_sent IS NULL OR alert.last_email_sent <= :cutoff)',
         { cutoff: cutoffDate },
