@@ -7,9 +7,14 @@ import { User } from '../../users/entities/user.entity';
 import { EmailService } from '../../../common/email/email.service';
 import { PropertiesService } from '../../properties/properties.service';
 import { SearchPropertiesDto } from '../../properties/dto/search-properties.dto';
+import { AlertFrequency } from '../../../common/enums';
 
-/** Cantidad mínima de días entre envíos de email para la misma alerta */
-const ALERTS_FREQUENCY_DAYS = 1;
+/** Días de intervalo según la frecuencia de la alerta */
+const FREQUENCY_DAYS: Record<AlertFrequency, number> = {
+  [AlertFrequency.DAILY]: 1,
+  [AlertFrequency.WEEKLY]: 7,
+  [AlertFrequency.MONTHLY]: 30,
+};
 
 /** Máxima cantidad de propiedades a incluir por email de alerta */
 const ALERT_PROPERTIES_LIMIT = 5;
@@ -32,17 +37,11 @@ export class SearchAlertsCronService {
   async handleSearchAlerts(): Promise<void> {
     this.logger.log('[SearchAlertsCron] Iniciando procesamiento de alertas de búsqueda...');
 
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - ALERTS_FREQUENCY_DAYS);
-
-    // Traer alertas activas cuyo last_email_sent es null o anterior al cutoff
+    // Traer todas las alertas activas — el cutoff se evalúa por alerta según su frequency
     const alerts = await this.searchAlertRepo
       .createQueryBuilder('alert')
       .where('alert.status = :status', { status: true })
-      .andWhere(
-        '(alert.last_email_sent IS NULL OR alert.last_email_sent <= :cutoff)',
-        { cutoff: cutoffDate },
-      )
+      .andWhere('alert.failed < :maxFailed', { maxFailed: 5 })
       .getMany();
 
     this.logger.log(`[SearchAlertsCron] Alertas a procesar: ${alerts.length}`);
@@ -62,6 +61,19 @@ export class SearchAlertsCronService {
   }
 
   private async processAlert(alert: SearchAlert): Promise<void> {
+    // Verificar si la alerta ya fue enviada dentro del período que le corresponde
+    const frequencyDays = FREQUENCY_DAYS[alert.frequency] ?? FREQUENCY_DAYS[AlertFrequency.DAILY];
+    if (alert.last_email_sent) {
+      const cutoff = new Date();
+      cutoff.setDate(cutoff.getDate() - frequencyDays);
+      if (alert.last_email_sent > cutoff) {
+        this.logger.log(
+          `[SearchAlertsCron] Alerta #${alert.id}: enviada hace menos de ${frequencyDays} día(s) (${alert.frequency}). Se omite.`,
+        );
+        return;
+      }
+    }
+
     // Parsear los filtros guardados como JSON
     let parsedFilters: Partial<SearchPropertiesDto> = {};
     try {
@@ -126,15 +138,26 @@ export class SearchAlertsCronService {
       firstImageUrl: p.images?.[0]?.url ?? null,
     }));
 
-    await this.emailService.sendSearchAlertEmail(
-      user.email,
-      user.name,
-      alert.title,
-      emailProperties,
-    );
+    try { 
+      await this.emailService.sendSearchAlertEmail(
+        user.email,
+        user.name,
+        alert.title,
+        emailProperties,
+      );  
+    } catch (err) {
+      this.logger.error(
+        `[SearchAlertsCron] Alerta #${alert.id}: error enviando email a ${user.email}:`,
+        err,
+      );
+      alert.failed++;
+      await this.searchAlertRepo.save(alert);
+      return;
+    }
 
     // Actualizar last_email_sent
     alert.last_email_sent = new Date();
+    alert.failed = 0; // resetear contador de fallos exitoso
     await this.searchAlertRepo.save(alert);
 
     this.logger.log(

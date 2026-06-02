@@ -908,6 +908,7 @@ CREATE TABLE public.search_alerts (
 	status      bool  NOT NULL DEFAULT 1,
 	last_email_sent timestamp NULL,
 	frequency   varchar(200) NULL,
+	failed      integer NOT NULL DEFAULT 0,
 	created_at  timestamp NOT NULL DEFAULT now(),
 	updated_at  timestamp NOT NULL DEFAULT now(),
 	CONSTRAINT pk_search_alerts PRIMARY KEY (id),

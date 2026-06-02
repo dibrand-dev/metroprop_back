@@ -40,6 +40,9 @@ export class SearchAlert {
   @Column({ type: 'timestamp', nullable: true })
   last_email_sent?: Date | null;
 
+  @Column({ type: 'integer', default: 0 })
+  failed!: number;
+
   @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'user_id' })
   user?: User;
