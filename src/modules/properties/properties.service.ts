@@ -908,7 +908,6 @@ export class PropertiesService {
         );
       }
     }
-
     const { warnings } = await this.propertyWriteService.updatePropertyCore(
       property,
       propertyData,

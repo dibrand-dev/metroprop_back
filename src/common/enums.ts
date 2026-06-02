@@ -259,8 +259,8 @@ export enum FiscalCondition {
   NO_RESPONSABLE = 'No Responsable',
 }
 
-
-export enum SearchAlertStatus {
-  ACTIVE = 'active',
-  INACTIVE = 'inactive',
+export enum AlertFrequency {
+  DAILY = 'daily',
+  WEEKLY = 'weekly',
+  MONTHLY = 'monthly',
 }

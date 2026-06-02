@@ -21,6 +21,7 @@ export class SearchAlertsService {
       user_id: userId,
       title: dto.title,
       filters: dto.filters,
+      frequency: dto.frequency,
       status: true,
     });
     return this.searchAlertRepository.save(alert);

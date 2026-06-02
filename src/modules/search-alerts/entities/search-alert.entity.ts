@@ -9,6 +9,7 @@ import {
   Index,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { AlertFrequency } from '@/common/enums';
 
 
 @Entity('search_alerts')
@@ -32,6 +33,9 @@ export class SearchAlert {
     default: true,
   })
   status!: boolean;
+
+  @Column({ type: 'varchar', length: 20, nullable: false })
+  frequency!: AlertFrequency;
 
   @Column({ type: 'timestamp', nullable: true })
   last_email_sent?: Date | null;

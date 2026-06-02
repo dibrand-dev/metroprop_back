@@ -1,3 +1,4 @@
+import { AlertFrequency } from '@/common/enums';
 import { IsBoolean, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class CreateSearchAlertDto {
@@ -10,13 +11,15 @@ export class CreateSearchAlertDto {
   @IsNotEmpty()
   filters!: string; // JSON string con los filtros
 
-
   @IsNotEmpty()
   @IsInt()
-  user_id?: number;
+  user_id!: number;
 
-  
   @IsOptional()
   @IsBoolean()
   status?: boolean;
+
+  @IsNotEmpty()
+  @IsEnum(AlertFrequency)
+  frequency!: AlertFrequency;
 }

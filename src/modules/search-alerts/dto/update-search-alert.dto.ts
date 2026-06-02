@@ -1,3 +1,4 @@
+import { AlertFrequency } from '@/common/enums';
 import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 
 export class UpdateSearchAlertDto {
@@ -13,4 +14,8 @@ export class UpdateSearchAlertDto {
   @IsBoolean()
   @IsOptional()
   status?: boolean;
+
+  @IsOptional()
+  @IsEnum(AlertFrequency)
+  frequency?: AlertFrequency;
 }
