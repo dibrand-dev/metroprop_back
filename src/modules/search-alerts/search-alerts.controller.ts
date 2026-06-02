@@ -16,11 +16,15 @@ import { SearchAlertsService } from './search-alerts.service';
 import { CreateSearchAlertDto } from './dto/create-search-alert.dto';
 import { UpdateSearchAlertDto } from './dto/update-search-alert.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { SearchAlertsCronService } from '../cron-tasks/search-alerts/search-alerts-cron.service';
 
 @Controller('search-alerts')
 @UseGuards(JwtAuthGuard)
 export class SearchAlertsController {
-  constructor(private readonly searchAlertsService: SearchAlertsService) {}
+  constructor(
+    private readonly searchAlertsService: SearchAlertsService,
+    private readonly searchAlertsCronService: SearchAlertsCronService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -57,5 +61,10 @@ export class SearchAlertsController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.searchAlertsService.remove(id, req.user.id);
+  }
+
+  @Post('test-cron')
+  async testCron() {
+    return this.searchAlertsCronService.handleSearchAlerts();
   }
 }

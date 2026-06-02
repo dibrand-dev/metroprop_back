@@ -13,5 +13,6 @@ import { PropertiesModule } from '../../properties/properties.module';
     PropertiesModule,
   ],
   providers: [SearchAlertsCronService],
+  exports: [SearchAlertsCronService],
 })
 export class SearchAlertsCronModule {}
