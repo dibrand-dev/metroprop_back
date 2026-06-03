@@ -1,4 +1,13 @@
 
+DROP TYPE IF EXISTS public."lead_property_lead_state_enum";
+CREATE TYPE public."lead_property_lead_state_enum" AS ENUM (
+	'Nuevo contacto',
+	'Contactado',
+	'Pendiente',
+	'Calificado',
+	'Perdido',
+	'Potencial cliente');
+
 DROP TYPE IF EXISTS public."organizations_professional_type_enum";
 CREATE TYPE public."organizations_professional_type_enum" AS ENUM (
 	'inmobiliario',
@@ -810,6 +819,13 @@ CREATE TABLE IF NOT EXISTS public.lead_property (
 	lead_id int4 NOT NULL,
 	property_id int4 NOT NULL,
 	message text NULL,
+	country_code varchar(10) NULL,
+	phone varchar(50) NULL,
+	deleted bool DEFAULT false NOT NULL,
+	highlighted bool DEFAULT false NOT NULL,
+	blocked bool DEFAULT false NOT NULL,
+	unread bool DEFAULT true NOT NULL,
+	lead_state public."lead_property_lead_state_enum" DEFAULT 'Nuevo contacto' NOT NULL,
 	created_at timestamp DEFAULT now() NOT NULL,
 	updated_at timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT pk_lead_property PRIMARY KEY (id)

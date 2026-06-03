@@ -264,3 +264,12 @@ export enum AlertFrequency {
   WEEKLY = 'weekly',
   MONTHLY = 'monthly',
 }
+
+export enum LeadState {
+  NEW = 'Nuevo contacto',
+  CONTACTED = 'Contactado',
+  PENDING = 'Pendiente',
+  QUALIFIED = 'Calificado',
+  LOST = 'Perdido',
+  POTENTIAL_CLIENT = 'Potencial cliente',
+}

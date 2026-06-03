@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Lead } from './lead.entity';
 import { Property } from '../../properties/entities/property.entity';
+import { LeadState } from '@/common/enums';
 
 @Entity('lead_property')
 export class LeadProperty {
@@ -29,6 +30,21 @@ export class LeadProperty {
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone?: string;
+
+  @Column({ type: 'boolean', default: false })
+  deleted: boolean = false;
+
+  @Column({ type: 'boolean', default: false })
+  highlighted: boolean = false;
+
+  @Column({ type: 'boolean', default: false })
+  blocked: boolean = false;
+
+  @Column({ type: 'boolean', default: true })
+  unread: boolean = true;
+
+  @Column({ type: 'enum', enum: LeadState, default: LeadState.NEW })
+  lead_state: LeadState = LeadState.NEW;
 
   @ManyToOne(() => Lead, (lead) => lead.lead_properties, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'lead_id' })

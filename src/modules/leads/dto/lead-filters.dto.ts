@@ -1,5 +1,6 @@
 import { Transform } from 'class-transformer';
-import { IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
+import { LeadState } from '@/common/enums';
 
 export class LeadFiltersDto {
   @IsOptional()
@@ -33,6 +34,30 @@ export class LeadFiltersDto {
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   owner_user_id?: number;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  deleted?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  highlighted?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  blocked?: boolean;
+
+  @IsOptional()
+  @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)
+  @IsBoolean()
+  unread?: boolean;
+
+  @IsOptional()
+  @IsEnum(LeadState)
+  lead_state?: LeadState;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
