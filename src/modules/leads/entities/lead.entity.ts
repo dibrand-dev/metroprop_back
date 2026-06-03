@@ -41,6 +41,8 @@ export class Lead {
   @Column({ type: 'integer', nullable: true })
   owner_user_id?: number;
 
+  @Column({ type: 'boolean', default: false })
+  deleted: boolean = false;
 
   @OneToMany(() => LeadProperty, (leadProperty) => leadProperty.lead, {
     eager: false,

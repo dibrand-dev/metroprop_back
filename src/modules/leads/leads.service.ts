@@ -60,6 +60,7 @@ export class LeadsService {
       .leftJoin('leadProperty.property', 'property')
       .addSelect(['property.id', 'property.publication_title', 'property.street', 'property.status'])
       .leftJoinAndSelect('leadProperty.lead', 'lead')
+      .andWhere('lead.deleted = false')
       .orderBy('leadProperty.created_at', 'DESC')
       .take(limit)
       .skip(offset);
@@ -94,6 +95,8 @@ export class LeadsService {
 
     if (deleted !== undefined) {
       queryBuilder.andWhere('leadProperty.deleted = :deleted', { deleted });
+    } else {
+      queryBuilder.andWhere('leadProperty.deleted = false');
     }
 
     if (highlighted !== undefined) {
@@ -255,11 +258,14 @@ export class LeadsService {
   }
 
   async remove(id: number): Promise<void> {
-    const result = await this.leadsRepository.delete(id);
+    const lead = await this.leadsRepository.findOne({ where: { id } });
 
-    if (result.affected === 0) {
+    if (!lead) {
       throw new NotFoundException('Lead not found');
     }
+
+    lead.deleted = true;
+    await this.leadsRepository.save(lead);
   }
 
   async findLeadPropertyWithLead(leadPropertyId: number): Promise<LeadProperty> {

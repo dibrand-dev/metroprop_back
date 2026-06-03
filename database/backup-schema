@@ -801,6 +801,7 @@ CREATE TABLE IF NOT EXISTS public.ads_banners (
 		phone varchar(50) NULL,
 		organization_id int4 NOT NULL,
 		owner_user_id int4 NULL,
+		deleted bool DEFAULT false NOT NULL,
 		created_at timestamp DEFAULT now() NOT NULL,
 		updated_at timestamp DEFAULT now() NOT NULL,
 		CONSTRAINT pk_leads PRIMARY KEY (id)
