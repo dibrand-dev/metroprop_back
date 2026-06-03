@@ -120,7 +120,7 @@ export class LeadsService {
 
   async getLeadProperties(filters: { email: string }): Promise<(PropertyCard & { lead_date: Date })[]> {
     const leads = await this.leadsRepository.find({
-      where: { email: filters.email },
+      where: { email: filters.email, deleted: false },
       relations: ['lead_properties'],
     });
 
@@ -150,7 +150,7 @@ export class LeadsService {
 
   async findOne(id: number, withRelations = false): Promise<Lead> {
     const lead = await this.leadsRepository.findOne({
-      where: { id },
+      where: { id, deleted: false },
       ...(withRelations && { relations: ['lead_properties'] }),
     });
 
@@ -298,6 +298,7 @@ export class LeadsService {
       where: {
         email,
         organization_id: organizationId,
+        deleted: false,
       },
     });
   }
@@ -307,6 +308,7 @@ export class LeadsService {
       where: {
         email,
         owner_user_id: ownerUserId,
+        deleted: false,
       },
     });
   }
@@ -356,7 +358,7 @@ export class LeadsService {
 
   async findAllByOrganization(organizationId: number): Promise<Lead[]> {
     return this.leadsRepository.find({
-      where: { organization_id: organizationId },
+      where: { organization_id: organizationId, deleted: false },
       relations: ['lead_properties'],
       order: { created_at: 'DESC' },
     });
@@ -365,7 +367,7 @@ export class LeadsService {
   private async notifyLead(lead: Lead): Promise<void> {
     // Obtener el lead_property más reciente para extraer property y mensaje
     const leadProperty = await this.leadPropertyRepository.findOne({
-      where: { lead_id: lead.id },
+      where: { lead_id: lead.id, deleted: false },
       order: { created_at: 'DESC' },
     });
 
