@@ -4,7 +4,7 @@ import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
 import { LeadFiltersDto } from './dto/lead-filters.dto';
-import { LeadState, UserRole } from '@/common/enums';
+import { LeadContactType, LeadState, UserRole } from '@/common/enums';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
@@ -64,6 +64,7 @@ export class LeadsController {
     @Query('blocked') blockedRaw: string | undefined,
     @Query('unread') unreadRaw: string | undefined,
     @Query('lead_state') leadStateRaw: string | undefined,
+    @Query('contact_type') contactTypeRaw: string | undefined,
     @Req() request: Request,
   ) {
     const user = (request as any).user;
@@ -79,6 +80,9 @@ export class LeadsController {
     if (unreadRaw !== undefined) filters.unread = unreadRaw === 'true';
     if (leadStateRaw !== undefined && Object.values(LeadState).includes(leadStateRaw as LeadState)) {
       filters.lead_state = leadStateRaw as LeadState;
+    }
+    if (contactTypeRaw !== undefined && Object.values(LeadContactType).includes(contactTypeRaw as LeadContactType)) {
+      filters.contact_type = contactTypeRaw as LeadContactType;
     }
 
     this.applyLeadScope(user, filters);

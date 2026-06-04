@@ -47,6 +47,7 @@ export class LeadsService {
       blocked,
       unread,
       lead_state,
+      contact_type,
       limit = 20,
       offset = 0,
     } = filters;
@@ -106,6 +107,10 @@ export class LeadsService {
 
     if (lead_state !== undefined) {
       queryBuilder.andWhere('lead.lead_state = :lead_state', { lead_state });
+    }
+
+    if (contact_type !== undefined) {
+      queryBuilder.andWhere('lead.contact_type = :contact_type', { contact_type });
     }
 
     return queryBuilder.getMany();

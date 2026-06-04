@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
-import { LeadState } from '@/common/enums';
+import { LeadContactType, LeadState } from '@/common/enums';
 
 const toOptionalInt = ({ value }: { value: unknown }) => {
   if (value === null || value === undefined || value === '') return undefined;
@@ -76,4 +76,8 @@ export class CreateLeadDto {
   @IsOptional()
   @IsEnum(LeadState)
   lead_state?: LeadState;
+
+  @IsOptional()
+  @IsEnum(LeadContactType)
+  contact_type?: LeadContactType;
 }

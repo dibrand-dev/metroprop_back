@@ -273,3 +273,9 @@ export enum LeadState {
   LOST = 'Perdido',
   POTENTIAL_CLIENT = 'Potencial cliente',
 }
+
+export enum LeadContactType {
+  MESSAGE = 'message',
+  WHATSAPP = 'whatsapp',
+  SAW_CONTACT = 'saw_contact',
+}

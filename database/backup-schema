@@ -1,6 +1,7 @@
 
 DROP TYPE IF EXISTS public."lead_property_lead_state_enum";
 DROP TYPE IF EXISTS public."leads_lead_state_enum";
+DROP TYPE IF EXISTS public."leads_contact_type_enum";
 CREATE TYPE public."leads_lead_state_enum" AS ENUM (
 	'Nuevo contacto',
 	'Contactado',
@@ -8,6 +9,10 @@ CREATE TYPE public."leads_lead_state_enum" AS ENUM (
 	'Calificado',
 	'Perdido',
 	'Potencial cliente');
+CREATE TYPE public."leads_contact_type_enum" AS ENUM (
+	'message',
+	'whatsapp',
+	'saw_contact');
 
 DROP TYPE IF EXISTS public."organizations_professional_type_enum";
 CREATE TYPE public."organizations_professional_type_enum" AS ENUM (
@@ -797,6 +802,7 @@ CREATE TABLE IF NOT EXISTS public.ads_banners (
 		user_id int4 NULL,
 		property_id int4 NOT NULL,
 		message text NULL,
+		contact_type public."leads_contact_type_enum" DEFAULT 'message' NOT NULL,
 		highlighted bool DEFAULT false NOT NULL,
 		blocked bool DEFAULT false NOT NULL,
 		unread bool DEFAULT true NOT NULL,

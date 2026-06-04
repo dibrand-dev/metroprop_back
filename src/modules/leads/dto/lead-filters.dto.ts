@@ -1,6 +1,6 @@
 import { Transform } from 'class-transformer';
 import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
-import { LeadState } from '@/common/enums';
+import { LeadContactType, LeadState } from '@/common/enums';
 
 export class LeadFiltersDto {
   @IsOptional()
@@ -58,6 +58,10 @@ export class LeadFiltersDto {
   @IsOptional()
   @IsEnum(LeadState)
   lead_state?: LeadState;
+
+  @IsOptional()
+  @IsEnum(LeadContactType)
+  contact_type?: LeadContactType;
 
   @IsOptional()
   @Transform(({ value }) => parseInt(value))

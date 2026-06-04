@@ -10,7 +10,7 @@ import {
 import { Organization } from '../../organizations/entities/organization.entity';
 import { User } from '../../users/entities/user.entity';
 import { Property } from '../../properties/entities/property.entity';
-import { LeadState } from '@/common/enums';
+import { LeadContactType, LeadState } from '@/common/enums';
 
 @Entity('leads')
 export class Lead {
@@ -52,6 +52,9 @@ export class Lead {
 
   @Column({ type: 'text', nullable: true })
   message?: string;
+
+  @Column({ type: 'enum', enum: LeadContactType, default: LeadContactType.MESSAGE })
+  contact_type: LeadContactType = LeadContactType.MESSAGE;
 
   @Column({ type: 'boolean', default: false })
   highlighted: boolean = false;
