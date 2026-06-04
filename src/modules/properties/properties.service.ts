@@ -1604,9 +1604,34 @@ export class PropertiesService {
 
     const [data, total] = await baseQb.getManyAndCount();
 
-    for (const property of data) {
-      if (property.images?.length) {
-        property.images = prependImagePrefixToUrls(THUMB_PREFIX, property.images);
+    if (data.length > 0) {
+      const propertyIds = data.map(p => p.id);
+      const leadsCount: Array<{ property_id: number, count: string }> = await this.dataSource.getRepository('leads')
+        .createQueryBuilder('lead')
+        .select('lead.property_id', 'property_id')
+        .addSelect('COUNT(lead.id)', 'count')
+        .where('lead.property_id IN (:...propertyIds)', { propertyIds })
+        .groupBy('lead.property_id')
+        .getRawMany();
+
+      const leadsCountMap = new Map<number, number>();
+      for (const lead of leadsCount) {
+        leadsCountMap.set(lead.property_id, parseInt(lead.count, 10));
+      }
+
+      for (const property of data) {
+        if (property.id) {
+          (property as any).leads_count = leadsCountMap.get(property.id) || 0;
+        }
+        if (property.images?.length) {
+          property.images = prependImagePrefixToUrls(THUMB_PREFIX, property.images);
+        }
+      }
+    } else {
+      for (const property of data) {
+        if (property.images?.length) {
+          property.images = prependImagePrefixToUrls(THUMB_PREFIX, property.images);
+        }
       }
     }
 
