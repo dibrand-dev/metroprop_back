@@ -55,6 +55,17 @@ export class LeadsService {
     const queryBuilder = this.leadsRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.property', 'property')
+      .leftJoinAndSelect(
+        'property.images',
+        'property_image',
+        `property_image.id = (
+          SELECT pi.id
+          FROM property_images pi
+          WHERE pi."propertyId" = property.id
+          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+          LIMIT 1
+        )`,
+      )
       .orderBy('lead.created_at', 'DESC')
       .take(limit)
       .skip(offset);
@@ -145,9 +156,23 @@ export class LeadsService {
   }
 
   async findOne(id: number): Promise<Lead> {
-    const lead = await this.leadsRepository.findOne({
-      where: { id, deleted: false },
-    });
+    const lead = await this.leadsRepository
+      .createQueryBuilder('lead')
+      .leftJoinAndSelect('lead.property', 'property')
+      .leftJoinAndSelect(
+        'property.images',
+        'property_image',
+        `property_image.id = (
+          SELECT pi.id
+          FROM property_images pi
+          WHERE pi."propertyId" = property.id
+          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+          LIMIT 1
+        )`,
+      )
+      .where('lead.id = :id', { id })
+      .andWhere('lead.deleted = false')
+      .getOne();
 
     if (!lead) {
       throw new NotFoundException('Lead not found');
@@ -251,10 +276,24 @@ export class LeadsService {
   }
 
   async findAllByOrganization(organizationId: number): Promise<Lead[]> {
-    return this.leadsRepository.find({
-      where: { organization_id: organizationId, deleted: false },
-      order: { created_at: 'DESC' },
-    });
+    return this.leadsRepository
+      .createQueryBuilder('lead')
+      .leftJoinAndSelect('lead.property', 'property')
+      .leftJoinAndSelect(
+        'property.images',
+        'property_image',
+        `property_image.id = (
+          SELECT pi.id
+          FROM property_images pi
+          WHERE pi."propertyId" = property.id
+          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+          LIMIT 1
+        )`,
+      )
+      .where('lead.organization_id = :organizationId', { organizationId })
+      .andWhere('lead.deleted = false')
+      .orderBy('lead.created_at', 'DESC')
+      .getMany();
   }
 
   private async notifyLead(lead: Lead): Promise<void> {
