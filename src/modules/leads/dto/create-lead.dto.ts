@@ -1,9 +1,17 @@
 import { Transform } from 'class-transformer';
-import { IsEmail, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { IsBoolean, IsEmail, IsEnum, IsInt, IsNotEmpty, IsOptional, IsString, MaxLength, Min } from 'class-validator';
+import { LeadState } from '@/common/enums';
 
 const toOptionalInt = ({ value }: { value: unknown }) => {
   if (value === null || value === undefined || value === '') return undefined;
   return Number(value);
+};
+
+const toOptionalBoolean = ({ value }: { value: unknown }) => {
+  if (value === null || value === undefined || value === '') return undefined;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return value;
 };
 
 export class CreateLeadDto {
@@ -48,5 +56,24 @@ export class CreateLeadDto {
   @Transform(toOptionalInt)
   @IsInt()
   @Min(1)
-  owner_user_id?: number;
+  user_id?: number;
+
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  highlighted?: boolean;
+
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  blocked?: boolean;
+
+  @IsOptional()
+  @Transform(toOptionalBoolean)
+  @IsBoolean()
+  unread?: boolean;
+
+  @IsOptional()
+  @IsEnum(LeadState)
+  lead_state?: LeadState;
 }

@@ -33,7 +33,7 @@ export class LeadFiltersDto {
   @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
-  owner_user_id?: number;
+  user_id?: number;
 
   @IsOptional()
   @Transform(({ value }) => value === 'true' ? true : value === 'false' ? false : value)

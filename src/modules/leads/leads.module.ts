@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Lead } from './entities/lead.entity';
-import { LeadProperty } from './entities/lead-property.entity';
 import { Property } from '../properties/entities/property.entity';
 import { Organization } from '../organizations/entities/organization.entity';
 import { Partner } from '../partners/entities/partner.entity';
@@ -13,7 +12,7 @@ import { PropertiesModule } from '../properties/properties.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Lead, LeadProperty, Property, Organization, Partner, User]),
+    TypeOrmModule.forFeature([Lead, Property, Organization, Partner, User]),
     EmailModule,
     PropertiesModule,
   ],

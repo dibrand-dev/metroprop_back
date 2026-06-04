@@ -1,11 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Lead } from './entities/lead.entity';
-import { LeadProperty } from './entities/lead-property.entity';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
-import { UpdateLeadPropertyDto } from './dto/update-lead-property.dto';
 import { Property } from '../properties/entities/property.entity';
 import { LeadFiltersDto } from './dto/lead-filters.dto';
 import { Organization } from '../organizations/entities/organization.entity';
@@ -23,8 +21,6 @@ export class LeadsService {
   constructor(
     @InjectRepository(Lead)
     private readonly leadsRepository: Repository<Lead>,
-    @InjectRepository(LeadProperty)
-    private readonly leadPropertyRepository: Repository<LeadProperty>,
     @InjectRepository(Property)
     private readonly propertyRepository: Repository<Property>,
     @InjectRepository(Organization)
@@ -37,7 +33,7 @@ export class LeadsService {
     private readonly propertiesService: PropertiesService,
   ) {}
 
-  async findAll(filters: LeadFiltersDto = {}): Promise<LeadProperty[]> {
+  async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
     const {
       id,
       email,
@@ -45,7 +41,7 @@ export class LeadsService {
       phone,
       property_id,
       organization_id,
-      owner_user_id,
+      user_id,
       deleted,
       highlighted,
       blocked,
@@ -55,13 +51,10 @@ export class LeadsService {
       offset = 0,
     } = filters;
 
-    const queryBuilder = this.leadPropertyRepository
-      .createQueryBuilder('leadProperty')
-      .leftJoin('leadProperty.property', 'property')
-      .addSelect(['property.id', 'property.publication_title', 'property.street', 'property.status'])
-      .leftJoinAndSelect('leadProperty.lead', 'lead')
-      .andWhere('lead.deleted = false')
-      .orderBy('leadProperty.created_at', 'DESC')
+    const queryBuilder = this.leadsRepository
+      .createQueryBuilder('lead')
+      .leftJoinAndSelect('lead.property', 'property')
+      .orderBy('lead.created_at', 'DESC')
       .take(limit)
       .skip(offset);
 
@@ -74,7 +67,7 @@ export class LeadsService {
     }
 
     if (property_id !== undefined) {
-      queryBuilder.andWhere('leadProperty.property_id = :property_id', { property_id });
+      queryBuilder.andWhere('lead.property_id = :property_id', { property_id });
     }
 
     if (email) {
@@ -89,30 +82,30 @@ export class LeadsService {
       queryBuilder.andWhere('lead.phone ILIKE :phone', { phone: `%${phone}%` });
     }
 
-    if (owner_user_id !== undefined) {
-      queryBuilder.andWhere('lead.owner_user_id = :owner_user_id', { owner_user_id });
+    if (user_id !== undefined) {
+      queryBuilder.andWhere('lead.user_id = :user_id', { user_id });
     }
 
     if (deleted !== undefined) {
-      queryBuilder.andWhere('leadProperty.deleted = :deleted', { deleted });
+      queryBuilder.andWhere('lead.deleted = :deleted', { deleted });
     } else {
-      queryBuilder.andWhere('leadProperty.deleted = false');
+      queryBuilder.andWhere('lead.deleted = false');
     }
 
     if (highlighted !== undefined) {
-      queryBuilder.andWhere('leadProperty.highlighted = :highlighted', { highlighted });
+      queryBuilder.andWhere('lead.highlighted = :highlighted', { highlighted });
     }
 
     if (blocked !== undefined) {
-      queryBuilder.andWhere('leadProperty.blocked = :blocked', { blocked });
+      queryBuilder.andWhere('lead.blocked = :blocked', { blocked });
     }
 
     if (unread !== undefined) {
-      queryBuilder.andWhere('leadProperty.unread = :unread', { unread });
+      queryBuilder.andWhere('lead.unread = :unread', { unread });
     }
 
     if (lead_state !== undefined) {
-      queryBuilder.andWhere('leadProperty.lead_state = :lead_state', { lead_state });
+      queryBuilder.andWhere('lead.lead_state = :lead_state', { lead_state });
     }
 
     return queryBuilder.getMany();
@@ -121,19 +114,17 @@ export class LeadsService {
   async getLeadProperties(filters: { email: string }): Promise<(PropertyCard & { lead_date: Date })[]> {
     const leads = await this.leadsRepository.find({
       where: { email: filters.email, deleted: false },
-      relations: ['lead_properties'],
+      order: { created_at: 'DESC' },
     });
 
     if (!leads.length) return [];
 
-    // Map property_id → most recent lead_property created_at
     const dateByPropertyId = new Map<number, Date>();
     for (const lead of leads) {
-      for (const lp of lead.lead_properties ?? []) {
-        const existing = dateByPropertyId.get(lp.property_id);
-        if (!existing || lp.created_at > existing) {
-          dateByPropertyId.set(lp.property_id, lp.created_at);
-        }
+      if (lead.property_id === undefined) continue;
+      const existing = dateByPropertyId.get(lead.property_id);
+      if (!existing || lead.created_at > existing) {
+        dateByPropertyId.set(lead.property_id, lead.created_at);
       }
     }
 
@@ -148,10 +139,9 @@ export class LeadsService {
     }));
   }
 
-  async findOne(id: number, withRelations = false): Promise<Lead> {
+  async findOne(id: number): Promise<Lead> {
     const lead = await this.leadsRepository.findOne({
       where: { id, deleted: false },
-      ...(withRelations && { relations: ['lead_properties'] }),
     });
 
     if (!lead) {
@@ -162,47 +152,23 @@ export class LeadsService {
   }
 
   async create(createLeadDto: CreateLeadDto): Promise<Lead> {
-    let lead: Lead | null = null;
-
-    // 1. Buscar lead existente: por email+org o por email+owner_user
-    if (createLeadDto.organization_id) {
-      lead = await this.findByEmailAndOrganization(
-        createLeadDto.email,
-        createLeadDto.organization_id,
-      );
-    } else if (createLeadDto.owner_user_id !== undefined) {
-
-      if (createLeadDto.owner_user_id !== undefined) {
-        await this.validateOwnerUserExists(createLeadDto.owner_user_id);
-      }
-      lead = await this.findByEmailAndOwnerUser(
-        createLeadDto.email,
-        createLeadDto.owner_user_id,
-      );
+    if (createLeadDto.user_id !== undefined) {
+      await this.validateUserExists(createLeadDto.user_id);
     }
 
-    if (!lead) {
-      lead = this.leadsRepository.create({
-        name: createLeadDto.name,
-        email: createLeadDto.email,
-    //    country_code: createLeadDto.country_code,
-     //   phone: createLeadDto.phone,
-        organization_id: createLeadDto.organization_id,
-        owner_user_id: createLeadDto.owner_user_id,
-      });
-      lead = await this.leadsRepository.save(lead);
-    }
-
-    // 4. Crear lead_property con el teléfono y el mensaje
-    await this.createLeadPropertyRelation(
-      lead.id,
+    const propertyValid = await this.validatePropertyBelongsToOrganization(
       createLeadDto.property_id,
-      createLeadDto.message,
-      createLeadDto.country_code,
-      createLeadDto.phone,
+      createLeadDto.organization_id,
     );
+    if (!propertyValid) {
+      throw new BadRequestException('The property does not belong to the organization');
+    }
 
-    const storedLead = await this.findOne(lead.id, true);
+    const lead = this.leadsRepository.create({
+      ...createLeadDto,
+    });
+
+    const storedLead = await this.leadsRepository.save(lead);
 
     this.notifyLead(storedLead).catch((err) =>
       this.logger.error('Error al notificar lead', err),
@@ -214,16 +180,10 @@ export class LeadsService {
   async update(id: number, updateLeadDto: UpdateLeadDto): Promise<Lead> {
     const lead = await this.findOne(id);
     const nextOrganizationId = updateLeadDto.organization_id ?? lead.organization_id;
-    const nextEmail = updateLeadDto.email ?? lead.email;
-
-    const duplicatedLead = await this.findByEmailAndOrganization(nextEmail, nextOrganizationId);
-    if (duplicatedLead && duplicatedLead.id !== id) {
-      throw new ConflictException('A lead with that email already exists for the organization');
-    }
-
-    if (updateLeadDto.property_id !== undefined) {
+    const nextPropertyId = updateLeadDto.property_id ?? lead.property_id;
+    if (nextPropertyId !== undefined) {
       const propertyValid = await this.validatePropertyBelongsToOrganization(
-        updateLeadDto.property_id,
+        nextPropertyId,
         nextOrganizationId,
       );
       if (!propertyValid) {
@@ -231,86 +191,33 @@ export class LeadsService {
       }
     }
 
-    if (updateLeadDto.owner_user_id !== undefined) {
-      await this.validateOwnerUserExists(updateLeadDto.owner_user_id);
+    if (updateLeadDto.user_id !== undefined) {
+      await this.validateUserExists(updateLeadDto.user_id);
     }
 
     Object.assign(lead, {
       name: updateLeadDto.name ?? lead.name,
-      email: nextEmail,
+      email: updateLeadDto.email ?? lead.email,
+      country_code: updateLeadDto.country_code ?? lead.country_code,
+      phone: updateLeadDto.phone ?? lead.phone,
+      message: updateLeadDto.message ?? lead.message,
       organization_id: nextOrganizationId,
-      owner_user_id: updateLeadDto.owner_user_id !== undefined ? updateLeadDto.owner_user_id : lead.owner_user_id,
+      user_id: updateLeadDto.user_id !== undefined ? updateLeadDto.user_id : lead.user_id,
+      property_id: nextPropertyId,
+      highlighted: updateLeadDto.highlighted ?? lead.highlighted,
+      blocked: updateLeadDto.blocked ?? lead.blocked,
+      unread: updateLeadDto.unread ?? lead.unread,
+      lead_state: updateLeadDto.lead_state ?? lead.lead_state,
+      deleted: updateLeadDto.deleted ?? lead.deleted,
     });
 
-    await this.leadsRepository.save(lead);
-
-    if (updateLeadDto.property_id !== undefined) {
-      await this.createLeadPropertyRelation(
-        lead.id,
-        updateLeadDto.property_id,
-        updateLeadDto.message,
-        updateLeadDto.country_code,
-        updateLeadDto.phone,
-      );
-    }
-
-    return this.findOne(lead.id, true);
+    return this.leadsRepository.save(lead);
   }
 
   async remove(id: number): Promise<void> {
-    const lead = await this.leadsRepository.findOne({ where: { id } });
-
-    if (!lead) {
-      throw new NotFoundException('Lead not found');
-    }
-
+    const lead = await this.findOne(id);
     lead.deleted = true;
     await this.leadsRepository.save(lead);
-  }
-
-  async findLeadPropertyWithLead(leadPropertyId: number): Promise<LeadProperty> {
-    const leadProperty = await this.leadPropertyRepository.findOne({
-      where: { id: leadPropertyId },
-      relations: ['lead'],
-    });
-
-    if (!leadProperty) {
-      throw new NotFoundException('LeadProperty not found');
-    }
-
-    return leadProperty;
-  }
-
-  async updateLeadProperty(leadProperty: LeadProperty, dto: UpdateLeadPropertyDto): Promise<LeadProperty> {
-    Object.assign(leadProperty, {
-      ...(dto.deleted !== undefined && { deleted: dto.deleted }),
-      ...(dto.highlighted !== undefined && { highlighted: dto.highlighted }),
-      ...(dto.blocked !== undefined && { blocked: dto.blocked }),
-      ...(dto.unread !== undefined && { unread: dto.unread }),
-      ...(dto.lead_state !== undefined && { lead_state: dto.lead_state }),
-    });
-
-    return this.leadPropertyRepository.save(leadProperty);
-  }
-
-  private async findByEmailAndOrganization(email: string, organizationId?: number): Promise<Lead | null> {
-    return this.leadsRepository.findOne({
-      where: {
-        email,
-        organization_id: organizationId,
-        deleted: false,
-      },
-    });
-  }
-
-  private async findByEmailAndOwnerUser(email: string, ownerUserId: number): Promise<Lead | null> {
-    return this.leadsRepository.findOne({
-      where: {
-        email,
-        owner_user_id: ownerUserId,
-        deleted: false,
-      },
-    });
   }
 
   private async validatePropertyBelongsToOrganization(
@@ -327,80 +234,49 @@ export class LeadsService {
     return true;
   }
 
-  private async validateOwnerUserExists(ownerUserId: number): Promise<void> {
-    const ownerUser = await this.userRepository.findOne({
-      where: { id: ownerUserId },
+  private async validateUserExists(userId: number): Promise<void> {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
       select: ['id'],
     });
 
-    if (!ownerUser) {
-      throw new BadRequestException('owner_user_id does not reference an existing user');
+    if (!user) {
+      throw new BadRequestException('user_id does not reference an existing user');
     }
-  }
-
-  private async createLeadPropertyRelation(
-    leadId: number,
-    propertyId: number,
-    message?: string,
-    country_code?: string,
-    phone?: string,
-  ): Promise<LeadProperty> {
-    const leadProperty = this.leadPropertyRepository.create({
-      lead_id: leadId,
-      property_id: propertyId,
-      message,
-      country_code,
-      phone,
-    });
-
-    return this.leadPropertyRepository.save(leadProperty);
   }
 
   async findAllByOrganization(organizationId: number): Promise<Lead[]> {
     return this.leadsRepository.find({
       where: { organization_id: organizationId, deleted: false },
-      relations: ['lead_properties'],
       order: { created_at: 'DESC' },
     });
   }
 
   private async notifyLead(lead: Lead): Promise<void> {
-    // Obtener el lead_property más reciente para extraer property y mensaje
-    const leadProperty = await this.leadPropertyRepository.findOne({
-      where: { lead_id: lead.id, deleted: false },
-      order: { created_at: 'DESC' },
-    });
-
-    if (!leadProperty) return;
-
-    // Obtener la propiedad con user_id y organization_id
     const property = await this.propertyRepository.findOne({
-      where: { id: leadProperty.property_id },
+      where: { id: lead.property_id },
       select: ['id', 'reference_code', 'publication_id', 'user_id', 'organization_id', 'publication_title'],
     });
 
     if (!property) return;
 
-    // Obtener la organización para saber si tiene partner
     const organization = await this.organizationRepository.findOne({
       where: { id: property.organization_id },
-      select: ['id', 'source_partner_id', 'company_name'],
+      select: ['id', 'source_partner_id', 'company_name', 'tokko_key'],
     });
 
     if (!organization) return;
 
-    const message = leadProperty.message ?? '';
-    const contactCountryCode = leadProperty.country_code ?? lead.country_code;
-    const contactPhone = leadProperty.phone ?? lead.phone;
+    const message = lead.message ?? '';
+    const contactCountryCode = lead.country_code;
+    const contactPhone = lead.phone;
 
-    // ── Con partner (ej: Tokko) ──────────────────────────────────────────────
     if (organization.source_partner_id) {
       const partner = await this.partnerRepository.findOne({
         where: { id: organization.source_partner_id },
         select: ['id', 'name'],
       });
 
-      // Por ahora, deshabilitado
       if (partner && 1 > 2) {
         switch (partner.name) {
           case TOKKO_PARTNER_NAME:
@@ -411,7 +287,17 @@ export class LeadsService {
               mail: lead.email,
               comment: message,
               phone: contactPhone ? `+${contactCountryCode ?? ''} ${contactPhone}`.trim() : undefined,
-              errorContext: { lead, leadProperty },
+              errorContext: {
+                lead: {
+                  id: lead.id,
+                  name: lead.name,
+                  email: lead.email,
+                  phone: lead.phone,
+                  country_code: lead.country_code,
+                  property_id: lead.property_id!,
+                  message: lead.message,
+                },
+              },
             });
             break;
 
@@ -422,7 +308,6 @@ export class LeadsService {
       }
     }
 
-    // ── Sin partner: org registrada en el sitio → email al user de la propiedad
     if (!property.user_id) return;
 
     const assignedUser = await this.userRepository.findOne({

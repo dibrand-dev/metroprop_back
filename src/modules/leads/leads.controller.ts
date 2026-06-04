@@ -1,9 +1,8 @@
-import { Body, Controller, Delete, ForbiddenException, Get, NotFoundException, Param, ParseIntPipe, Patch, Post, Put, Query, Req, UseGuards, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, Param, ParseIntPipe, Patch, Post, Query, Req, UseGuards, UseInterceptors } from '@nestjs/common';
 import { NoFilesInterceptor } from '@nestjs/platform-express';
 import { LeadsService } from './leads.service';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
-import { UpdateLeadPropertyDto } from './dto/update-lead-property.dto';
 import { LeadFiltersDto } from './dto/lead-filters.dto';
 import { LeadState, UserRole } from '@/common/enums';
 import { Roles } from '@/common/decorators/roles.decorator';
@@ -14,10 +13,10 @@ import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 export class LeadsController {
   constructor(private readonly leadsService: LeadsService) {}
 
-  private assertLeadAccess(user: any, lead: { organization_id?: number; owner_user_id?: number }): void {
+  private assertLeadAccess(user: any, lead: { organization_id?: number; user_id?: number }): void {
     if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) return;
     if (user.organization_id !== undefined && lead.organization_id == user.organization_id) return;
-    if (lead.owner_user_id == user.id) return;
+    if (lead.user_id == user.id) return;
     throw new ForbiddenException('No tenés permiso para acceder a este lead');
   }
 
@@ -32,7 +31,7 @@ export class LeadsController {
       return;
     }
 
-    filters.owner_user_id = user.id;
+    filters.user_id = user.id;
   }
  
   @Get()
@@ -103,15 +102,15 @@ export class LeadsController {
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Patch('lead-property/:id')
-  async updateLeadProperty(
+  @Patch(':id')
+  async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateLeadPropertyDto,
+    @Body() updateLeadDto: UpdateLeadDto,
     @Req() request: Request,
   ) {
-    const leadProperty = await this.leadsService.findLeadPropertyWithLead(id);
-    this.assertLeadAccess((request as any).user, leadProperty.lead!);
-    return this.leadsService.updateLeadProperty(leadProperty, dto);
+    const lead = await this.leadsService.findOne(id);
+    this.assertLeadAccess((request as any).user, lead);
+    return this.leadsService.update(id, updateLeadDto);
   }
 
   @UseGuards(JwtAuthGuard, RolesGuard)

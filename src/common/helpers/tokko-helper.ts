@@ -1552,20 +1552,26 @@ export interface TokkoContactParams {
   phone?: string;
   /** Contexto para el log de errores — no se envía a Tokko */
   errorContext: {
-    lead: { id?: number; name: string; email: string; phone?: string; country_code?: string };
-    leadProperty: { id?: number; lead_id: number; property_id: number; message?: string };
+    lead: {
+      id?: number;
+      name: string;
+      email: string;
+      phone?: string;
+      country_code?: string;
+      property_id: number;
+      message?: string;
+    };
   };
 }
 
 function writeTokkoContactError(params: {
   lead: TokkoContactParams['errorContext']['lead'];
-  leadProperty: TokkoContactParams['errorContext']['leadProperty'];
   rawStatus?: string;
   errorCode?: number;
   errorReason?: string;
 }): void {
   try {
-    const { lead, leadProperty, rawStatus, errorCode, errorReason } = params;
+    const { lead, rawStatus, errorCode, errorReason } = params;
     const logsDir = path.join(process.cwd(), 'logs');
     if (!fs.existsSync(logsDir)) fs.mkdirSync(logsDir, { recursive: true });
 
@@ -1576,8 +1582,8 @@ function writeTokkoContactError(params: {
     const lines = [
       `[${timestamp}] ERROR AL ENVIAR CONTACTO A TOKKO`,
       `  Lead        : id=${lead.id ?? '?'} | name="${lead.name}" | email=${lead.email} | phone=${lead.country_code ?? ''}${lead.phone ?? '(sin teléfono)'}`,
-      `  LeadProperty: id=${leadProperty.id ?? '?'} | lead_id=${leadProperty.lead_id} | property_id=${leadProperty.property_id}`,
-      `  Mensaje     : ${leadProperty.message ?? '(vacío)'}`,
+      `  Propiedad   : property_id=${lead.property_id}`,
+      `  Mensaje     : ${lead.message ?? '(vacío)'}`,
       `  Respuesta   : status="${rawStatus ?? 'desconocido'}"${errorCode !== undefined ? ` | error_code=${errorCode}` : ''}`,
       `  Motivo      : ${errorReason ?? 'No especificado'}`,
       '',
@@ -1616,7 +1622,6 @@ export async function notifyTokkoContact(params: TokkoContactParams): Promise<vo
 
   writeTokkoContactError({
     lead: errorContext.lead,
-    leadProperty: errorContext.leadProperty,
     rawStatus,
     errorCode,
     errorReason,

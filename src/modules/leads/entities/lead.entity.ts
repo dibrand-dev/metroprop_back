@@ -4,17 +4,15 @@ import {
   Column,
   CreateDateColumn,
   UpdateDateColumn,
-  Index,
   ManyToOne,
   JoinColumn,
-  OneToMany,
 } from 'typeorm';
 import { Organization } from '../../organizations/entities/organization.entity';
 import { User } from '../../users/entities/user.entity';
-import { LeadProperty } from './lead-property.entity';
+import { Property } from '../../properties/entities/property.entity';
+import { LeadState } from '@/common/enums';
 
 @Entity('leads')
-@Index('uk_leads_email_organization', ['email', 'organization_id'], { unique: true })
 export class Lead {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -39,15 +37,36 @@ export class Lead {
   organization?: Organization;
 
   @Column({ type: 'integer', nullable: true })
-  owner_user_id?: number;
+  user_id?: number;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'user_id' })
+  user?: User;
+
+  @Column({ type: 'integer', nullable: true })
+  property_id?: number;
+
+  @ManyToOne(() => Property, { nullable: true, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'property_id' })
+  property?: Property;
+
+  @Column({ type: 'text', nullable: true })
+  message?: string;
+
+  @Column({ type: 'boolean', default: false })
+  highlighted: boolean = false;
+
+  @Column({ type: 'boolean', default: false })
+  blocked: boolean = false;
+
+  @Column({ type: 'boolean', default: true })
+  unread: boolean = true;
+
+  @Column({ type: 'enum', enum: LeadState, default: LeadState.NEW })
+  lead_state: LeadState = LeadState.NEW;
 
   @Column({ type: 'boolean', default: false })
   deleted: boolean = false;
-
-  @OneToMany(() => LeadProperty, (leadProperty) => leadProperty.lead, {
-    eager: false,
-  })
-  lead_properties?: LeadProperty[];
 
   @CreateDateColumn({ name: 'created_at' })
   created_at!: Date;
