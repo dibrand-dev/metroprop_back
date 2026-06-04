@@ -18,6 +18,22 @@ import { PropertiesService, PropertyCard } from '../properties/properties.servic
 export class LeadsService {
   private readonly logger = new Logger(LeadsService.name);
 
+  private mapLeadPropertySummary(lead: Lead): Lead {
+    if (!lead.property) return lead;
+
+    const property = lead.property;
+    lead.property = {
+      id: property.id,
+      price: property.price,
+      currency: property.currency,
+      publication_title: property.publication_title,
+      operation_type: property.operation_type,
+      price_square_meter: property.price_square_meter,
+    } as Property;
+
+    return lead;
+  }
+
   constructor(
     @InjectRepository(Lead)
     private readonly leadsRepository: Repository<Lead>,
@@ -55,17 +71,6 @@ export class LeadsService {
     const queryBuilder = this.leadsRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.property', 'property')
-      .leftJoinAndSelect(
-        'property.images',
-        'property_image',
-        `property_image.id = (
-          SELECT pi.id
-          FROM property_images pi
-          WHERE pi."propertyId" = property.id
-          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
-          LIMIT 1
-        )`,
-      )
       .orderBy('lead.created_at', 'DESC')
       .take(limit)
       .skip(offset);
@@ -124,7 +129,8 @@ export class LeadsService {
       queryBuilder.andWhere('lead.contact_type = :contact_type', { contact_type });
     }
 
-    return queryBuilder.getMany();
+    const leads = await queryBuilder.getMany();
+    return leads.map((lead) => this.mapLeadPropertySummary(lead));
   }
 
   async getLeadProperties(filters: { email: string }): Promise<(PropertyCard & { lead_date: Date })[]> {
@@ -159,17 +165,6 @@ export class LeadsService {
     const lead = await this.leadsRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.property', 'property')
-      .leftJoinAndSelect(
-        'property.images',
-        'property_image',
-        `property_image.id = (
-          SELECT pi.id
-          FROM property_images pi
-          WHERE pi."propertyId" = property.id
-          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
-          LIMIT 1
-        )`,
-      )
       .where('lead.id = :id', { id })
       .andWhere('lead.deleted = false')
       .getOne();
@@ -178,7 +173,7 @@ export class LeadsService {
       throw new NotFoundException('Lead not found');
     }
 
-    return lead;
+    return this.mapLeadPropertySummary(lead);
   }
 
   async create(createLeadDto: CreateLeadDto): Promise<Lead> {
@@ -276,24 +271,15 @@ export class LeadsService {
   }
 
   async findAllByOrganization(organizationId: number): Promise<Lead[]> {
-    return this.leadsRepository
+    const leads = await this.leadsRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.property', 'property')
-      .leftJoinAndSelect(
-        'property.images',
-        'property_image',
-        `property_image.id = (
-          SELECT pi.id
-          FROM property_images pi
-          WHERE pi."propertyId" = property.id
-          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
-          LIMIT 1
-        )`,
-      )
       .where('lead.organization_id = :organizationId', { organizationId })
       .andWhere('lead.deleted = false')
       .orderBy('lead.created_at', 'DESC')
       .getMany();
+
+    return leads.map((lead) => this.mapLeadPropertySummary(lead));
   }
 
   private async notifyLead(lead: Lead): Promise<void> {
