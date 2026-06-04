@@ -379,8 +379,10 @@ export class PropertiesController {
     @Req() request: Request,
   ) {
     const user = (request as any).user;
+    const hasOrgId = typeof user.organization_id === 'number' && Number.isFinite(user.organization_id);
+
     if(user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-      if( user.organization_id === undefined || user.role_id === UserRole.USER_ROL_COLLABORATOR) {
+      if(!hasOrgId || user.role_id === UserRole.USER_ROL_COLLABORATOR) {
         searchDto.user_id = user.id;
       } else {
         searchDto.organization_id = user?.organization_id ?? user?.organization?.id;

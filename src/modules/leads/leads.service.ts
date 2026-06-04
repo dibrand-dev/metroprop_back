@@ -29,6 +29,7 @@ export class LeadsService {
       publication_title: property.publication_title,
       operation_type: property.operation_type,
       price_square_meter: property.price_square_meter,
+      street: property.street,
     } as Property;
 
     return lead;
