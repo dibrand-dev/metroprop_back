@@ -1,10 +1,10 @@
-import { 
-  Controller, 
-  Get, 
-  Post, 
-  Patch, 
-  Delete, 
-  Param, 
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
   Body,
   Query,
   ParseIntPipe,
@@ -13,40 +13,47 @@ import {
   UseGuards,
   Req,
   NotFoundException,
-  ForbiddenException
+  ForbiddenException,
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserFiltersDto } from './dto/user-filters.dto';
-import { VerifyEmailDto, RequestPasswordResetDto, ResetPasswordDto } from './dto/auth-validation.dto';
+import {
+  VerifyEmailDto,
+  RequestPasswordResetDto,
+  ResetPasswordDto,
+} from './dto/auth-validation.dto';
 import { EmailService } from '../../common/email/email.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
+import { UserOwnershipGuard } from '../../common/guards/user-ownership.guard';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
-    private readonly emailService: EmailService
+    private readonly emailService: EmailService,
   ) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async findAll(@Query() filters: UserFiltersDto, @Req() request: Request) {
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPERVISOR, UserRole.USER_ROL_COLLABORATOR)
+  async findAll(@Query() filters: UserFiltersDto, @Req() request: any) {
+    const requester = request.user;
 
-    if ((request as any).user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-      if ((request as any).user.organization_id !== undefined) {
-          filters.organization_id = (request as any).user.organization_id;
-      } 
-      
-      if ((request as any).user.role_id === UserRole.USER_ROL_COLLABORATOR 
-      || ((request as any).user.role_id === UserRole.USER_ROL_ADMIN && (request as any).user.organization_id === undefined)) {
-
-        filters.id = (request as any).user.id;
+    // Los no-super-admins tienen filtros forzados
+    if (requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+      // Admins/Supervisors ven su organización
+      if (requester.organization_id) {
+        filters.organization_id = requester.organization_id;
+      } else {
+        // Collaborators o Admins sin org solo se ven a sí mismos
+        filters.id = requester.id;
       }
     }
 
@@ -60,21 +67,9 @@ export class UsersController {
   }
 
   @Get(':id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  async findOne(@Param('id', ParseIntPipe) id: number, @Req() request: any) {
-    const requester = (request as any).user;
-    const where: any = { id, deleted: false };
-    if( requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-
-      if (requester.role_id === UserRole.USER_ROL_ADMIN && requester.organization_id !== undefined) {
-        where.organization_id = requester.organization_id;
-      } else if (id !== requester.id) {
-          // Si no tiene organization, solo puede acceder a su propio usuario
-          throw new NotFoundException('User not found');
-      }
-    }
-
-    const user = await this.usersService.searchUserByCondition(where, undefined, [
+  @UseGuards(UserOwnershipGuard)
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.usersService.searchUserByCondition({ id, deleted: false }, undefined, [
       'id',
       'name',
       'email',
@@ -87,7 +82,7 @@ export class UsersController {
       'organization_id',
       'created_at',
       'updated_at',
-      'branches'
+      'branches',
     ]);
 
     if (!user) {
@@ -99,55 +94,64 @@ export class UsersController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
-  create(@Body() createUserDto: CreateUserDto) {
+  create(@Body() createUserDto: CreateUserDto, @Req() req: any) {
+    const requester = req.user;
+
+    // Si un admin crea un usuario, lo asigna a su propia organización
+    if (requester.role_id === UserRole.USER_ROL_ADMIN && requester.organization_id) {
+      if (createUserDto.organizationId && createUserDto.organizationId !== requester.organization_id) {
+        throw new ForbiddenException('No puedes asignar un usuario a una organización diferente a la tuya.');
+      }
+      createUserDto.organizationId = requester.organization_id;
+    }
+    
     return this.usersService.create(createUserDto);
   }
 
   @Patch(':id')
-  @UseGuards(JwtAuthGuard)
-  async update( 
+  @UseGuards(UserOwnershipGuard)
+  async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
     @Req() req: any
   ) {
     const requester = req.user;
 
-    if (requester.role_id === UserRole.USER_ROL_SUPER_ADMIN || id === requester.id ) {
-      return this.usersService.update(id, updateUserDto);
-    } else if (requester.role_id === UserRole.USER_ROL_ADMIN  && requester.organization_id !== undefined) {
-        const target = await this.usersService.findById(id);
-        if (target?.organization_id === requester.organization_id) {
-          return this.usersService.update(id, updateUserDto);
-        }
+    // Evitar que un admin se cambie de organización o rol a superadmin
+    if (requester.role_id === UserRole.USER_ROL_ADMIN) {
+      if (updateUserDto.organizationId && updateUserDto.organizationId !== requester.organization_id) {
+        throw new ForbiddenException('No puedes cambiar la organización de este usuario.');
+      }
+      if (updateUserDto.role_id === UserRole.USER_ROL_SUPER_ADMIN) {
+        throw new ForbiddenException('No puedes ascender a un usuario a Super Admin.');
+      }
     }
-    throw new ForbiddenException('No tenés permiso para acceder a este recurso');
+    
+    return this.usersService.update(id, updateUserDto);
   }
 
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(UserOwnershipGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
     const requester = req.user;
 
     if (requester.role_id === UserRole.USER_ROL_ADMIN) {
-      // Admin no puede eliminarse a sí mismo
       if (requester.id === id) {
-        return { success: false, message: 'No se puede eliminar al admin de la organización' };
-      }
-
-      // Admin solo puede eliminar usuarios de su misma organización
-      const target = await this.usersService.findById(id);
-      if (target.organization?.id !== requester.organization_id) {
-        return { success: false, message: 'No tenés permisos para eliminar este usuario' };
+        throw new ForbiddenException('Un administrador no puede eliminarse a sí mismo.');
       }
     }
 
     await this.usersService.remove(id);
-    return { success: true };
+    return { success: true, message: 'Usuario eliminado correctamente.' };
   }
+
+  // ===========================================================================
+  // Endpoints públicos o con lógica de autorización propia
+  // ===========================================================================
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
@@ -158,21 +162,26 @@ export class UsersController {
   @Post('request-password-reset')
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
-    const result = await this.usersService.requestPasswordReset(requestPasswordResetDto.email);
-    
-    // Si hay usuario y token, enviar email
+    const result = await this.usersService.requestPasswordReset(
+      requestPasswordResetDto.email,
+    );
+
     if (result.success && result.user && result.token) {
       try {
-        await this.emailService.sendPasswordResetEmail(result.user.email, result.user.name, result.token);
+        await this.emailService.sendPasswordResetEmail(
+          result.user.email,
+          result.user.name,
+          result.token,
+        );
       } catch (emailError) {
         console.error('Error sending password reset email:', emailError);
       }
     }
-    
-    // Siempre devolver la misma respuesta por seguridad
+
     return {
       success: true,
-      message: 'Si el email existe en nuestro sistema, recibirás un enlace de recuperación'
+      message:
+        'Si el email existe en nuestro sistema, recibirás un enlace de recuperación',
     };
   }
 
@@ -185,7 +194,10 @@ export class UsersController {
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
-    return this.usersService.resetPassword(resetPasswordDto.token, resetPasswordDto.newPassword);
+    return this.usersService.resetPassword(
+      resetPasswordDto.token,
+      resetPasswordDto.newPassword,
+    );
   }
 
   @Post('change-password')
@@ -198,25 +210,29 @@ export class UsersController {
       newPassword: string;
     },
   ) {
-    return this.usersService.changePassword(body.id, body.oldPassword, body.newPassword);
+    return this.usersService.changePassword(
+      body.id,
+      body.oldPassword,
+      body.newPassword,
+    );
   }
 
   @Post('change-email')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard)
   async changeEmail(
-    @Req() req: Request,
+    @Req() req: any,
     @Body()
     body: {
       oldEmail: string;
       newEmail: string;
     },
   ) {
-    if ((req as any).user.user.email !== body.oldEmail) {
-      return { success: false, message: 'El email actual no coincide con tu cuenta' };
+    // El guard ya protege esta ruta, req.user existe.
+    if (req.user.email !== body.oldEmail) {
+      throw new ForbiddenException('El email actual no coincide con tu cuenta.');
     }
 
-    const result = await this.usersService.changeEmail((req as any).user.id, body.newEmail);
+    const result = await this.usersService.changeEmail(req.user.id, body.newEmail);
 
     if (result.success && result.newEmail && result.name) {
       try {
@@ -229,10 +245,9 @@ export class UsersController {
     return { success: result.success, message: result.message };
   }
 
-  
   @Post('update-password')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   async updatePassword(
     @Req() req: any,
@@ -242,10 +257,22 @@ export class UsersController {
       newPassword: string;
     },
   ) {
-    return this.usersService.updatePassword(body.user_id, body.newPassword, req.user.id);
+    const requester = req.user;
+    const targetUserId = body.user_id;
+
+    if (requester.role_id === UserRole.USER_ROL_ADMIN) {
+      if (!requester.organization_id) {
+        throw new ForbiddenException('No tienes permisos para esta acción.');
+      }
+      const targetUser = await this.usersService.findById(targetUserId);
+      if (!targetUser || targetUser.organization_id !== requester.organization_id) {
+        throw new ForbiddenException('No puedes cambiar la contraseña de este usuario.');
+      }
+    }
+    
+    return this.usersService.updatePassword(targetUserId, body.newPassword, requester.id);
   }
 
-  // Que accion tomar cuando se cierra una cuenta ? Que pasa si viene info de tokko ?
   @Post('close-account')
   @HttpCode(HttpStatus.OK)
   async closeAccount(
@@ -264,12 +291,12 @@ export class UsersController {
       await this.usersService.remove(body.id);
       return {
         success: true,
-        message: 'Cuenta eliminada exitosamente'
+        message: 'Cuenta eliminada exitosamente',
       };
     } else {
       return {
         success: false,
-        message: 'Contraseña incorrecta. No se pudo eliminar la cuenta.'
+        message: 'Contraseña incorrecta. No se pudo eliminar la cuenta.',
       };
     }
   }

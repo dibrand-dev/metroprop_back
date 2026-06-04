@@ -61,22 +61,13 @@ export class PropertyOwnershipGuard implements CanActivate {
     user: any,
     property: Pick<Property, 'id' | 'user_id' | 'organization_id'>,
   ): void {
-    if (user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) {
-      const userOrgId = user.organization_id ?? user.organization?.id;
-      if (userOrgId !== undefined && property.organization_id === userOrgId) return;
-      if (property.user_id === user.id) return;
-      throw new ForbiddenException('No tenés permiso para acceder a esta propiedad');
-    }
 
-    if (
-      user.role_id === UserRole.USER_ROL_COLLABORATOR
-    ) {
-      if (property.user_id !== user.id) {
-        throw new ForbiddenException('No tenés permiso para acceder a esta propiedad');
-      }
-      return;
-    }
+    if (property.user_id === user.id) return;
 
+    const hasOrgId = typeof user.organization_id === 'number' && Number.isFinite(user.organization_id);
+
+    if (hasOrgId && property.organization_id == user.organization_id) return;
+         
     throw new ForbiddenException('No tenés permiso para acceder a esta propiedad');
   }
 }

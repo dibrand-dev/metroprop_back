@@ -15,7 +15,8 @@ export class LeadsController {
 
   private assertLeadAccess(user: any, lead: { organization_id?: number; user_id?: number }): void {
     if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) return;
-    if (user.organization_id !== undefined && lead.organization_id == user.organization_id) return;
+    const userOrgId = user.organization_id ?? user.organization?.id;
+    if (userOrgId !== undefined && lead.organization_id == userOrgId) return;
     if (lead.user_id == user.id) return;
     throw new ForbiddenException('No tenés permiso para acceder a este lead');
   }

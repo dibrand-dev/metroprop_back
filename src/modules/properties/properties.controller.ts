@@ -108,7 +108,6 @@ export class PropertiesController {
    * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
   @Get(':propertyId/multimedia')
-  @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   async getMultimedia(@Param('propertyId', ParseIntPipe) propertyId: number) {
     return this.propertiesService.getMultimedia(propertyId);
   }

@@ -129,6 +129,7 @@ export class RegistrationService {
       email: dto.email,
       password: dto.password,
       name: dto.email,
+      role_id: UserRole.USER_ROL_COLLABORATOR
     });
 
     // Enviar email de bienvenida
