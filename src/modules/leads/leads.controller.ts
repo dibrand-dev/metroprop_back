@@ -23,9 +23,12 @@ export class LeadsController {
   private applyLeadScope(user: any, filters: LeadFiltersDto): void {
     if (user.role_id === UserRole.USER_ROL_SUPER_ADMIN) return;
 
+    const hasOrganizationScope =
+      typeof user.organization_id === 'number' && Number.isFinite(user.organization_id);
+
     if (
       (user.role_id === UserRole.USER_ROL_ADMIN || user.role_id === UserRole.USER_ROL_SUPERVISOR) &&
-      user.organization_id !== undefined
+      hasOrganizationScope
     ) {
       filters.organization_id = user.organization_id;
       return;
@@ -36,7 +39,7 @@ export class LeadsController {
  
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_COLLABORATOR, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR)
   findAll(@Query() filters: LeadFiltersDto, @Req() request: Request) {
     this.applyLeadScope((request as any).user, filters);
     return this.leadsService.findAll(filters);

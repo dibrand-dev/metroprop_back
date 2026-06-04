@@ -5,6 +5,12 @@ const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost'];
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+  private parseOptionalInt(value: string | undefined): number | undefined {
+    if (value === undefined || value === '') return undefined;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+
   canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
 
@@ -24,11 +30,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
     console.warn(`⚠️  JWT BYPASS ACTIVATED for IP ${ip} - injecting fake user and skipping auth guards. Remove 'x-bypass' header to disable.`);
     // ── STEP 3: Local + bypass activo → inyectar usuario fake, saltar Passport.
+    const roleId = this.parseOptionalInt(process.env.DEV_BYPASS_ROLE_ID) ?? 4;
     req.user = {
       id: Number(process.env.DEV_BYPASS_USER_ID ?? 77),
       email: process.env.DEV_BYPASS_USER_EMAIL ?? 'huerta.em@gmail.com',
-      role_id: Number(process.env.DEV_BYPASS_ROLE_ID ?? 1),
-      organization_id: Number(process.env.DEV_BYPASS_ORGANIZATION_ID ?? 56),
+      role_id: roleId,
+      organization_id: this.parseOptionalInt(process.env.DEV_BYPASS_ORGANIZATION_ID),
     };
     console.warn(`Injected fake user: ${JSON.stringify(req.user)}`);
     return true;
