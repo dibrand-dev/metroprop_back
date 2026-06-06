@@ -1194,11 +1194,15 @@ export class TokkoHelperService {
           try {
             // Verificar si la propiedad ya existe por reference_code
             const referenceCode = property.reference_code;
+            const tokkoId = property.tokko_id;
+            const publicationId = property.publication_id;
+            
             let propertyExists = false;
             
-            if (referenceCode) {
+            if (tokkoId && publicationId) {
               try {
-                await this.propertiesService.findByReferenceCode(referenceCode);
+                await this.propertiesService.findTokkoProperty(tokkoId, publicationId);
+                //await this.propertiesService.findByReferenceCode(referenceCode);
                 propertyExists = true;
                 console.log(`Propiedad ${propertyNumber} (${referenceCode}) ya existe - IGNORADA`);
               } catch (error) {
@@ -1213,6 +1217,8 @@ export class TokkoHelperService {
                 tokko_data: property,
                 status: 'ignored',
                 reference_code: referenceCode,
+                tokko_id: tokkoId,
+                publication_id: publicationId,
                 reason: 'Property already exists'
               });
             } else {
@@ -1238,6 +1244,8 @@ export class TokkoHelperService {
                 tokko_data: property,
                 status: 'created',
                 reference_code: referenceCode,
+                tokko_id: tokkoId,
+                publication_id: publicationId,
                 mapped_property: mappedProperty,
                 created_property_id: createdProperty.data.id
               });
@@ -1262,6 +1270,8 @@ export class TokkoHelperService {
               tokko_data: property,
               status: 'error',
               reference_code: property.reference_code || 'N/A',
+              tokko_id: property.tokko_id || 'N/A',
+              publication_id: property.publication_id || 'N/A',
               error: errorMessage
             });
           }
