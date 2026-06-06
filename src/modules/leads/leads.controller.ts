@@ -38,6 +38,18 @@ export class LeadsController {
     filters.user_id = user.id;
   }
  
+  
+  @Get('unread-count')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  async unreadCount(@Req() request: Request) {
+    const user = (request as any).user;
+    const filters: LeadFiltersDto = { unread: true };
+    this.applyLeadScope(user, filters);
+    console.log("FILTERS IN CONTROLLER:", filters);
+    const count = await this.leadsService.unreadCount(filters);
+    return { unread_count: count };
+  }
+
   @Get()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_COLLABORATOR, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR)
@@ -137,6 +149,5 @@ export class LeadsController {
     this.assertLeadAccess((request as any).user, lead);
     return this.leadsService.remove(id);
   }
-
 
 }

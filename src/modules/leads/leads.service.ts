@@ -385,4 +385,14 @@ export class LeadsService {
       contactsUrl,
     });
   }
+
+  async unreadCount(filters: LeadFiltersDto): Promise<number> {
+    const qb = this.leadsRepository.createQueryBuilder('lead');
+
+    if (filters.unread) {
+      qb.andWhere('lead.unread = true');
+    }
+
+    return qb.getCount();
+  }
 }
