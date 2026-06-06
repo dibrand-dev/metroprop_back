@@ -73,6 +73,7 @@ export interface TokkoPropertyResponse {
   producer: any;
   property_condition: string;
   public_url: string;
+  publication_id: string;
   publication_title: string;
   quality_level: any;
   real_address: string;
@@ -91,6 +92,7 @@ export interface TokkoPropertyResponse {
   surface_measurement: string;
   tags: any[]; // Ignorado según especificación
   toilet_amount: number;
+  tokko_id: string;  
   total_suites: number;
   total_surface: string;
   transaction_requirements: string;
@@ -239,6 +241,8 @@ export class TokkoHelperService {
     const metropropProperty: TokkoToMetropropResponse = {
       // Campos obligatorios
       reference_code: tokkoData.reference_code || '',
+      tokko_id: tokkoData.tokko_id ? String(tokkoData.tokko_id) : undefined,
+      publication_id: tokkoData.publication_id ? String(tokkoData.publication_id) : undefined, // Asumiendo que publication_id es igual a id de Tokko
       publication_title: tokkoData.publication_title || '',
       property_type: this.mapTokkoPropertyTypeToEnum(tokkoData.type),
       status: this.mapTokkoStatusToEnum(tokkoData.status),
