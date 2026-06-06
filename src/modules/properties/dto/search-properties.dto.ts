@@ -272,6 +272,10 @@ export class SearchPropertiesDto {
   @IsInt()
   property_id?: number;
 
+  @IsOptional()
+  @IsBoolean()
+  fetch_map_info?: boolean = false; 
+
 }
 
 /**

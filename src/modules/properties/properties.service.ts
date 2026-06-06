@@ -1370,6 +1370,9 @@ export class PropertiesService {
           'p.total_surface',
           'p.room_amount',
           'p.bathroom_amount',
+          'p.property_type',
+          'p.property_subtype',
+          'p.operation_type',
           'p.currency',
           'p.price',
           'p.price_square_meter',
@@ -1427,6 +1430,9 @@ export class PropertiesService {
       data = partialProps.map((p) => ({
         id: p.id as number,
         publication_title: p.publication_title,
+        property_type: p.property_type,
+        property_subtype: p.property_subtype,
+        operation_type: p.operation_type,
         user_id: p.user_id,
         street: p.street,
         total_surface: p.total_surface,
@@ -1471,22 +1477,26 @@ export class PropertiesService {
       }));
     }
 
-    // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
-    const mapData = await baseQb
-      .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.price_square_meter', 'p.reference_code'])
-      .andWhere('p.geo_lat IS NOT NULL')
-      .andWhere('p.geo_long IS NOT NULL')
-      .getRawMany()
-      .then(results =>
-        results.map(r => ({
-          id: r.p_id,
-          lat: parseFloat(r.p_geo_lat),
-          lng: parseFloat(r.p_geo_long),
-          price: r.p_price,
-          price_square_meter: r.p_price_square_meter,
-          reference_code: r.p_reference_code,
-        }))
-      );
+    let mapData: any[] = [];
+    
+    if(filters.fetch_map_info) {
+      // Datos para el mapa (todas las propiedades que coinciden, solo coordenadas)
+      mapData = await baseQb
+        .select(['p.id', 'p.geo_lat', 'p.geo_long', 'p.price', 'p.price_square_meter', 'p.reference_code'])
+        .andWhere('p.geo_lat IS NOT NULL')
+        .andWhere('p.geo_long IS NOT NULL')
+        .getRawMany()
+        .then(results =>
+          results.map(r => ({
+            id: r.p_id,
+            lat: parseFloat(r.p_geo_lat),
+            lng: parseFloat(r.p_geo_long),
+            price: r.p_price,
+            price_square_meter: r.p_price_square_meter,
+            reference_code: r.p_reference_code,
+          }))
+        );
+      }
 
     return {
       data,
