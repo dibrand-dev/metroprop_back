@@ -732,6 +732,7 @@ export class PropertiesService {
           'property.view_count',
           'property.bathroom_amount',
           'property.street',
+          'property.period',
           'property.room_amount',
           'property.surface',
           'property.is_development',
@@ -1356,6 +1357,7 @@ export class PropertiesService {
           'p.currency',
           'p.price',
           'p.price_square_meter',
+          'p.period',
           'p.is_development',
           'p.sub_location_id',
           'p.location_id',
@@ -1417,6 +1419,7 @@ export class PropertiesService {
         currency: p.currency,
         price: p.price,
         price_square_meter: p.price_square_meter,
+        period: p.period,
         is_development: p.is_development,
         location_id: p.location_id,
         sub_location_id: p.sub_location_id,
@@ -1816,6 +1819,10 @@ export class PropertiesService {
 
     if (filters.price_m2_max != null) {
       qb.andWhere('p.price_square_meter <= :price_m2_max', { price_m2_max: filters.price_m2_max });
+    }
+
+    if (filters.period != null) {
+      qb.andWhere('p.period = :period', { period: filters.period });
     }
 
     if (filters.roofed_surface_min != null) {

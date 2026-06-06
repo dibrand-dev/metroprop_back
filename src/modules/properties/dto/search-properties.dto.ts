@@ -153,7 +153,12 @@ export class SearchPropertiesDto {
   @Min(0)
   price_m2_min?: number;
 
-  // ========== Superficies ==========
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  period?: number;
+
+  // ========== Superficies ===A=======
 
   @IsOptional()
   @Type(() => Number)

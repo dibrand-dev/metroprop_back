@@ -69,12 +69,28 @@ export class LeadsService {
       offset = 0,
     } = filters;
 
+    const includeFullProperty = property_id !== undefined;
+
     const queryBuilder = this.leadsRepository
       .createQueryBuilder('lead')
       .leftJoinAndSelect('lead.property', 'property')
       .orderBy('lead.created_at', 'DESC')
       .take(limit)
       .skip(offset);
+
+    if (includeFullProperty) {
+      queryBuilder.leftJoinAndSelect(
+        'property.images',
+        'propertyImage',
+        `propertyImage.id = (
+          SELECT pi.id
+          FROM property_images pi
+          WHERE pi."propertyId" = property.id
+          ORDER BY COALESCE(pi.order_position, 2147483647) ASC, pi.id ASC
+          LIMIT 1
+        )`,
+      );
+    }
 
     if (id !== undefined) {
       queryBuilder.andWhere('lead.id = :id', { id });
@@ -89,15 +105,15 @@ export class LeadsService {
     }
 
     if (email) {
-      queryBuilder.andWhere('lead.email ILIKE :email', { email: `%${email}%` });
+      queryBuilder.orWhere('lead.email ILIKE :email', { email: `%${email}%` });
     }
 
     if (name) {
-      queryBuilder.andWhere('lead.name ILIKE :name', { name: `%${name}%` });
+      queryBuilder.orWhere('lead.name ILIKE :name', { name: `%${name}%` });
     }
 
     if (phone) {
-      queryBuilder.andWhere('lead.phone ILIKE :phone', { phone: `%${phone}%` });
+      queryBuilder.orWhere('lead.phone ILIKE :phone', { phone: `%${phone}%` });
     }
 
     if (user_id !== undefined) {
@@ -131,6 +147,10 @@ export class LeadsService {
     }
 
     const leads = await queryBuilder.getMany();
+    if (includeFullProperty) {
+      return leads;
+    }
+
     return leads.map((lead) => this.mapLeadPropertySummary(lead));
   }
 

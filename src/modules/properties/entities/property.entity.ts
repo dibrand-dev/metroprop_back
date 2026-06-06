@@ -236,7 +236,7 @@ export class Property {
   currency!: Currency;
 
   @Column({ type: 'integer', nullable: true })
-  period?: TemporalRentPeriod;
+period?: number;
 
   @Column({ type: 'integer', nullable: true, default: 0 })
   visibility?: number;

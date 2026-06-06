@@ -69,6 +69,7 @@ export class LeadsController {
     @Query('unread') unreadRaw: string | undefined,
     @Query('lead_state') leadStateRaw: string | undefined,
     @Query('contact_type') contactTypeRaw: string | undefined,
+    @Query('search') searchRaw: string | undefined,
     @Req() request: Request,
   ) {
     const user = (request as any).user;
@@ -87,6 +88,13 @@ export class LeadsController {
     }
     if (contactTypeRaw !== undefined && Object.values(LeadContactType).includes(contactTypeRaw as LeadContactType)) {
       filters.contact_type = contactTypeRaw as LeadContactType;
+    }
+    // este searchRaw deberia filtrar conun like por name
+
+    if (searchRaw) {
+      filters.name = searchRaw;
+      filters.phone = searchRaw;
+      filters.email = searchRaw;
     }
 
     this.applyLeadScope(user, filters);
