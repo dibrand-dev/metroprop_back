@@ -68,7 +68,7 @@ export class LeadsController {
 
   // search leads by property_id and/or lead email
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_COLLABORATOR, UserRole.USER_ROL_SUPERVISOR)
   @Get('search')
   findFiltered(
     @Query('property_id') propertyIdRaw: string | undefined,
