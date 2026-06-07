@@ -432,7 +432,7 @@ export class PlansService {
   }
 
   private async mercadopagoPayment(
-    params: PlanPaymentDto,
+    params: PlanPaymentDto, 
   ): Promise<MercadoPagoPaymentResponse> {
     const accessToken = this.configService.get<string>('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
