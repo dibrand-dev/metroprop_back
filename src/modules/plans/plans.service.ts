@@ -484,6 +484,7 @@ export class PlansService {
       let errorMessage = `No se pudo consultar MercadoPago (${paymentResponse.status})`;
       try {
         const errorBody = JSON.parse(body) as MercadoPagoErrorResponse;
+        console.log("MercadoPago error response body:", errorBody);
         const causeCode = errorBody.cause?.[0]?.code?.toString() ?? '';
         if (causeCode === '205' || causeCode.includes('cardNumber')) {
           errorMessage = 'El número de tarjeta no es válido';
@@ -498,6 +499,7 @@ export class PlansService {
         } else if (causeCode === 'E301' || causeCode.includes('securityCode')) {
           errorMessage = 'Código de seguridad inválido';
         } else if (errorBody.message) {
+          console.log("MercadoPago error message:", errorBody.message);
           errorMessage = `Error al procesar el pago. Verifique los datos e intente nuevamente.`;
         }
       } catch {
