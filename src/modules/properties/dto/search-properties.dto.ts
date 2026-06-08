@@ -126,6 +126,11 @@ export class SearchPropertiesDto {
   @IsInt()
   status?: number;
 
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  hired_plan_id?: number;
+
   // ========== Precio ==========
 
   @IsOptional()
