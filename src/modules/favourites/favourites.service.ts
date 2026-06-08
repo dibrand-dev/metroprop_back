@@ -6,6 +6,7 @@ import { ToggleFavouriteDto } from './dto/toggle-favourite.dto';
 import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
 import { PropertiesService } from '../properties/properties.service';
+import { MEDIUM_PREFIX } from '@/common/constants';
 
 @Injectable()
 export class FavouritesService {
@@ -65,7 +66,7 @@ export class FavouritesService {
     const ids = await this.getPropertyIdsByUserId(userId);
     if (!ids.length) return [];
     // Preserve the favourite order (most recently added first)
-    const cards = await this.propertiesService.getPropertiesCardsByIds(ids);
+    const cards = await this.propertiesService.getPropertiesCardsByIds(ids, MEDIUM_PREFIX);
     const indexMap = new Map(ids.map((id, i) => [id, i]));
     return cards.sort((a, b) => (indexMap.get(a.id) ?? 0) - (indexMap.get(b.id) ?? 0));
   }

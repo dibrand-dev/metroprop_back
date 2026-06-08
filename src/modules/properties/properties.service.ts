@@ -1222,7 +1222,7 @@ export class PropertiesService {
   // SEARCH PROPERTIES
   // =============================================
 
-  async getPropertiesCardsByIds(ids: number[]): Promise<PropertyCard[]> {
+  async getPropertiesCardsByIds(ids: number[], imgPrefix: string = THUMB_PREFIX): Promise<PropertyCard[]> {
     if (!ids.length) return [];
 
     const qb = this.propertyRepository
@@ -1285,7 +1285,7 @@ export class PropertiesService {
       currency: p.currency,
       price: p.price,
       price_square_meter: p.price_square_meter,
-      images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
+      images: p.images ? prependImagePrefixToUrls(imgPrefix, p.images) : [],
       lat: p.geo_lat,
       long: p.geo_long,
       is_development: p.is_development,
