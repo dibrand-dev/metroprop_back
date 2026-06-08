@@ -43,9 +43,8 @@ export class LeadsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   async unreadCount(@Req() request: Request) {
     const user = (request as any).user;
-    const filters: LeadFiltersDto = { unread: true };
+    const filters: LeadFiltersDto = { unread: true, deleted: false };
     this.applyLeadScope(user, filters);
-    console.log("FILTERS IN CONTROLLER:", filters);
     const count = await this.leadsService.unreadCount(filters);
     return { unread_count: count };
   }
