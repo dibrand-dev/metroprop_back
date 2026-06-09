@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { Lead } from './entities/lead.entity';
 import { CreateLeadDto } from './dto/create-lead.dto';
 import { UpdateLeadDto } from './dto/update-lead.dto';
@@ -53,9 +53,7 @@ export class LeadsService {
   async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
     const {
       id,
-      email,
-      name,
-      phone,
+      searchString,
       property_id,
       organization_id,
       user_id,
@@ -104,17 +102,16 @@ export class LeadsService {
       queryBuilder.andWhere('lead.property_id = :property_id', { property_id });
     }
 
-    if (email) {
-      queryBuilder.orWhere('lead.email ILIKE :email', { email: `%${email}%` });
+    if (searchString !== undefined) {
+      queryBuilder.andWhere(
+        new Brackets(qb => {
+          qb.where('lead.name ILIKE :search', { search: `%${searchString}%` })
+            .orWhere('lead.phone ILIKE :search', { search: `%${searchString}%` })
+            .orWhere('lead.email ILIKE :search', { search: `%${searchString}%` });
+        }),
+      );
     }
 
-    if (name) {
-      queryBuilder.orWhere('lead.name ILIKE :name', { name: `%${name}%` });
-    }
-
-    if (phone) {
-      queryBuilder.orWhere('lead.phone ILIKE :phone', { phone: `%${phone}%` });
-    }
 
     if (user_id !== undefined) {
       queryBuilder.andWhere('lead.user_id = :user_id', { user_id });

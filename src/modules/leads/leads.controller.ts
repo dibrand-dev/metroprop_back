@@ -102,10 +102,8 @@ export class LeadsController {
     }
     // este searchRaw deberia filtrar conun like por name
 
-    if (searchRaw) {
-      filters.name = searchRaw;
-      filters.phone = searchRaw;
-      filters.email = searchRaw;
+    if (searchRaw !== undefined) {
+      filters.searchString = searchRaw;
     }
 
     this.applyLeadScope(user, filters);

@@ -64,6 +64,10 @@ export class LeadFiltersDto {
   contact_type?: LeadContactType;
 
   @IsOptional()
+  @IsString()
+  searchString?: string;
+
+  @IsOptional()
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   limit?: number = 20;
