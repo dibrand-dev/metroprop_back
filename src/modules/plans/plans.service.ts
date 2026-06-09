@@ -223,6 +223,8 @@ export class PlansService {
       .addSelect('p.plan_name', 'plan_name')
       .addSelect('p.highlight_limit', 'highlight_limit')
       .addSelect('p.visibility', 'visibility')
+      .addSelect('bp.start_date', 'start_date')
+      .addSelect('bp.end_date', 'end_date')
       .addSelect('ARRAY_AGG(bp.id)', 'branch_plan_ids')
       .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
       .where('bp.branch_id = :branchId', { branchId })
@@ -233,12 +235,16 @@ export class PlansService {
       .groupBy('p.id')
       .addGroupBy('p.plan_name')
       .addGroupBy('p.highlight_limit')
+      .addGroupBy('bp.start_date')
+      .addGroupBy('bp.end_date')
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
       .getRawMany<{
         plan_id: number;
         plan_name: string;
         visibility: string;
         highlight_limit: number;
+        start_date: Date;
+        end_date: Date;
         branch_plan_ids: number[];
         used: string;
       }>();
@@ -251,6 +257,8 @@ export class PlansService {
         plan_visibility: r.visibility,
         highlight_limit: r.highlight_limit,
         branch_plan_ids: r.branch_plan_ids,
+        start_date: r.start_date,
+        end_date: r.end_date,
         used,
         available: Math.max(0, r.highlight_limit - used),
       };
@@ -360,6 +368,8 @@ export class PlansService {
       .addSelect('p.visibility', 'visibility')
       .addSelect('ARRAY_AGG(up.id)', 'user_plan_ids')
       .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
+      .addSelect('up.start_date', 'start_date')
+      .addSelect('up.end_date', 'end_date') 
       .where('up.user_id = :userId', { userId })
       .andWhere('up.active = true')
       .andWhere('up.end_date >= :now', { now: new Date() })
@@ -368,6 +378,8 @@ export class PlansService {
       .groupBy('p.id')
       .addGroupBy('p.plan_name')
       .addGroupBy('p.highlight_limit')
+      .addGroupBy('up.start_date')
+      .addGroupBy('up.end_date')
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
       .getRawMany<{
         plan_id: number;
@@ -375,6 +387,8 @@ export class PlansService {
         highlight_limit: number;
         visibility: string;
         user_plan_ids: number[];
+        start_date: Date;
+        end_date: Date;
         used: string;
       }>();
 
@@ -385,6 +399,8 @@ export class PlansService {
         plan_name: r.plan_name,
         plan_visibility: r.visibility,
         highlight_limit: r.highlight_limit,
+        start_date: r.start_date,
+        end_date: r.end_date,
         user_plan_ids: r.user_plan_ids,
         used,
         available: Math.max(0, r.highlight_limit - used),
