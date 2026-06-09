@@ -139,6 +139,10 @@ export class CreateDevelopmentDto {
   @IsInt()
   hired_plan_id?: number;
 
+  @IsOptional()
+  @IsInt()
+  purchased_plan_id?: number;
+
   // ========== Emprendimiento ==========
 
 

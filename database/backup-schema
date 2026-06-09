@@ -364,6 +364,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	currency_expenses varchar(3) NULL,
 	visibility int4 DEFAULT 0 NULL,
 	hired_plan_id int4 NULL,
+	purchased_plan_id int4 NULL,
 	apartments_per_floor int4 NULL,
 	warehouse_units int4 NULL,
 	number_of_guests int4 NULL,

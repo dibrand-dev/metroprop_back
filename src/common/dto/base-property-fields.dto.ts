@@ -322,6 +322,11 @@ export class BasePropertyFieldsDto {
   @IsInt()
   @Min(0)
   hired_plan_id?: number;
+ 
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  purchased_plan_id?: number;
 
   // --- Precio por metro cuadrado ---
   @IsOptional()

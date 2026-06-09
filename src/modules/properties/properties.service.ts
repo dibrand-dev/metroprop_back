@@ -313,7 +313,7 @@ export class PropertiesService {
       );
     }
 
-    await this.propertyRepository.update(unitId, { deleted: true, hired_plan_id: 0 });
+    await this.propertyRepository.update(unitId, { deleted: true, hired_plan_id: 0, purchased_plan_id: 0 });
   }
 
   /**
@@ -964,12 +964,10 @@ export class PropertiesService {
     let affected = 0;
     if (targetIds.length > 0) {
 
-    
-
-
       const updateFields: Partial<Property> = { status };
       if (status !== PropertyStatus.DISPONIBLE) {
         updateFields.hired_plan_id = 0;
+        updateFields.purchased_plan_id = 0;
       }
 
       const updateResult = await this.propertyRepository
@@ -996,6 +994,7 @@ export class PropertiesService {
     body: {
       ids: number | number[];
       hired_plan_id: number;
+      purchased_plan_id?: number;
       branch_id?: number;
       user_id?: number;
     },
@@ -1016,6 +1015,7 @@ export class PropertiesService {
     let affected = 0;
     if (targetIds.length > 0) {
       const fieldsToUpdate: Partial<Property> = { hired_plan_id };
+      if (body.purchased_plan_id !== undefined) fieldsToUpdate.purchased_plan_id = body.purchased_plan_id;
       if (body.branch_id !== undefined) fieldsToUpdate.branch_id = body.branch_id;
       if (body.user_id !== undefined) fieldsToUpdate.user_id = body.user_id;
 
@@ -1153,6 +1153,7 @@ export class PropertiesService {
     property.deleted = true;
     property.deleted_at = new Date();
     property.hired_plan_id = 0;
+    property.purchased_plan_id = 0;
 
     await this.propertyRepository.save(property);
 

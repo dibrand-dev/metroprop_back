@@ -209,15 +209,16 @@ export class PlansService {
       .leftJoin(
         (qb) =>
           qb
-            .select('prop.hired_plan_id', 'hpid')
+        //     .select('prop.hired_plan_id', 'hpid')
+            .select('prop.purchased_plan_id', 'ppid')
             .addSelect('COUNT(prop.id)', 'cnt')
             .from(Property, 'prop')
             .where('prop.branch_id = :branchId')
             .andWhere('prop.deleted = false')
             .andWhere('prop.status NOT IN (:...excludedStatuses)')
-            .groupBy('prop.hired_plan_id'),
+            .groupBy('prop.purchased_plan_id'),
         'prop_counts',
-        'prop_counts.hpid = p.id',
+        'prop_counts.ppid = p.id',
       )
       .select('p.id', 'plan_id')
       .addSelect('p.plan_name', 'plan_name')
@@ -352,15 +353,16 @@ export class PlansService {
       .leftJoin(
         (qb) =>
           qb
-            .select('prop.hired_plan_id', 'hpid')
+       //     .select('prop.hired_plan_id', 'hpid')
+            .select('prop.purchased_plan_id', 'ppid')  
             .addSelect('COUNT(prop.id)', 'cnt')
             .from(Property, 'prop')
             .where('prop.user_id = :userId')
             .andWhere('prop.deleted = false')
             .andWhere('prop.status NOT IN (:...excludedStatuses)')
-            .groupBy('prop.hired_plan_id'),
+            .groupBy('prop.purchased_plan_id'),
         'prop_counts',
-        'prop_counts.hpid = p.id',
+        'prop_counts.ppid = p.id',
       )
       .select('p.id', 'plan_id')
       .addSelect('p.plan_name', 'plan_name')
