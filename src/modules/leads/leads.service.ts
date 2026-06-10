@@ -395,6 +395,6 @@ export class LeadsService {
     qb.andWhere('lead.unread = true');
     qb.andWhere('lead.deleted = false');
 
-    return qb.getMany();
+    return qb.getCount();
   }
 }
