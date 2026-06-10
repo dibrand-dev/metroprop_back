@@ -46,7 +46,7 @@ export class LeadsController {
     const filters: LeadFiltersDto = { unread: true, deleted: false };
     this.applyLeadScope(user, filters);
     const count = await this.leadsService.unreadCount(filters);
-    return { unread_count: count.length, data : count };
+    return { unread_count: count.length, data : count, filters: filters };
   }
 
   @Get()
