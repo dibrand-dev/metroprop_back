@@ -33,7 +33,6 @@ import { UserRole } from '../../common/enums';
 import { UserOwnershipGuard } from '../../common/guards/user-ownership.guard';
 
 @Controller('users')
-@UseGuards(JwtAuthGuard)
 export class UsersController {
   constructor(
     private readonly usersService: UsersService,
