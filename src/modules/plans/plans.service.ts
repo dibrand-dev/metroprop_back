@@ -370,6 +370,7 @@ export class PlansService {
       .addSelect('p.visibility', 'visibility')
       .addSelect('ARRAY_AGG(up.id)', 'user_plan_ids')
       .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
+      .addSelect('up.id', 'purchased_plan_id')
       .addSelect('up.start_date', 'start_date')
       .addSelect('up.end_date', 'end_date') 
       .where('up.user_id = :userId', { userId })
@@ -380,6 +381,7 @@ export class PlansService {
       .groupBy('p.id')
       .addGroupBy('p.plan_name')
       .addGroupBy('p.highlight_limit')
+      .addGroupBy('up.id')
       .addGroupBy('up.start_date')
       .addGroupBy('up.end_date')
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
@@ -392,12 +394,14 @@ export class PlansService {
         start_date: Date;
         end_date: Date;
         used: string;
+        purchased_plan_id: number;
       }>();
 
     return rows.map((r) => {
       const used = parseInt(r.used, 10);
       return {
         plan_id: r.plan_id,
+        purchased_plan_id: r.purchased_plan_id,
         plan_name: r.plan_name,
         plan_visibility: r.visibility,
         highlight_limit: r.highlight_limit,
