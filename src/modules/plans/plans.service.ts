@@ -224,6 +224,7 @@ export class PlansService {
       .addSelect('p.plan_name', 'plan_name')
       .addSelect('p.highlight_limit', 'highlight_limit')
       .addSelect('p.visibility', 'visibility')
+      .addSelect('bp.id', 'purchased_plan_id')
       .addSelect('bp.start_date', 'start_date')
       .addSelect('bp.end_date', 'end_date')
       .addSelect('ARRAY_AGG(bp.id)', 'branch_plan_ids')
@@ -241,6 +242,7 @@ export class PlansService {
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
       .getRawMany<{
         plan_id: number;
+        purchased_plan_id: number;
         plan_name: string;
         visibility: string;
         highlight_limit: number;
@@ -254,6 +256,7 @@ export class PlansService {
       const used = parseInt(r.used, 10);
       return {
         plan_id: r.plan_id,
+        purchased_plan_id: r.purchased_plan_id,
         plan_name: r.plan_name,
         plan_visibility: r.visibility,
         highlight_limit: r.highlight_limit,
