@@ -28,6 +28,7 @@ import {
 import { EmailService } from '../../common/email/email.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
+import { Public } from '../../common/decorators/public.decorator';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 import { UserOwnershipGuard } from '../../common/guards/user-ownership.guard';
@@ -154,12 +155,14 @@ export class UsersController {
   // ===========================================================================
 
   @Post('verify-email')
+  @Public()
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.usersService.verifyEmail(verifyEmailDto.token);
   }
 
   @Post('request-password-reset')
+  @Public()
   @HttpCode(HttpStatus.OK)
   async requestPasswordReset(@Body() requestPasswordResetDto: RequestPasswordResetDto) {
     const result = await this.usersService.requestPasswordReset(
@@ -186,6 +189,7 @@ export class UsersController {
   }
 
   @Get('validate-reset-token/:token')
+  @Public()
   @HttpCode(HttpStatus.OK)
   async validateResetToken(@Param('token') token: string) {
     return this.usersService.validateResetToken(token);
@@ -193,6 +197,7 @@ export class UsersController {
 
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
+  @Public()
   async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
     return this.usersService.resetPassword(
       resetPasswordDto.token,

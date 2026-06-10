@@ -1,10 +1,16 @@
 import { ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
+import { Reflector } from '@nestjs/core';
 import { AuthGuard } from '@nestjs/passport';
 
 const LOOPBACK = ['127.0.0.1', '::1', '::ffff:127.0.0.1', 'localhost'];
 
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
+
+  constructor(private reflector: Reflector) {
+    super();
+  }
+
   private parseOptionalInt(value: string | undefined): number | undefined {
     if (value === undefined || value === '') return undefined;
     const parsed = Number(value);
@@ -13,6 +19,12 @@ export class JwtAuthGuard extends AuthGuard('jwt') {
 
   canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest();
+
+    // ── STEP 0: ¿Es público? ───────────────
+    const isPublic = this.reflector.get<boolean>('isPublic', context.getHandler());
+    if (isPublic) {
+      return true;
+    }
 
     // ── STEP 1: ¿Estamos en localhost? Si NO → flujo normal, fin. ────────────
     const ip = req?.ip ?? req?.socket?.remoteAddress ?? '';
