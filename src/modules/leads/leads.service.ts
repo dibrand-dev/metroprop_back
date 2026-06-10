@@ -385,10 +385,15 @@ export class LeadsService {
 
   async unreadCount(filters: LeadFiltersDto): Promise<any> {
     const qb = this.leadsRepository.createQueryBuilder('lead');
-
-    if (filters.unread) {
-      qb.andWhere('lead.unread = true');
+ 
+    if(filters.organization_id !== undefined) {
+      qb.where('lead.organization_id = :organization_id', { organization_id: filters.organization_id });
+    } 
+    if (filters.user_id !== undefined) {
+      qb.where('lead.user_id = :user_id', { user_id: filters.user_id });
     }
+    qb.andWhere('lead.unread = true');
+    qb.andWhere('lead.deleted = false');
 
     return qb.getMany();
   }
