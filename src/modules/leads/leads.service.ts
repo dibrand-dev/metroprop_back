@@ -383,13 +383,13 @@ export class LeadsService {
     });
   }
 
-  async unreadCount(filters: LeadFiltersDto): Promise<number> {
+  async unreadCount(filters: LeadFiltersDto): Promise<any> {
     const qb = this.leadsRepository.createQueryBuilder('lead');
 
     if (filters.unread) {
       qb.andWhere('lead.unread = true');
     }
 
-    return qb.getCount();
+    return qb.getMany();
   }
 }
