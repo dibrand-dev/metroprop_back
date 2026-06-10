@@ -239,6 +239,7 @@ export class PlansService {
       .addGroupBy('p.highlight_limit')
       .addGroupBy('bp.start_date')
       .addGroupBy('bp.end_date')
+      .addGroupBy('bp.id')
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
       .getRawMany<{
         plan_id: number;
