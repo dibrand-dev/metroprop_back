@@ -108,7 +108,7 @@ export class EmailService {
                   <!-- Header -->
                   <tr>
                     <td align="center" style="padding:20px; background-color: #F5F5F5;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.svg" alt="Metroprop Logo" width="150" style="display:block;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
                     </td>
                   </tr> 
                   <!-- Body -->
@@ -194,7 +194,7 @@ export class EmailService {
                   <!-- Header -->
                   <tr>
                     <td align="center" style="padding:20px;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.svg" alt="Metroprop Logo" width="150" style="display:block;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
                     </td>
                   </tr>
                   <!-- Body -->
@@ -283,7 +283,7 @@ export class EmailService {
                   <!-- Header -->
                   <tr>
                     <td align="center" style="padding:20px;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.svg" alt="Metroprop Logo" width="150" style="display:block;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
                     </td>
                   </tr>
                   <!-- Body -->
@@ -376,7 +376,7 @@ export class EmailService {
                   <!-- Header -->
                   <tr>
                     <td align="center" style="padding:20px; background-color: #F5F5F5;">
-                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.svg" alt="Metroprop Logo" width="150" style="display:block;">
+                      <img src="${ this.configService.get('FRONTEND_URL')}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
                     </td>
                   </tr>
                   <!-- Body -->
@@ -519,7 +519,7 @@ export class EmailService {
                 <!-- Header -->
                 <tr>
                   <td align="center" style="padding:24px 20px; background-color:#F5F5F5;">
-                    <img src="${frontendUrl}/images/metroprop.svg" alt="Metroprop Logo" width="150" style="display:block;">
+                    <img src="${frontendUrl}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
                   </td>
                 </tr>
 
@@ -611,7 +611,7 @@ export class EmailService {
               <table width="600" cellpadding="0" cellspacing="0" border="0">
                 <tr>
                   <td align="center" style="padding:20px; background-color:#F5F5F5;">
-                    <img src="${frontendUrl}/images/metroprop.svg" alt="Metroprop Logo" width="150" style="display:block;">
+                    <img src="${frontendUrl}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
                   </td>
                 </tr>
                 <tr>
@@ -665,7 +665,7 @@ export class EmailService {
             <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:8px;overflow:hidden;">
               <tr>
                 <td align="center" style="padding:20px;background:#F5F5F5;">
-                  <img src="${frontendUrl}/images/metroprop.svg" alt="Metroprop" width="150" style="display:block;">
+                  <img src="${frontendUrl}/images/metroprop.png" alt="Metroprop" width="150" style="display:block;">
                 </td>
               </tr>
               <tr>
