@@ -426,7 +426,7 @@ export class EmailService {
 
     await this.sendEmail({
       to,
-      subject: 'MetroProp - Restablecer contraseña (Acción requerida)',
+      subject: 'MetroProp - Restablecer contraseña',
       html
     });
   }

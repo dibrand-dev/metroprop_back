@@ -736,9 +736,11 @@ export class PropertiesService {
           'property.room_amount',
           'property.surface',
           'property.is_development',
+          'property.delivery_date',
           'organization.company_name',
           'organization.company_logo',
           'units',
+
         //  'unitImages',
         ])
         .getOne();
