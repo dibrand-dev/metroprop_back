@@ -79,6 +79,7 @@ export class UsersController {
       'phone',
       'phone_additional',
       'phone_whatsapp',
+      'accept_newsletters',
       'is_verified',
       'organization_id',
       'created_at',
