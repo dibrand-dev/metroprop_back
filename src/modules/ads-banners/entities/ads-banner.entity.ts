@@ -1,3 +1,4 @@
+import { IsAlpha } from 'class-validator';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -17,6 +18,9 @@ export class AdsBanner {
   /** S3 key of the banner image */
   @Column({ type: 'varchar', length: 500, nullable: true })
   file?: string;
+
+  @Column({ type: 'varchar', length: 500, nullable: true })
+  link!: string;
 
   /** JSON array of BannerPlacement values, e.g. "[1,2]" */
   @Column({ type: 'varchar', length: 500 })

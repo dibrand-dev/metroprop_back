@@ -779,6 +779,7 @@ CREATE TABLE IF NOT EXISTS public.ads_banners (
 	file            varchar(500)   NULL,
 	placements      varchar(500)   NOT NULL,
 	status          bool           NOT NULL DEFAULT true,
+	link			varchar(500)   NOT NULL,	
 	file_status     varchar(500)   NULL,
 	file_retry      int4           NOT NULL DEFAULT 0,
 	created_at      timestamp      NOT NULL DEFAULT now(),

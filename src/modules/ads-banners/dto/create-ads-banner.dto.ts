@@ -23,6 +23,9 @@ export class CreateAdsBannerDto {
   @IsEnum(BannerPlacement, { each: true })
   placements!: BannerPlacement[];
 
+  @IsString()
+  link!: string;
+
   @IsOptional()
   @Transform(({ value }) => {
     if (value === 'true') return true;

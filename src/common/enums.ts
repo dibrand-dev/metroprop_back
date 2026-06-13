@@ -249,6 +249,7 @@ export enum PlanName {
 export enum BannerPlacement {
   HEADER = 1,
   FOOTER = 2,
+  SIDEBAR = 3,
 }
 
 export enum FiscalCondition {
