@@ -260,7 +260,7 @@ export class EmailService {
 
     await this.sendEmail({
       to,
-      subject: 'MetroProp Professional - Activa tu cuenta avanzada',
+      subject: 'MetroProp Profesional - Activá tu cuenta avanzada',
       html
     });
   }
