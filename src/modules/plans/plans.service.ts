@@ -62,9 +62,12 @@ export class PlansService {
     private readonly propertyRepo: Repository<Property>,
   ) {}
 
-  findAll(): Promise<Plan[]> {
+  findAll(filters: any): Promise<Plan[]> {
+
+    filters.deleted = false; 
+
     return this.repo.find({
-      where: { deleted: false },
+      where: filters,
       order: { plan_name: 'ASC' },
     });
   }

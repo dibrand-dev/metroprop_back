@@ -20,7 +20,7 @@ import { PlanPaymentDto } from './dto/mercadopago-purchase.dto';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
-import { UserRole } from '../../common/enums';
+import { PlanUserType, UserRole } from '../../common/enums';
 
 @Controller('plans')
 export class PlansController {
@@ -30,8 +30,14 @@ export class PlansController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  findAll() {
-    return this.plansService.findAll();
+  findAll( @Request() req: any ) {
+    let filters: any = {};
+    if(req.user.organization_id !== null) {
+      filters.user_type = PlanUserType.COMPANY;
+    } else {
+      filters.user_type = PlanUserType.INDIVIDUAL;
+    }
+    return this.plansService.findAll(filters);
   }
 
   // ─── Branch-plan routes (static segments before dynamic :id) ──────────────
