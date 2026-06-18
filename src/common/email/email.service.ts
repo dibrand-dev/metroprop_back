@@ -678,7 +678,7 @@ export class EmailService {
                   <p style="margin:0 0 8px;font-weight:600;">Datos del contacto:</p>
                   <ul style="margin:0 0 24px;padding-left:20px;">
                     <li><strong>Nombre:</strong> ${lead.name}</li>
-                    <li><strong>Email:</strong> ${lead.email}</li>
+                    ${lead.email ? `<li><strong>Email:</strong> ${lead.email}</li>` : ''}
                     ${lead.phone ? `<li><strong>Tel&eacute;fono:</strong> +${lead.country_code ?? ''} ${lead.phone}</li>` : ''}
                   </ul>
                   <div style="text-align:center;">
@@ -703,6 +703,71 @@ export class EmailService {
     await this.sendEmail({
       to,
       subject: `Te contactaron por la propiedad ${propertyLabel}`,
+      html,
+    });
+  }
+
+  async sendLeadAutoReplyEmail(params: {
+    to: string;
+    recipientName: string;
+    propertyLabel: string;
+    message: string;
+    organization: { company_name: string; email: string; phone?: string };
+    assignedUser: { id: number; email: string; name: string, phone?: string };
+
+  }): Promise<void> {
+    const { to, recipientName, propertyLabel, message, organization, assignedUser } = params;
+    const frontendUrl = this.configService.get('FRONTEND_URL', '');
+    const html = `
+      <!DOCTYPE html>
+      <html lang="es">
+      <head><meta charset="UTF-8"><title>Gracias por tu mensaje</title></head>
+      <body style="margin:0;padding:0;font-family:Arial,sans-serif;background-color:#f7f7f7;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:20px 0;">
+          <tr><td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" border="0" style="background:#fff;border-radius:8px;overflow:hidden;">
+              <tr>
+                <td align="center" style="padding:20px;background:#F5F5F5;">
+                  <img src="${frontendUrl}/images/metroprop.png" alt="Metroprop" width="150" style="display:block;">
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
+                  <p style="margin:0 0 12px;">Hola <strong>${recipientName}</strong>,</p>
+                  <p style="margin:0 0 16px;">Gracias por tu mensaje sobre la propiedad <strong>${propertyLabel}</strong>:</p>
+                  <blockquote style="border-left:4px solid #007bff;padding:12px 16px;margin:0 0 20px;background:#f0f6ff;border-radius:0 4px 4px 0;color:#555;font-style:italic;">
+                    ${message}
+                  </blockquote>
+                  <p>El agente asignado a la propiedad es:</p>
+                  <ul style="margin:0 0 24px;padding-left:20px;">
+                    ${assignedUser.name ? `<li><strong>Nombre:</strong> ${assignedUser.name}</li>` : ''}
+                    ${assignedUser.email ? `<li><strong>Email:</strong> ${assignedUser.email}</li>` : ''}
+                    ${assignedUser.phone ? `<li><strong>Tel&eacute;fono:</strong> ${assignedUser.phone}</li>` : ''}
+                  </ul>
+                  <p>Los datos de contacto de la inmobiliaria son:</p>
+                  <ul style="margin:0 0 24px;padding-left:20px;">
+                    ${organization.company_name ? `<li><strong>Nombre:</strong> ${organization.company_name}</li>` : ''}
+                    ${organization.email ? `<li><strong>Email:</strong> ${organization.email}</li>` : ''}
+                    ${organization.phone ? `<li><strong>Tel&eacute;fono:</strong> ${organization.phone}</li>` : ''}
+                  </ul>
+                  
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding:16px;font-size:12px;color:#999;background:#f7f7f7;">
+                  Metroprop &mdash; <a href="${frontendUrl}" style="color:#007bff;text-decoration:none;">metroprop.co</a>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    await this.sendEmail({
+      to,
+      subject: `MetroProp · Te contactaste por la propiedad ${propertyLabel}`,
       html,
     });
   }

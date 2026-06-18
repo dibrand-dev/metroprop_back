@@ -5,7 +5,7 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { Currency } from '../../../common/enums';
+import { Currency, PlanUserType } from '../../../common/enums';
 
 @Entity('plans')
 export class Plan {
@@ -28,6 +28,9 @@ export class Plan {
 
   @Column({ type: 'int', default: 0 })
   visibility!: number;
+
+  @Column({ type: 'varchar', length: 10, default: 'individual' })
+  user_type!: PlanUserType;
 
   /** Max number of highlighted properties (destaques) allowed (0 = unlimited) */
   @Column({ type: 'int', default: 0 })

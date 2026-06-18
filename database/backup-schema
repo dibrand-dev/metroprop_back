@@ -758,6 +758,7 @@ CREATE TABLE IF NOT EXISTS public.plans (
 	visibility  int4         NULL DEFAULT 0,
 	highlight_limit int4         NOT NULL DEFAULT 0,
 	is_active       bool         NOT NULL DEFAULT true,
+	user_type       varchar(10)  NULL DEFAULT 'individual',
 	deleted         bool         NOT NULL DEFAULT false,
 	deleted_at      timestamp    NULL,
 	created_at      timestamp    NOT NULL DEFAULT now(),

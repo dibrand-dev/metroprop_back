@@ -366,7 +366,7 @@ export class LeadsService {
     if (!assignedUser?.email) return;
 
     const propertyLabel = property.publication_title ?? property.reference_code ?? `#${property.id}`;
-    const contactsUrl = `${API_BASE_URL}/contactos`;
+    const contactsUrl = `${API_BASE_URL}/protected/leads`;
 
     await this.emailService.sendLeadNotificationEmail({
       to: assignedUser.email,
@@ -381,6 +381,16 @@ export class LeadsService {
       message,
       contactsUrl,
     });
+
+    await this.emailService.sendLeadAutoReplyEmail({
+      to: lead.email,
+      recipientName: lead.name,
+      propertyLabel,
+      message,
+      organization: organization,
+      assignedUser: assignedUser,
+    });
+
   }
 
   async unreadCount(filters: LeadFiltersDto): Promise<any> {

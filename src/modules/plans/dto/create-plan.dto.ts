@@ -5,7 +5,7 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { Currency } from '../../../common/enums';
+import { Currency, PlanUserType } from '../../../common/enums';
 
 export class CreatePlanDto {
   @IsString()
@@ -25,6 +25,9 @@ export class CreatePlanDto {
   @IsInt()
   @Min(0)
   visibility!: number;
+
+  @IsEnum(PlanUserType)
+  user_type!: PlanUserType;
 
   /** Max highlights/destaques (0 = unlimited) */
   @IsInt()

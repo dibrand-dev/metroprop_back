@@ -280,3 +280,8 @@ export enum LeadContactType {
   WHATSAPP = 'whatsapp',
   SAW_CONTACT = 'saw_contact',
 }
+
+export enum PlanUserType {
+  INDIVIDUAL = 'individual',
+  COMPANY = 'company',
+}
