@@ -713,10 +713,11 @@ export class EmailService {
     propertyLabel: string;
     message: string;
     organization: { company_name: string; email: string; phone?: string };
+    propertyUrl: string;
     assignedUser: { id: number; email: string; name: string, phone?: string };
 
   }): Promise<void> {
-    const { to, recipientName, propertyLabel, message, organization, assignedUser } = params;
+    const { to, recipientName, propertyLabel, message, organization, propertyUrl, assignedUser } = params;
     const frontendUrl = this.configService.get('FRONTEND_URL', '');
     const html = `
       <!DOCTYPE html>
@@ -734,7 +735,7 @@ export class EmailService {
               <tr>
                 <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
                   <p style="margin:0 0 12px;">Hola <strong>${recipientName}</strong>,</p>
-                  <p style="margin:0 0 16px;">Gracias por tu mensaje sobre la propiedad <strong>${propertyLabel}</strong>:</p>
+                  <p style="margin:0 0 16px;">Gracias por tu mensaje sobre la propiedad <a href="${propertyUrl}" style="color:#007bff;text-decoration:none;"><strong>${propertyLabel}</strong></a>:</p>
                   <blockquote style="border-left:4px solid #007bff;padding:12px 16px;margin:0 0 20px;background:#f0f6ff;border-radius:0 4px 4px 0;color:#555;font-style:italic;">
                     ${message}
                   </blockquote>

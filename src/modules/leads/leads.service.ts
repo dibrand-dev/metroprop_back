@@ -386,6 +386,7 @@ export class LeadsService {
       to: lead.email,
       recipientName: lead.name,
       propertyLabel,
+      propertyUrl: `${API_BASE_URL}/propertyDetail/${property.id}`,
       message,
       organization: organization,
       assignedUser: assignedUser,
