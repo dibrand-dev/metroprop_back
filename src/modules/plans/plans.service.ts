@@ -313,7 +313,7 @@ export class PlansService {
     const orgId = targetUser.organization?.id;
     if (
       requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
-      requester.organization_id !== orgId
+      requester.id !== userId
     ) {
       throw new ForbiddenException(
         'No tienes permisos para operar sobre este usuario',
@@ -428,10 +428,9 @@ export class PlansService {
     });
     if (!targetUser) throw new NotFoundException('User not found');
 
-    const orgId = targetUser.organization?.id;
     if (
       requester.role_id !== UserRole.USER_ROL_SUPER_ADMIN &&
-      requester.organization_id !== orgId
+      requester.id !== userId
     ) {
       throw new ForbiddenException(
         'No tienes permisos para ver los planes de este usuario',
