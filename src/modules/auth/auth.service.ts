@@ -18,6 +18,11 @@ export class AuthService {
       throw new UnauthorizedException('El correo o la contraseña ingresados son incorrectos');
     }
 
+    // Verificar que el usuario haya validado su email
+    if (!user.is_verified) {
+      throw new UnauthorizedException('Tu cuenta aun no fue verificada. Revisa tu bandeja de entrada o spam y seguí las instrucciones.');
+    }
+
     const isPasswordValid = await this.usersService.validatePassword(
       loginDto.password,
       user.password,
@@ -27,11 +32,7 @@ export class AuthService {
       throw new UnauthorizedException('El correo o la contraseña ingresados son incorrectos');
     }
 
-    // Verificar que el usuario haya validado su email
-    if (!user.is_verified) {
-      throw new UnauthorizedException('Tu cuenta aun no fue verificada. Revisa tu bandeja de entrada o spam y seguí las instrucciones.');
-    }
-
+   
     const access_token = this.jwtService.sign({
       sub: user.id,
       email: user.email,
