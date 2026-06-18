@@ -29,7 +29,7 @@ export class TokkoMigratorService {
   
 
   constructor(private readonly dataSource: DataSource, private readonly configService: ConfigService) {}
-  @Cron(CronExpression.EVERY_1ST_DAY_OF_MONTH_AT_MIDNIGHT)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleMigration() {
     this.logger.log('Iniciando migración automática de locations desde Tokko...');
     const enabled = this.configService.get<string>('FEATURE_FLAG_TOKKO_SYNC');
@@ -50,6 +50,7 @@ export class TokkoMigratorService {
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
       //await this.normalizeSubLocationsByCountry(1);
+      await this.normalizeNeighborhoodByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
@@ -236,6 +237,81 @@ export class TokkoMigratorService {
       }
     } catch (e) {
       this.logger.error(`[normalizeSubLocationsByCountry] Error para country ${countryId}`, e);
+    }
+    await queryRunner.release();
+  }
+
+  /**
+   * Normaliza neighborhoods (divisions de cada sub-location) de un país o de una location específica
+   */
+  async normalizeNeighborhoodByCountry(countryId: number, locationId?: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      // Buscar locations a procesar
+      let locations: Location[] = [];
+      if (locationId) {
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: locationId, type: 'sub_location' } });
+        if (loc) locations = [loc];
+      } else {
+        locations = await queryRunner.manager.getRepository(Location).find({
+          where: { type: 'sub_location', country_id: countryId, migrated: false },
+          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
+        });
+      }
+      for (const location of locations) {
+        // Obtener info de Tokko
+        const response = await axios.get(`${API_LOCATION}${location.id}/?lang=es_ar&format=json`);
+        const detail = response.data;
+        // Actualizar location en DB
+        const updateLoc: any = {};
+        if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
+          updateLoc.migrated = false;
+        } else {
+          updateLoc.migrated = true;
+        }
+        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+        this.logger.log(`[normalizeNeighborhoodByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
+
+        // Procesar divisions
+        if (Array.isArray(detail.divisions)) {
+          let allDivisionsOk = true;
+          for (const division of detail.divisions) {
+            const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
+            const updateDiv: any = {
+              name: division.name,
+              type: 'neighborhood',
+              parent_id: location.id,
+              state_id: location.state_id,
+              country_id: countryId,
+              migrated: true,
+              full_location: division.name + ', ' + location.name,
+            };
+            if (division.short_location) updateDiv.short_location = division.short_location;
+            try {
+              if (dbDivision) {
+                await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
+              } else {
+                await queryRunner.manager.insert('locations', {
+                  id: division.id,
+                  ...updateDiv,
+                });
+                this.logger.log(`[normalizeNeighborhoodByCountry] Division insertada: ${division.name} (ID: ${division.id})`);
+              }
+            } catch (err) {
+              allDivisionsOk = false;
+              this.logger.error(`[normalizeNeighborhoodByCountry] Error actualizando division ${division.id}`, err);
+            }
+          }
+          // Si todas las divisions OK, marcar location como migrada
+          if (allDivisionsOk) {
+            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+          }
+        }
+      }
+    } catch (e) {
+      this.logger.error(`[normalizeNeighborhoodByCountry] Error para country ${countryId}`, e);
     }
     await queryRunner.release();
   }
