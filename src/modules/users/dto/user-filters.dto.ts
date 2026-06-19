@@ -40,4 +40,8 @@ export class UserFiltersDto {
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   branch_id?: number;
+
+  @IsOptional()
+  @IsString()
+  searchCriteria?: string;
 }

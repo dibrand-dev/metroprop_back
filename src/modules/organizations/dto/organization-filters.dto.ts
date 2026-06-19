@@ -39,4 +39,8 @@ export class OrganizationFiltersDto {
   @Transform(({ value }) => parseInt(value))
   @IsNumber()
   state_id?: number;
+
+  @IsOptional()
+  @IsString()
+  searchCriteria?: string;
 }

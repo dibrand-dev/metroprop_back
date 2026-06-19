@@ -27,46 +27,67 @@ export class OrganizationsService {
       source_partner_id,
       company_name,
       location_id,
-      state_id
+      state_id,
+      searchCriteria
     } = filters;
 
     const whereConditions: any = {
       deleted
     };
 
-    if (id !== undefined) {
-      whereConditions.id = id;
-    }
+    if (searchCriteria !== undefined) {
+      // convertir en array de condiciones OR
+      const parsedId = Number(searchCriteria);
+      const orConditions = [
+        { ...whereConditions, company_name: Like(`%${searchCriteria}%`) },
+        ...( !isNaN(parsedId) ? [{ ...whereConditions, id: parsedId }] : [] )
+      ];
+      
+      const [data, total] = await this.repo.findAndCount({
+        where: orConditions, 
+        take: limit,
+        skip: offset,
+        order: { created_at: 'DESC' }
+      });
 
-    if (source_partner_id !== undefined) {
-      whereConditions.source_partner_id = source_partner_id;
-    }
-
-    if (company_name) {
-      whereConditions.company_name = Like(`%${company_name}%`);
-    }
-
-    if (location_id) {
-      whereConditions.location_id = location_id;
-    }
-
-    if (state_id !== undefined) {
-      whereConditions.state_id = state_id;
-    }
-
-    const [data, total] = await this.repo.findAndCount({
-      where: whereConditions,
-      take: limit,
-      skip: offset,
-      order: {
-        created_at: 'DESC'
+      return { data, total };
+    } else {
+      
+      if (id !== undefined) {
+        whereConditions.id = id;
       }
-    });
 
-    return {
-      data,
-      total
-    };
+      if (source_partner_id !== undefined) {
+        whereConditions.source_partner_id = source_partner_id;
+      }
+
+      if (company_name) {
+        whereConditions.company_name = Like(`%${company_name}%`);
+      }
+
+      if (location_id) {
+        whereConditions.location_id = location_id;
+      }
+
+      if (state_id !== undefined) {
+        whereConditions.state_id = state_id;
+      }
+
+      
+      const [data, total] = await this.repo.findAndCount({
+        where: whereConditions,
+        take: limit,
+        skip: offset,
+        order: {
+          created_at: 'DESC'
+        }
+      });
+
+      return {
+        data,
+        total
+      };
+    }
   }
 
   /**

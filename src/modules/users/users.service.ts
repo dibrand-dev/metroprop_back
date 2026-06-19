@@ -1,6 +1,6 @@
 import { Injectable, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, EntityManager, FindOptionsWhere } from 'typeorm';
+import { Repository, EntityManager, FindOptionsWhere, Brackets } from 'typeorm';
 import * as bcrypt from 'bcryptjs';
 import * as crypto from 'crypto';
 import { User } from './entities/user.entity';
@@ -79,28 +79,46 @@ export class UsersService {
       .take(limit)
       .skip(offset);
 
-    if (id !== undefined) {
-      qb.andWhere('user.id = :id', { id });
-    }
+    
+      if (filters.searchCriteria) {
+        const parsedId = Number(filters.searchCriteria);
 
-    if (email) {
-      qb.andWhere('user.email ILIKE :email', { email: `%${email}%` });
-    }
+        qb.andWhere(
+          new Brackets(qbInner => {
+            qbInner.where('user.email ILIKE :search', { search: `%${filters.searchCriteria}%` })
+              .orWhere('user.name ILIKE :search', { search: `%${filters.searchCriteria}%` });
 
-    if (is_verified !== undefined) {
-      qb.andWhere('user.is_verified = :is_verified', { is_verified });
-    }
+            // Solo agregamos la condición de id si es un número válido
+            if (!isNaN(parsedId)) {
+              qbInner.orWhere('user.id = :idSearch', { idSearch: parsedId });
+            }
+          }),
+        );
+      } else {
 
-    if (organization_id !== undefined) {
-      qb.andWhere('user.organization_id = :organization_id', { organization_id });
-    }
+        if (id !== undefined) {
+          qb.andWhere('user.id = :id', { id });
+        }
 
-    if (branch_id !== undefined) {
-      // Subquery sobre la tabla de unión para no afectar qué branches se cargan
-      qb.andWhere(
-        'user.id IN (SELECT ub.user_id FROM users_branches ub WHERE ub.branch_id = :branch_id)',
-        { branch_id },
-      );
+        if (email) {
+          qb.andWhere('user.email ILIKE :email', { email: `%${email}%` });
+        }
+
+        if (is_verified !== undefined) {
+          qb.andWhere('user.is_verified = :is_verified', { is_verified });
+        }
+
+        if (organization_id !== undefined) {
+          qb.andWhere('user.organization_id = :organization_id', { organization_id });
+        }
+
+        if (branch_id !== undefined) {
+          // Subquery sobre la tabla de unión para no afectar qué branches se cargan
+          qb.andWhere(
+            'user.id IN (SELECT ub.user_id FROM users_branches ub WHERE ub.branch_id = :branch_id)',
+            { branch_id },
+          );
+        }
     }
 
     const [users, total] = await qb.getManyAndCount();
