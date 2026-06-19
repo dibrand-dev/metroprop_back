@@ -32,10 +32,12 @@ export class PlansController {
   @UseGuards(JwtAuthGuard)
   findAll( @Request() req: any ) {
     let filters: any = {};
-    if(req.user.organization_id !== null) {
-      filters.user_type = PlanUserType.COMPANY;
-    } else {
-      filters.user_type = PlanUserType.INDIVIDUAL;
+    if(req.user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
+      if(req.user.organization_id !== null) {
+        filters.user_type = PlanUserType.COMPANY;
+      } else {
+        filters.user_type = PlanUserType.INDIVIDUAL;
+      }
     }
     return this.plansService.findAll(filters);
   }
