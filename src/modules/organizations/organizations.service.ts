@@ -2,7 +2,7 @@ import { MediaService } from '../../common/media/media.service';
 import { ORGANIZATION_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, NotFoundException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Like } from 'typeorm';
+import { Repository, Like, ILike } from 'typeorm';
 import { Organization } from './entities/organization.entity';
 import { CreateOrganizationDto } from './dto/create-organization.dto';
 import { UpdateOrganizationDto } from './dto/update-organization.dto';
@@ -39,10 +39,10 @@ export class OrganizationsService {
       // convertir en array de condiciones OR
       const parsedId = Number(searchCriteria);
       const orConditions = [
-        { ...whereConditions, company_name: Like(`%${searchCriteria}%`) },
+        { ...whereConditions, company_name: ILike(`%${searchCriteria}%`) },
         ...( !isNaN(parsedId) ? [{ ...whereConditions, id: parsedId }] : [] )
       ];
-      
+
       const [data, total] = await this.repo.findAndCount({
         where: orConditions, 
         take: limit,
