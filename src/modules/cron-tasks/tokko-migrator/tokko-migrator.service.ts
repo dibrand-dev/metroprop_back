@@ -259,55 +259,67 @@ export class TokkoMigratorService {
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
         });
       }
-      for (const location of locations) {
-        // Obtener info de Tokko
-        const response = await axios.get(`${API_LOCATION}${location.id}/?lang=es_ar&format=json`);
-        const detail = response.data;
-        // Actualizar location en DB
-        const updateLoc: any = {};
-        if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
-          updateLoc.migrated = false;
-        } else {
-          updateLoc.migrated = true;
-        }
-        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
-        this.logger.log(`[normalizeNeighborhoodByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
 
-        // Procesar divisions
-        if (Array.isArray(detail.divisions)) {
-          let allDivisionsOk = true;
-          for (const division of detail.divisions) {
-            const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
-            const updateDiv: any = {
-              name: division.name,
-              type: 'neighborhood',
-              parent_id: location.id,
-              state_id: location.state_id,
-              country_id: countryId,
-              migrated: true,
-              full_location: division.name + ', ' + location.name,
-            };
-            if (division.short_location) updateDiv.short_location = division.short_location;
-            try {
-              if (dbDivision) {
-                await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
-                this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
-              } else {
-                await queryRunner.manager.insert('locations', {
-                  id: division.id,
-                  ...updateDiv,
-                });
-                this.logger.log(`[normalizeNeighborhoodByCountry] Division insertada: ${division.name} (ID: ${division.id})`);
+      this.logger.log(`[normalizeNeighborhoodByCountry] Procesando ${locations.length} locations para country ${countryId}`);
+      
+      for (const location of locations) {
+        try {
+          this.logger.log(`[normalizeNeighborhoodByCountry] Procesando location ${location.name} (ID: ${location.id}) con parent_id ${location.parent_id} y full_location "${location.full_location}"`);
+          // Obtener info de Tokko
+          const response = await axios.get(`${API_LOCATION}${location.id}/?lang=es_ar&format=json`);
+          const detail = response.data;
+          // Actualizar location en DB
+          const updateLoc: any = {};
+          if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
+            updateLoc.migrated = false;
+          } else {
+            updateLoc.migrated = true;
+          }
+          await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+          this.logger.log(`[normalizeNeighborhoodByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
+
+          // Procesar divisions
+          if (Array.isArray(detail.divisions)) {
+            this.logger.log(`[normalizeNeighborhoodByCountry] Procesando ${detail.divisions.length} divisiones para location ${location.name} (ID: ${location.id})`);
+            let allDivisionsOk = true;
+            for (const division of detail.divisions) {
+              const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
+              const updateDiv: any = {
+                name: division.name,
+                type: 'neighborhood',
+                parent_id: location.id,
+                state_id: location.state_id,
+                country_id: countryId,
+                migrated: true,
+                full_location: division.name + ', ' + location.name,
+              };
+              if (division.short_location) updateDiv.short_location = division.short_location;
+              try {
+                if (dbDivision) {
+                  await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                  this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
+                } else {
+                  await queryRunner.manager.insert('locations', {
+                    id: division.id,
+                    ...updateDiv,
+                  });
+                  this.logger.log(`[normalizeNeighborhoodByCountry] Division insertada: ${division.name} (ID: ${division.id})`);
+                }
+              } catch (err) {
+                allDivisionsOk = false;
+                this.logger.error(`[normalizeNeighborhoodByCountry] Error actualizando division ${division.id}`, err);
+                this.logger.error(err);
               }
-            } catch (err) {
-              allDivisionsOk = false;
-              this.logger.error(`[normalizeNeighborhoodByCountry] Error actualizando division ${division.id}`, err);
             }
-          }
-          // Si todas las divisions OK, marcar location como migrada
-          if (allDivisionsOk) {
-            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
-          }
+            // Si todas las divisions OK, marcar location como migrada
+            if (allDivisionsOk) {
+              await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+            }
+          } 
+        } catch (err) {
+          this.logger.error(`[normalizeNeighborhoodByCountry] Error procesando location ${location.id}`, err);
+          this.logger.error(err);
+          continue; 
         }
       }
     } catch (e) {
