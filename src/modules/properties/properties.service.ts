@@ -725,6 +725,8 @@ export class PropertiesService {
       //  .leftJoinAndSelect('units.images', 'unitImages')
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
+        .andWhere('organization.deleted = false')
+        .andWhere('organization.status = true')
         .select([
           'property.id',
           'property.price',
@@ -788,6 +790,8 @@ export class PropertiesService {
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
         .andWhere('(units.deleted = false OR units.id IS NULL)')
+        .andWhere('organization.deleted = false')
+        .andWhere('organization.status = true')
         .select([
           'property',
           'images',
@@ -844,6 +848,7 @@ export class PropertiesService {
    * Obtener una propiedad por reference_code
    */
   async findByReferenceCode(reference_code: string): Promise<Property> {
+    /*
     const property = await this.propertyRepository.findOne({
       where: {
         reference_code,
@@ -851,6 +856,21 @@ export class PropertiesService {
       },
       relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
     });
+    */
+
+    const property = await this.propertyRepository
+    .createQueryBuilder('property')
+    .leftJoinAndSelect('property.images', 'images')
+    .leftJoinAndSelect('property.attributes', 'attributes')
+    .leftJoinAndSelect('property.tags', 'tags')
+    .leftJoinAndSelect('property.videos', 'videos')
+    .leftJoinAndSelect('property.attached', 'attached')
+    .leftJoinAndSelect('property.organization', 'organization')
+    .where('property.reference_code = :reference_code', { reference_code })
+    .andWhere('property.deleted = false')
+    .andWhere('organization.deleted = false')
+    .andWhere('organization.status = true')
+    .getOne();
 
     if (!property) {
       throw new NotFoundException(
@@ -878,13 +898,15 @@ export class PropertiesService {
   }
 
   async incrementViewCount(id: number) {
-    const property = await this.propertyRepository.findOne({
-      where: {
-        id,
-        deleted: false,
-      },
-      select: ['id', 'view_count'],
-    });
+    const property = await this.propertyRepository
+      .createQueryBuilder('property')
+      .leftJoin('property.organization', 'organization')
+      .where('property.id = :id', { id })
+      .andWhere('property.deleted = false')
+      .andWhere('organization.deleted = false')
+      .andWhere('organization.status = 1')
+      .select(['property.id', 'property.view_count'])
+      .getOne();
 
     if (!property) {
       throw new NotFoundException(`Propiedad con ID ${id} no encontrada`);
@@ -892,10 +914,14 @@ export class PropertiesService {
 
     await this.propertyRepository.increment({ id }, 'view_count', 1);
 
-    const updatedProperty = await this.propertyRepository.findOne({
-      where: { id },
-      select: ['id', 'view_count'],
-    });
+    const updatedProperty = await this.propertyRepository
+      .createQueryBuilder('property')
+      .leftJoin('property.organization', 'organization')
+      .where('property.id = :id', { id })
+      .andWhere('organization.deleted = false')
+      .andWhere('organization.status = 1')
+      .select(['property.id', 'property.view_count'])
+      .getOne();
 
     return {
       counted: true,
@@ -1172,8 +1198,11 @@ export class PropertiesService {
       .leftJoinAndSelect('property.images', 'image')
       .leftJoinAndSelect('property.videos', 'video')
       .leftJoinAndSelect('property.attached', 'attached')
+      .leftJoinAndSelect('property.organization', 'organization')
       .where('property.id = :id', { id: propertyId })
       .andWhere('property.deleted = :deleted', { deleted: false })
+      .andWhere('organization.deleted = :deleted', { deleted: false })
+      .andWhere('organization.status = :status', { status: 1 })
       .orderBy('image.order_position', 'ASC')
       .addOrderBy('video.order', 'ASC')
       .addOrderBy('attached.order', 'ASC')
@@ -1270,7 +1299,7 @@ export class PropertiesService {
           LIMIT 1
         )`,
       )
-      .leftJoinAndSelect('p.organization', 'p_org')
+      .leftJoinAndSelect('p.organization', 'p_org', 'p_org.deleted = false AND p_org.status = true')
       .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
   //  .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
@@ -1425,7 +1454,7 @@ export class PropertiesService {
             LIMIT 1
           )`,
         )
-        .leftJoinAndSelect('p.organization', 'p_org')
+        .leftJoinAndSelect('p.organization', 'p_org', 'p_org.deleted = false AND p_org.status = true')
         .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
       //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')

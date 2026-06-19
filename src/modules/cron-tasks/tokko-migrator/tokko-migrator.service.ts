@@ -50,7 +50,7 @@ export class TokkoMigratorService {
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
       //await this.normalizeSubLocationsByCountry(1);
-      await this.normalizeNeighborhoodByCountry(1);
+     // await this.normalizeNeighborhoodByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');

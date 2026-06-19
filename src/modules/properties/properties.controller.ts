@@ -23,6 +23,7 @@ import { CreateDevelopmentDto } from './dto/create-development.dto';
 import { UpdateDevelopmentDto } from './dto/update-development.dto';
 import { CreateDevelopmentUnitDto } from './dto/create-development-unit.dto';
 import { UpdateDevelopmentUnitDto } from './dto/update-development-unit.dto';
+import { ReferenceCodeParamDto } from './dto/reference-code-param.dto';
 
 import { UploadedFiles, UseInterceptors } from '@nestjs/common';
 
@@ -396,8 +397,8 @@ export class PropertiesController {
    * Obtener propiedad por reference_code
    */
   @Get('ref/:reference_code')
-  findByReferenceCode(@Param('reference_code') reference_code: string) {
-    return this.propertiesService.findByReferenceCode(reference_code);
+  findByReferenceCode(@Param() params: ReferenceCodeParamDto) {
+    return this.propertiesService.findByReferenceCode(params.reference_code);  
   }
 
   
