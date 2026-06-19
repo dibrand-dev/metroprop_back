@@ -13,6 +13,7 @@ import { EmailService } from '../../common/email/email.service';
 import { notifyTokkoContact } from '../../common/helpers/tokko-helper';
 import { TOKKO_PARTNER_NAME, API_BASE_URL } from '../../common/constants';
 import { PropertiesService, PropertyCard } from '../properties/properties.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class LeadsService {
@@ -36,6 +37,7 @@ export class LeadsService {
   }
 
   constructor(
+    private readonly configService: ConfigService,    
     @InjectRepository(Lead)
     private readonly leadsRepository: Repository<Lead>,
     @InjectRepository(Property)
@@ -365,8 +367,9 @@ export class LeadsService {
 
     if (!assignedUser?.email) return;
 
+    const frontendUrl = this.configService.get('FRONTEND_URL', 'https://metroprop.co');
     const propertyLabel = property.publication_title ?? property.reference_code ?? `#${property.id}`;
-    const contactsUrl = `${API_BASE_URL}/protected/leads`;
+    const contactsUrl = `${frontendUrl}/protected/leads`;
 
     await this.emailService.sendLeadNotificationEmail({
       to: assignedUser.email,
@@ -386,7 +389,7 @@ export class LeadsService {
       to: lead.email,
       recipientName: lead.name,
       propertyLabel,
-      propertyUrl: `${API_BASE_URL}/propertyDetail/${property.id}`,
+      propertyUrl: `${frontendUrl}/propertyDetail/${property.id}`,
       message,
       organization: organization,
       assignedUser: assignedUser,
