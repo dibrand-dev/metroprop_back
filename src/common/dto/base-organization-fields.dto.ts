@@ -79,6 +79,11 @@ export class BaseOrganizationFieldsDto {
   @IsPositive()
   sub_location_id?: number;
 
+  @IsOptional()  
+  @IsInt()
+  @IsPositive()
+  neighborhood_id?: number;
+
   @IsOptional()
   @IsString()
   location_id?: string;

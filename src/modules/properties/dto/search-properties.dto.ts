@@ -81,6 +81,11 @@ export class SearchPropertiesDto {
   sub_location_id?: number;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  neighborhood_id?: number;
+
+  @IsOptional()
   @IsString()
   northEastLat?: string;
 

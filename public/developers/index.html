@@ -489,7 +489,7 @@
       <tr><td><code>country_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del país. Obtener con <a href="#ep-loc-countries"><code>GET /locations/countries</code></a></td></tr>
       <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia o estado. Obtener con <a href="#ep-loc-states"><code>GET /locations/states?countryId=</code></a></td></tr>
       <tr><td><code>location_id</code></td><td>string</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad o ciudad. Obtener con <a href="#ep-loc-cities"><code>GET /locations/cities?stateId=</code></a></td></tr>
-      <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio o sublocalidad. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
+      <tr><td><code>neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio o sublocalidad. Obtener con <a href="#ep-loc-neighborhoods"><code>GET /locations/neighborhoods?locationId=</code></a></td></tr>
       <tr><td><code>full_location</code></td><td>string(500)</td><td><span class="badge badge-optional">opcional</span></td><td>Texto libre con la ubicación completa (ej: <em>"Buenos Aires, Argentina"</em>)</td></tr>
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
@@ -603,6 +603,7 @@
       <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia. Obtener con <a href="#ep-loc-states"><code>GET /locations/states?countryId=</code></a></td></tr>
       <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad. Obtener con <a href="#ep-loc-cities"><code>GET /locations/cities?stateId=</code></a></td></tr>
       <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
+      <tr><td><code>neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio. Obtener con <a href="#ep-loc-neighborhoods"><code>GET /locations/neighborhoods?locationId=</code></a></td></tr>
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
       <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa (true/false)</td></tr>
@@ -883,6 +884,7 @@
       <tr><td><code>state_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la provincia/estado</td></tr>
       <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad</td></tr>
       <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio</td></tr>
+      <tr><td><code>neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del sub barrio</td></tr>
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
       <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa</td></tr>

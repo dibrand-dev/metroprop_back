@@ -94,6 +94,17 @@ export class PartnerApiController {
     return this.locationsService.getLocationChildrens(locationId);
   }
 
+  @Get('locations/neighborhoods')
+  @ApiTags('Locations')
+  @ApiOperation({
+    summary: 'Obtener barrios de una sublocalidad',
+    description: 'Retorna barrios (neighborhood_id) de una sublocalidad dado su sub_location_id.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de barrios' })
+  getSubLocationNeighborhoods(@Query('subLocationId') subLocationId: number) {
+    return this.locationsService.getSubLocationNeighborhoods(subLocationId);
+  }
+
   // ====== ORGANIZATION (real) ======
 
   @Post('organizations')

@@ -355,6 +355,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	country_id int4 NULL,
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
+	neighborhood_id int4 NULL,
 	roofed_surface_measurement varchar(10) DEFAULT 'M2'::character varying NULL,
 	brightness int4 NULL,
 	garage_coverage int4 NULL,
@@ -383,6 +384,7 @@ CREATE INDEX IF NOT EXISTS idx_properties_reference_code ON public.properties US
 CREATE INDEX IF NOT EXISTS idx_properties_state_id ON public.properties USING btree (state_id);
 CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_properties_sub_location_id ON public.properties USING btree (sub_location_id);
+CREATE INDEX IF NOT EXISTS idx_properties_neighborhood_id ON public.properties USING btree (neighborhood_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_properties_publication_id ON public.properties USING btree (publication_id) WHERE (publication_id IS NOT NULL);
 
 
@@ -565,6 +567,7 @@ CREATE TABLE IF NOT EXISTS public.branches (
 	country_id int4 NULL,
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
+	neighborhood_id int4 NULL,
 	external_reference varchar(255) NULL,
 	CONSTRAINT pk_branches PRIMARY KEY (id)
 );
@@ -573,6 +576,7 @@ CREATE INDEX IF NOT EXISTS idx_branches_location_id ON public.branches USING btr
 CREATE INDEX IF NOT EXISTS idx_branches_organization ON public.branches USING btree (organization_id);
 CREATE INDEX IF NOT EXISTS idx_branches_state_id ON public.branches USING btree (state_id);
 CREATE INDEX IF NOT EXISTS idx_branches_sub_location_id ON public.branches USING btree (sub_location_id);
+CREATE INDEX IF NOT EXISTS idx_branches_neighborhood_id ON public.branches USING btree (neighborhood_id);
 
 
 -- public.organizations definition
@@ -610,6 +614,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
 	country_id int4 NULL,
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
+	neighborhood_id int4 NULL,
 	professional_type public."organizations_professional_type_enum" NULL,
 	tokko_key varchar NULL,
 	CONSTRAINT pk_organizations PRIMARY KEY (id)

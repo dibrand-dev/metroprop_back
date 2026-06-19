@@ -18,6 +18,7 @@ import { User } from '../../users/entities/user.entity';
 @Index('idx_branches_country_id', ['country_id'])
 @Index('idx_branches_state_id', ['state_id'])
 @Index('idx_branches_sub_location_id', ['sub_location_id'])
+@Index('idx_branches_neighborhood_id', ['neighborhood_id'])
 export class Branch {
   @PrimaryGeneratedColumn()
   id!: number;
@@ -60,6 +61,9 @@ export class Branch {
 
   @Column({ type: 'integer', nullable: true })
   sub_location_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  neighborhood_id?: number;
 
   @Column({ type: 'varchar', nullable: true })
   full_location?: string;

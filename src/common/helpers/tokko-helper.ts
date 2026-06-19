@@ -772,8 +772,9 @@ export class TokkoHelperService {
     country_id?: number;
     state_id?: number;
     sub_location_id?: number;
+    neighborhood_id?: number;
   }> {
-    const result: { location_id?: number; country_id?: number; state_id?: number; sub_location_id?: number } = {};
+    const result: { location_id?: number; country_id?: number; state_id?: number; sub_location_id?: number, neighborhood_id?: number } = {};
     let currentId: number | null = locationId;
 
     while (currentId != null) {
@@ -781,6 +782,9 @@ export class TokkoHelperService {
       if (!loc) break;
 
       switch (loc.type) {
+        case 'neighborhood':
+          result.neighborhood_id = loc.id;
+          break;
         case 'sub_location':
           result.sub_location_id = loc.id;
           break;

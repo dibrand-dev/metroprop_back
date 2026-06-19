@@ -71,6 +71,11 @@ export class BaseBranchFieldsDto {
   sub_location_id?: number;
 
   @IsOptional()
+  @IsInt()
+  @IsPositive()
+  neighborhood_id?: number;
+
+  @IsOptional()
   @IsString()
   @MaxLength(500)
   full_location?: string;

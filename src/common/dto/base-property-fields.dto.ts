@@ -125,6 +125,11 @@ export class BasePropertyFieldsDto {
   sub_location_id?: number;
 
   @IsOptional()
+  @IsInt()
+  @IsPositive()
+  neighborhood_id?: number;
+
+  @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(-90)
   @Max(90)
