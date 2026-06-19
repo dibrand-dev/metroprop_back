@@ -449,6 +449,7 @@ export class EmailService {
       price_square_meter?: number;
       firstImageUrl?: string | null;
     }>,
+    queryStringParams: string,
   ): Promise<void> {
     const frontendUrl = this.configService.get('FRONTEND_URL', 'https://metroprop.co');
 
@@ -466,7 +467,7 @@ export class EmailService {
 
     const cardHtmlArray = properties.map((p) => {
       const imageHtml = p.firstImageUrl
-        ? `<img src="${p.firstImageUrl}" alt="${p.publication_title}" width="100%" style="display:block; border-radius:8px 8px 0 0; max-height:200px; object-fit:cover;">`
+        ? `<img src="${p.firstImageUrl.startsWith('http') ? p.firstImageUrl : `${this.configService.get('AWS_S3_BUCKET_URL')}/${p.firstImageUrl}`}" alt="${p.publication_title}" width="100%" style="display:block; border-radius:8px 8px 0 0; max-height:200px; object-fit:cover;">`
         : `<div style="width:100%;height:160px;background-color:#e9ecef;border-radius:8px 8px 0 0;"></div>`;
 
       const addressLine = [p.street, p.number].filter(Boolean).join(' ');
@@ -493,7 +494,7 @@ export class EmailService {
               <p style="margin:0 0 8px 0;font-size:20px;font-weight:800;color:#1a1a1a;">${priceLine}${priceM2}</p>
               ${addressLine ? `<p style="margin:0 0 6px 0;font-size:13px;color:#555;">${addressLine}</p>` : ''}
               ${specs ? `<p style="margin:0 0 12px 0;font-size:13px;color:#555;">${specs}</p>` : ''}
-              <a href="${frontendUrl}/property/${p.id}" style="display:inline-block;background-color:#007bff;color:#fff;text-decoration:none;padding:8px 20px;border-radius:4px;font-size:13px;font-weight:bold;">
+              <a href="${frontendUrl}/propertyDetail/${p.id}" style="display:inline-block;background-color:#007bff;color:#fff;text-decoration:none;padding:8px 20px;border-radius:4px;font-size:13px;font-weight:bold;">
                 Ver propiedad
               </a>
             </td>
@@ -549,7 +550,7 @@ export class EmailService {
                 <!-- CTA final -->
                 <tr>
                   <td align="center" style="padding:16px 32px 32px 32px;">
-                    <a href="${frontendUrl}/propiedades" style="display:inline-block;background-color:#007bff;color:#fff;text-decoration:none;padding:14px 48px;border-radius:4px;font-size:15px;font-weight:bold;">
+                    <a href="${frontendUrl}/results?q=${queryStringParams}" style="display:inline-block;background-color:#007bff;color:#fff;text-decoration:none;padding:14px 48px;border-radius:4px;font-size:15px;font-weight:bold;">
                       Ver todas las propiedades
                     </a>
                   </td>

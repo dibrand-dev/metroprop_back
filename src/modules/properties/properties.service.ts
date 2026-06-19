@@ -1788,7 +1788,7 @@ export class PropertiesService {
         user_id: filters.user_id,
       });
     }
-    console.log('filters.status', filters.status, 'options.includeStatusFilter', options?.includeStatusFilter);
+
     if (options?.includeStatusFilter !== undefined) {
       // si incluye el filtro de status, aplicar el filtro recibido si existe sino traer todos los statuses (
       if (filters.status != null) {
@@ -1830,6 +1830,10 @@ export class PropertiesService {
       qb.andWhere('p.property_type IN (:...property_type)', {
         property_type: filters.property_type,
       });
+    }
+
+    if(filters.created_from != null) {
+      qb.andWhere('p.created_at >= :created_from', { created_from: filters.created_from });
     }
 
     // property subtype

@@ -95,11 +95,11 @@ export class MediaService {
       buffers[key] = await sharp(buffer)
         .rotate()                                                   // auto-corregir orientación EXIF
         .resize({ width: config.width, withoutEnlargement: true }) // no agrandar imágenes pequeñas
-        .webp({ quality: 82 })
+        .jpeg({ quality: 100, progressive: true })
         .toBuffer();
     }
 
-    return { buffers, mimetype: 'image/webp' };
+    return { buffers, mimetype: 'image/jpeg' };
   }
 
   // =========================================================

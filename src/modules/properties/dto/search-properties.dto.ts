@@ -45,6 +45,10 @@ export class SearchPropertiesDto {
   // ========== Identificadores / Organización ==========
 
   @IsOptional()
+  @IsString()
+  created_from?: Date | string; 
+
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   organization_id?: number;

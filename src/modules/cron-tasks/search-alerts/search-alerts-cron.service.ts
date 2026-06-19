@@ -85,7 +85,12 @@ export class SearchAlertsCronService {
       return;
     }
 
-    const sinceDate = alert.last_email_sent ?? new Date(0);
+    const queryStringParams = new URLSearchParams(parsedFilters as Record<string, string>).toString();
+
+
+    const sinceDate = alert.last_email_sent ?? new Date(0); 
+
+    parsedFilters.created_from = sinceDate.toISOString();
 
     // Reusar searchProperties con los filtros del usuario, ordenado por más reciente
     const searchDto = Object.assign(new SearchPropertiesDto(), {
@@ -144,6 +149,7 @@ export class SearchAlertsCronService {
         user.name,
         alert.title,
         emailProperties,
+        queryStringParams,
       );  
     } catch (err) {
       this.logger.error(
