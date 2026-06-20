@@ -49,8 +49,8 @@ export class TokkoMigratorService {
 
 
       //await this.normalizeStatesByCountry(1);
-      await this.normalizeLocationsByCountry(1);
-      //await this.normalizeSubLocationsByCountry(1);
+      //await this.normalizeLocationsByCountry(1);
+      await this.normalizeSubLocationsByCountry(1);
       //await this.normalizeNeighborhoodsByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
