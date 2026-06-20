@@ -27,7 +27,7 @@ export class SearchPropertiesDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
-  @Min(1)
+  @Min(0)
   @Max(100)
   limit?: number = 20;
 

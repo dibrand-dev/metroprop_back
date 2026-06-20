@@ -50,7 +50,7 @@ export class TokkoMigratorService {
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
       //await this.normalizeSubLocationsByCountry(1);
-     // await this.normalizeNeighborhoodByCountry(1);
+        await this.normalizeNeighborhoodByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
@@ -256,7 +256,8 @@ export class TokkoMigratorService {
       } else {
         locations = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'sub_location', country_id: countryId, migrated: false, failed_migration_try: LessThan(3) },
-          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
+          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
+          take: 10,
         });
       }
 

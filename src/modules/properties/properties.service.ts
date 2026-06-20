@@ -725,8 +725,7 @@ export class PropertiesService {
       //  .leftJoinAndSelect('units.images', 'unitImages')
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
-        .andWhere('organization.deleted = false')
-        .andWhere('organization.status = true')
+        .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = true))')
         .select([
           'property.id',
           'property.price',
@@ -790,7 +789,7 @@ export class PropertiesService {
       .where('property.id = :id', { id })
       .andWhere('property.deleted = false')
       .andWhere('(units.deleted = false OR units.id IS NULL)')
-      .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = 1))')
+      .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = true))')
       .select([
         'property',
         'images',
@@ -903,7 +902,7 @@ export class PropertiesService {
       .where('property.id = :id', { id })
       .andWhere('property.deleted = false')
       .andWhere('organization.deleted = false')
-      .andWhere('organization.status = 1')
+      .andWhere('organization.status = true')
       .select(['property.id', 'property.view_count'])
       .getOne();
 
@@ -1779,13 +1778,15 @@ export class PropertiesService {
 
     const qb = this.propertyRepository
       .createQueryBuilder('p')
-      .leftJoin('organizations', 'org', 'p.organization_id = org.id');
-
+      .leftJoin('organizations', 'org', 'p.organization_id = org.id')
+      .leftJoin('p.user', 'u', 'p.user_id = u.id');
+ 
     // Traer propiedades de inmobiliarias activas Y propiedades de dueño directo
     qb.where('p.deleted = :deleted', { deleted: false })
-      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.direct_owner = true))', {
+      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.direct_owner = true and u.status = :userStatus))', {
         orgStatus: true,
         orgDeleted: false,
+        userStatus: true,
       });
 
     if (filters.organization_id != null) {
