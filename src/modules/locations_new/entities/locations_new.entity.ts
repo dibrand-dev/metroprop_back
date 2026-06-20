@@ -1,9 +1,10 @@
-import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
+import { Column, Entity, PrimaryColumn, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('locations_new')
 export class LocationNew {
-  @PrimaryGeneratedColumn()
-    id!: number;
+  
+  @PrimaryColumn({ type: 'integer' })    
+  id!: number;
 
   @Column()
     name!: string;
