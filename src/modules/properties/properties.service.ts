@@ -790,7 +790,7 @@ export class PropertiesService {
       .where('property.id = :id', { id })
       .andWhere('property.deleted = false')
       .andWhere('(units.deleted = false OR units.id IS NULL)')
-      .andWhere('(organization.id IS NULL OR (organization.deleted = false AND organization.status = 1))')
+      .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = 1))')
       .select([
         'property',
         'images',

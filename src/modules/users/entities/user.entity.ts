@@ -86,6 +86,9 @@ export class User {
   @Column({ type: 'timestamp', nullable: true })
   deleted_at?: Date;
 
+  @Column({ type: 'boolean', default: true })
+  status?: boolean; 
+
   // Relaciones
   @Column({
     type: 'integer',
@@ -117,5 +120,6 @@ export class User {
     },
   })
   branches?: Branch[];
+
 
 }

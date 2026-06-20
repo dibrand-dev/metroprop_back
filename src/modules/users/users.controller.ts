@@ -306,4 +306,29 @@ export class UsersController {
       };
     }
   }
+  
+  @Post(':id/disable')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  async disable(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.usersService.disable(id);
+    return {
+      message: 'Usuario deshabilitado correctamente',
+      data: user,
+    };
+  }
+
+  @Post(':id/enable')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  async enable(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.usersService.enable(id);
+    return {
+      message: 'Usuario habilitado correctamente',
+      data: user,
+    };
+  }
+
 }

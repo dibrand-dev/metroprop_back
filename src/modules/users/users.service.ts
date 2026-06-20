@@ -541,4 +541,23 @@ export class UsersService {
       .of(userId)
       .add(branchId);
   }
+
+  
+  /**
+   * Deshabilitar un usuario (status = false)
+   */
+  async disable(id: number) {
+    const user = await this.findById(id);
+    user.status = false;
+    return this.usersRepository.save(user);
+  }
+
+  /**
+   * Habilitar un usuario (status = true)
+   */
+  async enable(id: number) {
+    const user = await this.findById(id);
+    user.status = true;
+    return this.usersRepository.save(user);
+  }
 }

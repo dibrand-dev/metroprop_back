@@ -98,7 +98,10 @@ export class CreateUserDto {
   @IsBoolean({ message: 'accept_newsletters debe ser booleano' })
   accept_newsletters?: boolean;
 
-
+ 
+  @IsOptional()  @Type(() => Boolean)
+  @IsBoolean({ message: 'status debe ser booleano' })
+  status?: boolean;
 
 
   @IsOptional()

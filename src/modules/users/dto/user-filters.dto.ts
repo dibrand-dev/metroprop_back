@@ -44,4 +44,8 @@ export class UserFiltersDto {
   @IsOptional()
   @IsString()
   searchCriteria?: string;
+
+  @IsOptional()  @Transform(({ value }) => value === 'true')
+  @IsBoolean()
+  status?: boolean;
 }
