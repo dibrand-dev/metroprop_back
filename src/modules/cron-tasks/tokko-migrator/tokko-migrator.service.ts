@@ -50,7 +50,7 @@ export class TokkoMigratorService {
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
       //await this.normalizeSubLocationsByCountry(1);
-        await this.normalizeNeighborhoodByCountry(1);
+      //await this.normalizeNeighborhoodsByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
@@ -73,7 +73,7 @@ export class TokkoMigratorService {
       if (Array.isArray(detail.states)) {
         for (const state of detail.states) {
           // Crear o actualizar el state en la DB
-          const dbState = await queryRunner.manager.findOne('locations', { where: { id: state.id } }) as LocationDb | null;
+          const dbState = await queryRunner.manager.findOne('locations_new', { where: { id: state.id } }) as LocationDb | null;
           const updateData: any = {
             name: state.name,
             type: 'state',
@@ -86,10 +86,10 @@ export class TokkoMigratorService {
           }
 
           if (dbState) {
-            await queryRunner.manager.update('locations', { id: state.id }, updateData);
+            await queryRunner.manager.update('locations_new', { id: state.id }, updateData);
             this.logger.log(`[normalizeStatesByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
           } else {
-            await queryRunner.manager.insert('locations', {
+            await queryRunner.manager.insert('locations_new', {
               id: state.id,
               migrated: false,
               ...updateData,
@@ -128,7 +128,7 @@ export class TokkoMigratorService {
         // Obtener info de Tokko
         const response = await axios.get(`${API_STATE}${state.id}/?lang=es_ar&format=json`);
         const detail = response.data;
-        await queryRunner.manager.update('locations', { id: state.id }, updateState);
+        await queryRunner.manager.update('locations_new', { id: state.id }, updateState);
         this.logger.log(`[normalizeLocationsByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
 
         // Obtener locations desde Tokko
@@ -146,10 +146,10 @@ export class TokkoMigratorService {
             if (location.short_location) updateLoc.short_location = location.short_location;
 
             if (dbLocation) {
-              await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+              await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
               this.logger.log(`[normalizeLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
             } else {
-              await queryRunner.manager.insert('locations', {
+              await queryRunner.manager.insert('locations_new', {
                 id: location.id,
                 ...updateLoc,
               });
@@ -158,7 +158,7 @@ export class TokkoMigratorService {
           }
         }
         // Al terminar, marcar el state como migrado
-        await queryRunner.manager.update('locations', { id: state.id }, { migrated: true });
+        await queryRunner.manager.update('locations_new', { id: state.id }, { migrated: true });
       }
     } catch (e) {
       this.logger.error(`[normalizeLocationsByCountry] Error para country ${countryId}`, e);
@@ -195,7 +195,7 @@ export class TokkoMigratorService {
         } else {
           updateLoc.migrated = true;
         }
-        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+        await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
         this.logger.log(`[normalizeSubLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
 
         // Procesar divisions
@@ -215,10 +215,10 @@ export class TokkoMigratorService {
             if (division.short_location) updateDiv.short_location = division.short_location;
             try {
               if (dbDivision) {
-                await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                await queryRunner.manager.update('locations_new', { id: division.id }, updateDiv);
                 this.logger.log(`[normalizeSubLocationsByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
               } else {
-                await queryRunner.manager.insert('locations', {
+                await queryRunner.manager.insert('locations_new', {
                   id: division.id,
                   ...updateDiv,
                 });
@@ -231,7 +231,7 @@ export class TokkoMigratorService {
           }
           // Si todas las divisions OK, marcar location como migrada
           if (allDivisionsOk) {
-            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+            await queryRunner.manager.update('locations_new', { id: location.id }, { migrated: true });
           }
         }
       }
@@ -244,7 +244,7 @@ export class TokkoMigratorService {
   /**
    * Normaliza neighborhoods (divisions de cada sub-location) de un país o de una location específica
    */
-  async normalizeNeighborhoodByCountry(countryId: number, locationId?: number) {
+  async normalizeNeighborhoodsByCountry(countryId: number, locationId?: number) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     try {
@@ -276,7 +276,7 @@ export class TokkoMigratorService {
           } else {
             updateLoc.migrated = true;
           }
-          await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+          await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
           this.logger.log(`[normalizeNeighborhoodByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
 
           // Procesar divisions
@@ -300,12 +300,12 @@ export class TokkoMigratorService {
                   
                   // #############################################
                   // FOR THE MOMENT, IF EXISTS LEAVE IT BE
-                  // await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                  // await queryRunner.manager.update('locations_new', { id: division.id }, updateDiv);
                   // this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
                   // #############################################
 
                 } else {
-                  await queryRunner.manager.insert('locations', {
+                  await queryRunner.manager.insert('locations_new', {
                     id: division.id,
                     ...updateDiv,
                   });
@@ -319,11 +319,11 @@ export class TokkoMigratorService {
             }
             // Si todas las divisions OK, marcar location como migrada
             if (allDivisionsOk) {
-              await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+              await queryRunner.manager.update('locations_new', { id: location.id }, { migrated: true });
             } else {
               this.logger.warn(`[normalizeNeighborhoodByCountry] No se marcó location ${location.id} como migrada porque hubo errores en las divisiones`);
               await queryRunner.manager.increment(
-                'locations',              
+                'locations_new',              
                 { id: location.id },      
                 'failed_migration_try',
                 1
@@ -364,7 +364,7 @@ export class TokkoMigratorService {
         let apiUrl = '';
         if (loc.type === 'state') {
           apiUrl = `${API_STATE}${loc.id}/?lang=es_ar&format=json`;
-        } else if (loc.type === 'location' || loc.type === 'sub_location') {
+        } else if (loc.type === 'location' || loc.type === 'sub_location' || loc.type === 'neighborhood') {
           apiUrl = `${API_LOCATION}${loc.id}/?lang=es_ar&format=json`;
         } else {
           continue; // ignorar otros tipos
@@ -386,11 +386,17 @@ export class TokkoMigratorService {
             const parentState = parentLocation ? await queryRunner.manager.getRepository(Location).findOne({ where: { id: parentLocation.parent_id } }) : null;
             const stateName = parentState?.name || '';
             updateData.full_location = detail.name ? `${detail.name}, ${locationName}, ${stateName}` : (loc.name ? `${loc.name}, ${locationName}, ${stateName}` : '');
+          } else if (loc.type === 'neighborhood') {
+            const parentLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: loc.parent_id } });
+            const locationName = parentLocation?.name || '';
+            const parentState = parentLocation ? await queryRunner.manager.getRepository(Location).findOne({ where: { id: parentLocation.state_id } }) : null;
+            const stateName = parentState?.name || '';
+            updateData.full_location = detail.name ? `${detail.name}, ${locationName}, ${stateName}` : (loc.name ? `${loc.name}, ${locationName}, ${stateName}` : '');
           }
 
           if (detail.short_location) updateData.short_location = detail.short_location;
           if (Object.keys(updateData).length > 0) {
-            await queryRunner.manager.update('locations', { id: loc.id }, updateData);
+            await queryRunner.manager.update('locations_new', { id: loc.id }, updateData);
             this.logger.log(`[normalizeFullLocationsByCountry] Location actualizada: ${loc.id} (${loc.type})`);
           }
         } catch (err) {
@@ -413,9 +419,9 @@ export class TokkoMigratorService {
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
       for (const country of data.objects) {
-        const exists = await queryRunner.manager.findOne('locations', { where: { id: country.id } });
+        const exists = await queryRunner.manager.findOne('locations_new', { where: { id: country.id } });
         if (exists) continue;
-        await queryRunner.manager.insert('locations', {
+        await queryRunner.manager.insert('locations_new', {
           id: country.id,
           name: country.name,
           iso_code: country.iso_code || null,
@@ -442,9 +448,9 @@ export class TokkoMigratorService {
         const detail = response.data;
         if (Array.isArray(detail.states)) {
           for (const state of detail.states) {
-            const exists = await queryRunner.manager.findOne('locations', { where: { id: state.id } });
+            const exists = await queryRunner.manager.findOne('locations_new', { where: { id: state.id } });
             if (exists) continue;
-            await queryRunner.manager.insert('locations', {
+            await queryRunner.manager.insert('locations_new', {
               id: state.id,
               name: state.name,
               parent_id: country.id,
@@ -482,12 +488,12 @@ export class TokkoMigratorService {
             };
             if (location.full_location) updateData.full_location = location.full_location;
             if (location.short_location) updateData.short_location = location.short_location;
-            const exists = await queryRunner.manager.findOne('locations', { where: { id: location.id } });
+            const exists = await queryRunner.manager.findOne('locations_new', { where: { id: location.id } });
             if (exists) {
-              await queryRunner.manager.update('locations', { id: location.id }, updateData);
+              await queryRunner.manager.update('locations_new', { id: location.id }, updateData);
               this.logger.log(`[migrateLocations] Location actualizado: ${location.name} (ID: ${location.id})`);
             } else {
-              await queryRunner.manager.insert('locations', {
+              await queryRunner.manager.insert('locations_new', {
                 id: location.id,
                 ...updateData,
               });
@@ -495,7 +501,7 @@ export class TokkoMigratorService {
             }
           }
         }
-        await queryRunner.manager.update('locations', { id: state.id }, { migrated: true });
+        await queryRunner.manager.update('locations_new', { id: state.id }, { migrated: true });
       } catch (e) {
         this.logger.error(`Error migrando locations para state ${state.id}`, e);
       }
@@ -521,7 +527,7 @@ export class TokkoMigratorService {
         if (detail.country && detail.country.id) updateLoc.country_id = detail.country.id;
         if (detail.full_location) updateLoc.full_location = detail.full_location;
         if (detail.short_location) updateLoc.short_location = detail.short_location;
-        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
+        await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
 
         let allDivisionsOk = true;
         if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
@@ -540,7 +546,7 @@ export class TokkoMigratorService {
               if (detail.country && detail.country.id) updateDiv.country_id = detail.country.id;
               if (divDetail.full_location) updateDiv.full_location = divDetail.full_location;
               if (divDetail.short_location) updateDiv.short_location = divDetail.short_location;
-              await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+              await queryRunner.manager.update('locations_new', { id: division.id }, updateDiv);
               this.logger.log(`[migrateDivisions] Division actualizada: ${division.name} (ID: ${division.id})`);
             } catch (err) {
               allDivisionsOk = false;
@@ -549,11 +555,11 @@ export class TokkoMigratorService {
           }
           // Si todas las divisions OK, marcar location como migrada
           if (allDivisionsOk) {
-            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+            await queryRunner.manager.update('locations_new', { id: location.id }, { migrated: true });
           }
         } else {
           // Si no tiene divisions, marcar como migrada
-          await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+          await queryRunner.manager.update('locations_new', { id: location.id }, { migrated: true });
         }
       } catch (e) {
         this.logger.error(`[migrateDivisions] Error migrando divisiones para location ${location.id}`, e);

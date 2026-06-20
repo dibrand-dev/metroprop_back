@@ -12,6 +12,12 @@ export class LocationsController {
   ) {}
   // --- ENDPOINTS DE NORMALIZACIÓN ---
 
+  @Get('normalize-countries')
+  async normalizeCountries() {
+    await this.migrator.migrateCountries();
+    return { ok: true };
+  }
+
   @Get('normalize-states')
   async normalizeStatesByCountry(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
@@ -30,6 +36,13 @@ export class LocationsController {
   async normalizeSubLocationsByCountry(@Query('countryId') countryId: number, @Query('locationId') locationId?: number) {
     if (!countryId) return { error: 'countryId es requerido' };
     await this.migrator.normalizeSubLocationsByCountry(Number(countryId), locationId ? Number(locationId) : undefined);
+    return { ok: true };
+  }
+
+  @Get('normalize-neighborhoods')
+  async normalizeNeighborhoodsByCountry(@Query('countryId') countryId: number, @Query('locationId') locationId?: number) {
+    if (!countryId) return { error: 'countryId es requerido' };
+    await this.migrator.normalizeNeighborhoodsByCountry(Number(countryId), locationId ? Number(locationId) : undefined);
     return { ok: true };
   }
 
