@@ -29,7 +29,7 @@ export class TokkoMigratorService {
   
 
   constructor(private readonly dataSource: DataSource, private readonly configService: ConfigService) {}
-  @Cron(CronExpression.EVERY_5_MINUTES)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleMigration() {
     this.logger.log('Iniciando migración automática de locations desde Tokko...');
     const enabled = this.configService.get<string>('FEATURE_FLAG_TOKKO_SYNC');
@@ -257,7 +257,7 @@ export class TokkoMigratorService {
         locations = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'sub_location', country_id: countryId, migrated: false, failed_migration_try: LessThan(3) },
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
-          take: 10,
+          take: 50,
         });
       }
 
