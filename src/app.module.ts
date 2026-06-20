@@ -15,6 +15,7 @@ import { PropertiesModule } from './modules/properties/properties.module';
 import { PartnersModule } from './modules/partners/partners.module';
 import { EmailModule } from './common/email/email.module';
 import { LocationsModule } from './modules/locations/locations.module';
+import { LocationsNewModule } from './modules/locations_new/locations_new.module';
 import { TagsModule } from './modules/tags/tags.module';
 import { DevelopersModule } from './modules/developers/developers.module';
 import { TokkoSyncModule } from './modules/cron-tasks/tokko-sync/tokko-sync.module';
@@ -82,6 +83,7 @@ import { PaymentsCronModule } from './modules/cron-tasks/payments/payments-cron.
     PartnersModule,
     EmailModule,
     LocationsModule,
+    LocationsNewModule,
     TagsModule,
     DevelopersModule,
     TokkoSyncModule,
