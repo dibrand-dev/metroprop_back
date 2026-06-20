@@ -3,7 +3,7 @@ import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { LocationsNewService } from './locations_new.service';
 import { TokkoMigratorService } from '../cron-tasks/tokko-migrator/tokko-migrator.service';
 
-@Controller('location')
+@Controller('locationsnew')
 export class LocationsNewController {
    
   constructor(
