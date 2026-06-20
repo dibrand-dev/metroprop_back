@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import axios from 'axios';
-import { DataSource } from 'typeorm';
+import { DataSource, LessThan, MoreThan } from 'typeorm';
 import { Location } from '../../locations/entities/location.entity';
 import { ConfigService } from '@nestjs/config';
 
@@ -255,7 +255,7 @@ export class TokkoMigratorService {
         if (loc) locations = [loc];
       } else {
         locations = await queryRunner.manager.getRepository(Location).find({
-          where: { type: 'sub_location', country_id: countryId, migrated: false },
+          where: { type: 'sub_location', country_id: countryId, migrated: false, failed_migration_try: LessThan(3) },
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location']
         });
       }
@@ -296,8 +296,13 @@ export class TokkoMigratorService {
               if (division.short_location) updateDiv.short_location = division.short_location;
               try {
                 if (dbDivision) {
-                  await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
-                  this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
+                  
+                  // #############################################
+                  // FOR THE MOMENT, IF EXISTS LEAVE IT BE
+                  // await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                  // this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
+                  // #############################################
+
                 } else {
                   await queryRunner.manager.insert('locations', {
                     id: division.id,
@@ -314,6 +319,14 @@ export class TokkoMigratorService {
             // Si todas las divisions OK, marcar location como migrada
             if (allDivisionsOk) {
               await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
+            } else {
+              this.logger.warn(`[normalizeNeighborhoodByCountry] No se marcó location ${location.id} como migrada porque hubo errores en las divisiones`);
+              await queryRunner.manager.increment(
+                'locations',              
+                { id: location.id },      
+                'failed_migration_try',
+                1
+              );
             }
           } 
         } catch (err) {

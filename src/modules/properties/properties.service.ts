@@ -778,33 +778,32 @@ export class PropertiesService {
     } else {
       // DETALLE MAS COMPLETO DE LA PROPIEDAD
       property = await this.propertyRepository.createQueryBuilder('property')
-        .leftJoinAndSelect('property.images', 'images')
-        .leftJoinAndSelect('property.attributes', 'attributes')
-        .leftJoinAndSelect('property.tags', 'tags')
-        .leftJoinAndSelect('property.videos', 'videos')
-        .leftJoinAndSelect('property.attached', 'attached')
-        .leftJoinAndSelect('property.organization', 'organization')
-        .leftJoinAndSelect('property.units', 'units')
-        .leftJoinAndSelect('units.images', 'unitImages')
-        .leftJoinAndSelect('property.user', 'user') 
-        .where('property.id = :id', { id })
-        .andWhere('property.deleted = false')
-        .andWhere('(units.deleted = false OR units.id IS NULL)')
-        .andWhere('organization.deleted = false')
-        .andWhere('organization.status = true')
-        .select([
-          'property',
-          'images',
-          'attributes',
-          'tags',
-          'videos',
-          'attached',
-          'organization',
-          'units',
-          'unitImages',
-          'user',
-        ])
-        .getOne();
+      .leftJoinAndSelect('property.images', 'images')
+      .leftJoinAndSelect('property.attributes', 'attributes')
+      .leftJoinAndSelect('property.tags', 'tags')
+      .leftJoinAndSelect('property.videos', 'videos')
+      .leftJoinAndSelect('property.attached', 'attached')
+      .leftJoinAndSelect('property.organization', 'organization')
+      .leftJoinAndSelect('property.units', 'units')
+      .leftJoinAndSelect('units.images', 'unitImages')
+      .leftJoinAndSelect('property.user', 'user')
+      .where('property.id = :id', { id })
+      .andWhere('property.deleted = false')
+      .andWhere('(units.deleted = false OR units.id IS NULL)')
+      .andWhere('(organization.id IS NULL OR (organization.deleted = false AND organization.status = 1))')
+      .select([
+        'property',
+        'images',
+        'attributes',
+        'tags',
+        'videos',
+        'attached',
+        'organization',
+        'units',
+        'unitImages',
+        'user',
+      ])
+      .getOne();
 
       if (property?.images) {
         property.images = prependImagePrefixToUrls('', property.images);

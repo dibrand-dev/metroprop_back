@@ -40,4 +40,7 @@ export class Location {
 
   @Column({ nullable: true })
     status!: string;
+
+  @Column({ default: 0 })
+    failed_migration_try?: number;
 }
