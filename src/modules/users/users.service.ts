@@ -72,6 +72,7 @@ export class UsersService {
         'user.created_at',
         'user.updated_at',
         'user.organization_id',
+        'user.status',
       ])
       .leftJoinAndSelect('user.branches', 'branch')
       .where('user.deleted = :deleted', { deleted })
