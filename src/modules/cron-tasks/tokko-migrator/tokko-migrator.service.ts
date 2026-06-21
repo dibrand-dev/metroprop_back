@@ -50,8 +50,8 @@ export class TokkoMigratorService {
 
       //await this.normalizeStatesByCountry(1);
       //await this.normalizeLocationsByCountry(1);
-      await this.normalizeSubLocationsByCountry(1);
-      //await this.normalizeNeighborhoodsByCountry(1);
+      //await this.normalizeSubLocationsByCountry(1);
+      await this.normalizeNeighborhoodsByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
@@ -283,7 +283,7 @@ export class TokkoMigratorService {
         if (loc) locations = [loc];
       } else {
         locations = await queryRunner.manager.getRepository(LocationNew).find({
-          where: { type: 'sub_location', country_id: countryId, migrated: false, failed_migration_try: LessThan(3) },
+          where: { type: 'sub_location', country_id: countryId, migrated: false, failed_migration_try: LessThan(5) },
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
           take: 50,
         });
@@ -669,7 +669,7 @@ export class TokkoMigratorService {
    * Compara neighborhoods (divisions de una sub_location) con registros type='neighborhood' en locations_new.
    * Si se pasa subLocationId, procesa solo esa sublocation; si no, procesa todas las sublocations (costoso).
    */
-  async compareNeighborhoodsWithTokko(subLocationId?: number, countryId: number = 1) {
+  async compareNeighborhoodsWithTokko(from: number, to: number, subLocationId?: number, countryId: number = 1) {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     try {
@@ -690,7 +690,7 @@ export class TokkoMigratorService {
 
       const results: Array<any> = [];
 
-      for (const subloc of sublocationsToProcess) {
+      for (const subloc of sublocationsToProcess.slice(from, to)) {
         try {
           const response = await axios.get(`${API_LOCATION}${subloc.id}/?lang=es_ar&format=json`);
           const detail = response.data;

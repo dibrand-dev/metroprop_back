@@ -82,8 +82,13 @@ export class LocationsController {
   }
 
   @Get('compare-neighborhoods')
-  async compareNeighborhoodsWithTokko(@Query('subLocationId') subLocationId?: number, @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number = 1) {
-    const result = await this.migrator.compareNeighborhoodsWithTokko(subLocationId ? Number(subLocationId) : undefined, Number(countryId));
+  async compareNeighborhoodsWithTokko(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('subLocationId') subLocationId?: number,
+    @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number = 1,
+  ) {
+    const result = await this.migrator.compareNeighborhoodsWithTokko(Number(from), Number(to), subLocationId ? Number(subLocationId) : undefined, Number(countryId));
     return result;
    }
 
