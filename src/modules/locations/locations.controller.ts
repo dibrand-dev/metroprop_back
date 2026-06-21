@@ -1,4 +1,4 @@
-import { Controller, Get, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, DefaultValuePipe, Get, ParseIntPipe, Query, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { LocationsService } from './locations.service';
 import { TokkoMigratorService } from '../cron-tasks/tokko-migrator/tokko-migrator.service';
@@ -52,6 +52,40 @@ export class LocationsController {
     await this.migrator.normalizeFullLocationsByCountry(Number(countryId));
     return { ok: true };
   }
+
+  @Get('compare-states')
+  async compareStatesWithTokko(
+    @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number,
+  ) {
+    const result = await this.migrator.compareStatesWithTokko(Number(countryId));
+    return result;
+  }
+
+  @Get('compare-locations')
+  async compareLocationsWithTokko(
+    @Query('stateId') stateId?: number,
+    @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number = 1,
+  ) {
+    const result = await this.migrator.compareLocationsWithTokko(stateId ? Number(stateId) : undefined, Number(countryId));
+    return result;
+  }
+
+  @Get('compare-sublocations')
+  async compareSubLocationsWithTokko(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('locationId') locationId?: number,
+    @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number = 1,
+  ) {
+    const result = await this.migrator.compareSubLocationsWithTokko(Number(from), Number(to), locationId ? Number(locationId) : undefined, Number(countryId));
+    return result;
+  }
+
+  @Get('compare-neighborhoods')
+  async compareNeighborhoodsWithTokko(@Query('subLocationId') subLocationId?: number, @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number = 1) {
+    const result = await this.migrator.compareNeighborhoodsWithTokko(subLocationId ? Number(subLocationId) : undefined, Number(countryId));
+    return result;
+   }
 
   @Get('countries')
   getCountries() {
