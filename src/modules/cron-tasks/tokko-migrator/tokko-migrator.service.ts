@@ -153,6 +153,7 @@ export class TokkoMigratorService {
 
               if (dbLocation) {
                 this.logger.log(`[normalizeLocationsByCountry] Location ya existe: ${location.name} (ID: ${location.id}). Se omite.`);
+                chidlrensInserted++;
                 // ########### NO UPDATES IF EXIST FOR THE MOMENT, TO AVOID OVERWRITING MANUAL FIXES ############
                 //await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
                 //this.logger.log(`[normalizeLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
