@@ -1285,6 +1285,8 @@ export class PropertiesService {
         'usr.name',
         'usr.email',
         'usr.phone',
+        'usr.phone_additional',
+        'usr.phone_whatsapp',
       ])
       .leftJoinAndSelect(
         'p.images',
