@@ -1343,6 +1343,8 @@ export class PropertiesService {
         name: p.user.name,
         email: p.user.email,
         phone: p.user.phone,
+        phone_whatsapp: p.user.phone_whatsapp,
+        phone_additional: p.user.phone_additional,
       } : undefined,
       units: p.units ? p.units.map((unit) => ({
         id: unit.id,
