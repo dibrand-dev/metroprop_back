@@ -320,9 +320,9 @@ export class LeadsService {
     const message = lead.message ?? '';
     const contactCountryCode = lead.country_code;
     const contactPhone = lead.phone;
-
+    let partner: any;
     if (organization.source_partner_id) {
-      const partner = await this.partnerRepository.findOne({
+      partner = await this.partnerRepository.findOne({
         where: { id: organization.source_partner_id },
         select: ['id', 'name'],
       });
@@ -369,12 +369,16 @@ export class LeadsService {
 
     const frontendUrl = this.configService.get('FRONTEND_URL', 'https://metroprop.co');
     const propertyLabel = property.publication_title ?? property.reference_code ?? `#${property.id}`;
+    const propertyZone = property.street ? `${property.street}${property.number ? ' ' + property.number : ''}` : 'Ubicación no disponible';
     const contactsUrl = `${frontendUrl}/protected/leads`;
+    const partnerName = partner?.name ?? null;
 
     await this.emailService.sendLeadNotificationEmail({
       to: assignedUser.email,
       recipientName: assignedUser.name,
       propertyLabel,
+      propertyZone,
+      partnerName,
       lead: {
         name: lead.name,
         email: lead.email,

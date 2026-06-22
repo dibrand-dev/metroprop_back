@@ -649,11 +649,13 @@ export class EmailService {
     to: string;
     recipientName: string;
     propertyLabel: string;
+    propertyZone: string;
     lead: { name: string; email: string; phone?: string; country_code?: string };
+    partnerName?: string;
     message: string;
     contactsUrl: string;
   }): Promise<void> {
-    const { to, recipientName, propertyLabel, lead, message, contactsUrl } = params;
+    const { to, recipientName, propertyLabel, propertyZone, lead, partnerName, message, contactsUrl } = params;
     const frontendUrl = this.configService.get('FRONTEND_URL', '');
 
     const html = `
@@ -671,22 +673,31 @@ export class EmailService {
               </tr>
               <tr>
                 <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
-                  <p style="margin:0 0 12px;">Hola <strong>${recipientName}</strong>,</p>
-                  <p style="margin:0 0 16px;">Recibiste un mensaje por la propiedad <strong>${propertyLabel}</strong>:</p>
-                  <blockquote style="border-left:4px solid #007bff;padding:12px 16px;margin:0 0 20px;background:#f0f6ff;border-radius:0 4px 4px 0;color:#555;font-style:italic;">
-                    ${message}
-                  </blockquote>
-                  <p style="margin:0 0 8px;font-weight:600;">Datos del contacto:</p>
-                  <ul style="margin:0 0 24px;padding-left:20px;">
-                    <li><strong>Nombre:</strong> ${lead.name}</li>
-                    ${lead.email ? `<li><strong>Email:</strong> ${lead.email}</li>` : ''}
-                    ${lead.phone ? `<li><strong>Tel&eacute;fono:</strong> +${lead.country_code ?? ''} ${lead.phone}</li>` : ''}
+                  <p style="margin:0; font-size:26px; font-weight:800;text-align:center;">¡Nueva consulta!</p>
+                  <p style="margin:30px 0 0 16px;">Un usuario se interesó en una de tus propiedades publicadas.</p>
+                  
+                  <ul style="list-style:none; padding: 15px 15px 15px 0;  background-color:#ffffff; margin:10px 10px 10px 0;border-radius: 8px;border:1px solid #006AFF;">
+                    <li style="margin-bottom: 8px;">Propiedad: <strong>${propertyLabel}</strong></li>
+                    <li style="margin-bottom: 8px;">Zona: ${propertyZone}</li>
+                    <li style="margin-bottom: 8px;">Interesado: ${lead.name}</li>                    
+                    <li style="margin-bottom: 8px;">Contacto: ${lead.phone ? `${lead.phone}` : ''} / ${lead.email ? `${lead.email}` : ''}</li>
+                    <li style="margin-bottom: 8px;">Mensaje: ${message}</li>
                   </ul>
-                  <div style="text-align:center;">
+                  <div style="text-align:center; margin-top:30px;">
                     <a href="${contactsUrl}" style="background-color:#007bff;color:#fff;text-decoration:none;padding:12px 28px;border-radius:4px;font-weight:bold;display:inline-block;">
                       Ver todos tus contactos
                     </a>
                   </div>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
+                  <p style="margin:0 0 16px;">${partnerName ? `Este contacto también se envió a tu CRM ${partnerName}.` : ''}</p>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
+                  <p style="margin:0 0 16px;font-weight:bold;text-align:center;">Equipo Metroprop</p>
                 </td>
               </tr>
               <tr>
