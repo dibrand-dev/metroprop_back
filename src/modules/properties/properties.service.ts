@@ -725,6 +725,7 @@ export class PropertiesService {
       //  .leftJoinAndSelect('units.images', 'unitImages')
         .where('property.id = :id', { id })
         .andWhere('property.deleted = false')
+        .andWhere('property.status = ' + PropertyStatus.DISPONIBLE)
         .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = true))')
         .select([
           'property.id',
@@ -776,7 +777,7 @@ export class PropertiesService {
 
     } else {
       // DETALLE MAS COMPLETO DE LA PROPIEDAD
-      property = await this.propertyRepository.createQueryBuilder('property')
+      const qb  = this.propertyRepository.createQueryBuilder('property')
       .leftJoinAndSelect('property.images', 'images')
       .leftJoinAndSelect('property.attributes', 'attributes')
       .leftJoinAndSelect('property.tags', 'tags')
@@ -801,8 +802,13 @@ export class PropertiesService {
         'units',
         'unitImages',
         'user',
-      ])
-      .getOne();
+      ]);
+
+      if (format !== 'edit') {
+        qb.andWhere('property.status = :status', { status: PropertyStatus.DISPONIBLE });
+      } 
+
+      property = await qb.getOne();
 
       if (property?.images) {
         property.images = prependImagePrefixToUrls('', property.images);
