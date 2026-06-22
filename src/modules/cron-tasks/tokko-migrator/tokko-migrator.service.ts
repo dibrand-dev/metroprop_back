@@ -292,6 +292,8 @@ export class TokkoMigratorService {
       this.logger.log(`[normalizeNeighborhoodByCountry] Procesando ${locations.length} locations para country ${countryId}`);
       
       for (const location of locations) {
+        // wait 1 second between requests to avoid hitting rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
         try {
           this.logger.log(`[normalizeNeighborhoodByCountry] Procesando location ${location.name} (ID: ${location.id}) con parent_id ${location.parent_id} y full_location "${location.full_location}"`);
           // Obtener info de Tokko
