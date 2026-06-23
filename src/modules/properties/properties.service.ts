@@ -6,7 +6,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, In, Repository } from 'typeorm';
+import { Brackets, DataSource, In, Repository } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -1205,8 +1205,28 @@ export class PropertiesService {
       .leftJoinAndSelect('property.organization', 'organization')
       .where('property.id = :id', { id: propertyId })
       .andWhere('property.deleted = :deleted', { deleted: false })
-      .andWhere('organization.deleted = :deleted', { deleted: false })
-      .andWhere('organization.status = :status', { status: 1 })
+      .andWhere(
+        new Brackets(qb => {
+          // Caso 1: la propiedad pertenece a una organización activa y no eliminada
+          qb.where(
+            new Brackets(orgQb => {
+              orgQb
+                .where('property.organization_id IS NOT NULL')
+                .andWhere('organization.deleted = :orgDeleted', { orgDeleted: false })
+                .andWhere('organization.status = :orgStatus', { orgStatus: 1 });
+            }),
+          )
+            // Caso 2: propiedad sin organización pero con dueño directo
+            .orWhere(
+              new Brackets(ownerQb => {
+                ownerQb
+                  .where('property.organization_id IS NULL')
+                  .andWhere('property.user_id IS NOT NULL')
+                  .andWhere('property.direct_owner = :directOwner', { directOwner: true });
+              }),
+            );
+        }),
+      )
       .orderBy('image.order_position', 'ASC')
       .addOrderBy('video.order', 'ASC')
       .addOrderBy('attached.order', 'ASC')
@@ -1679,7 +1699,18 @@ export class PropertiesService {
       .skip(offset)
       .take(filters.limit);
 
-    const [data, total] = await baseQb.getManyAndCount();
+    let [data, total] = await baseQb.getManyAndCount();
+
+    // Sin filtro de status: la lista solo muestra vigentes 
+    if (filters.status == null) {
+      data = data.filter((p) => p.status === PropertyStatus.DISPONIBLE);
+      const vigenteCount = toFacet(statusRaw).find(
+        (f) => f.value === PropertyStatus.DISPONIBLE,
+      )?.count;
+      if (vigenteCount !== undefined) {
+        total = vigenteCount;
+      }
+    }
 
     if (data.length > 0) {
       const propertyIds = data.map(p => p.id);
