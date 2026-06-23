@@ -852,16 +852,7 @@ export class PropertiesService {
    * Obtener una propiedad por reference_code
    */
   async findByReferenceCode(reference_code: string): Promise<Property> {
-    /*
-    const property = await this.propertyRepository.findOne({
-      where: {
-        reference_code,
-        deleted: false,
-      },
-      relations: ['images', 'attributes', 'tags', 'videos', 'attached'],
-    });
-    */
-
+   
     const property = await this.propertyRepository
     .createQueryBuilder('property')
     .leftJoinAndSelect('property.images', 'images')
@@ -870,10 +861,33 @@ export class PropertiesService {
     .leftJoinAndSelect('property.videos', 'videos')
     .leftJoinAndSelect('property.attached', 'attached')
     .leftJoinAndSelect('property.organization', 'organization')
+    .leftJoinAndSelect('property.user', 'user')
     .where('property.reference_code = :reference_code', { reference_code })
     .andWhere('property.deleted = false')
-    .andWhere('organization.deleted = false')
-    .andWhere('organization.status = true')
+    .andWhere(
+      new Brackets(qb => {
+        // Caso 1: la propiedad pertenece a una organización activa y no eliminada
+        qb.where(
+          new Brackets(orgQb => {
+            orgQb
+              .where('property.organization_id IS NOT NULL')
+              .andWhere('organization.deleted = false')
+              .andWhere('organization.status = true');
+          }),
+        )
+          // Caso 2: propiedad sin organización pero con dueño directo verificado y activo
+          .orWhere(
+            new Brackets(ownerQb => {
+              ownerQb
+                .where('property.organization_id IS NULL')
+                .andWhere('property.user_id IS NOT NULL')
+                .andWhere('property.direct_owner = :directOwner', { directOwner: true })
+                .andWhere('user.status = true')
+                .andWhere('user.is_verified = true');
+            }),
+          );
+      }),
+    )
     .getOne();
 
     if (!property) {
@@ -923,7 +937,7 @@ export class PropertiesService {
       .leftJoin('property.organization', 'organization')
       .where('property.id = :id', { id })
       .andWhere('organization.deleted = false')
-      .andWhere('organization.status = 1')
+      .andWhere('organization.status = true')
       .select(['property.id', 'property.view_count'])
       .getOne();
 
@@ -1203,6 +1217,7 @@ export class PropertiesService {
       .leftJoinAndSelect('property.videos', 'video')
       .leftJoinAndSelect('property.attached', 'attached')
       .leftJoinAndSelect('property.organization', 'organization')
+      .leftJoinAndSelect('property.user', 'user')
       .where('property.id = :id', { id: propertyId })
       .andWhere('property.deleted = :deleted', { deleted: false })
       .andWhere(
@@ -1216,13 +1231,15 @@ export class PropertiesService {
                 .andWhere('organization.status = :orgStatus', { orgStatus: 1 });
             }),
           )
-            // Caso 2: propiedad sin organización pero con dueño directo
+            // Caso 2: propiedad sin organización pero con dueño directo verificado y activo
             .orWhere(
               new Brackets(ownerQb => {
                 ownerQb
                   .where('property.organization_id IS NULL')
                   .andWhere('property.user_id IS NOT NULL')
-                  .andWhere('property.direct_owner = :directOwner', { directOwner: true });
+                  .andWhere('property.direct_owner = :directOwner', { directOwner: true })
+                  .andWhere('user.status = true')
+                  .andWhere('user.is_verified = true');
               }),
             );
         }),
@@ -1330,7 +1347,31 @@ export class PropertiesService {
   //  .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
       .where('p.id IN (:...ids)', { ids })
-      .andWhere('p.deleted = false');
+      .andWhere('p.deleted = false')
+      .andWhere(
+        new Brackets(qb => {
+          // Caso 1: la propiedad pertenece a una organización activa y no eliminada
+          qb.where(
+            new Brackets(orgQb => {
+              orgQb
+                .where('p.organization_id IS NOT NULL')
+                .andWhere('p_org.deleted = false')
+                .andWhere('p_org.status = true');
+            }),
+          )
+            // Caso 2: propiedad sin organización pero con dueño directo verificado y activo
+            .orWhere(
+              new Brackets(ownerQb => {
+                ownerQb
+                  .where('p.organization_id IS NULL')
+                  .andWhere('p.user_id IS NOT NULL')
+                  .andWhere('p.direct_owner = :directOwner', { directOwner: true })
+                  .andWhere('usr.status = true')
+                  .andWhere('usr.is_verified = true');
+              }),
+            );
+        }),
+      );
 
     const props = await qb.getMany();
 
@@ -1824,10 +1865,11 @@ export class PropertiesService {
  
     // Traer propiedades de inmobiliarias activas Y propiedades de dueño directo
     qb.where('p.deleted = :deleted', { deleted: false })
-      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.direct_owner = true and usrAss.status = :userStatus))', {
+      .andWhere('((p.organization_id IS NOT NULL AND org.status = :orgStatus AND org.deleted = :orgDeleted) OR (p.organization_id IS NULL AND p.user_id IS NOT NULL AND p.direct_owner = true AND usrAss.status = :userStatus AND usrAss.is_verified = :userVerified))', {
         orgStatus: true,
         orgDeleted: false,
         userStatus: true,
+        userVerified: true,
       });
 
     if (filters.organization_id != null) {
