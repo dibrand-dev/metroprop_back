@@ -661,6 +661,7 @@ export class PartnerApiService {
       location_id: propertyData.location_id ?? parentDev.location_id,
       sub_location_id: propertyData.sub_location_id ?? parentDev.sub_location_id,
       neighborhood_id: propertyData.neighborhood_id ?? parentDev.neighborhood_id,
+      sub_neighborhood_id: propertyData.sub_neighborhood_id ?? parentDev.sub_neighborhood_id,
     };
 
     if (existing) {

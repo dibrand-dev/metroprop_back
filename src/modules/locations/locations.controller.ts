@@ -46,6 +46,13 @@ export class LocationsController {
     return { ok: true };
   }
 
+  @Get('normalize-subneighborhoods')
+  async normalizeSubNeighborhoodsByCountry(@Query('countryId') countryId: number, @Query('neighborhoodId') neighborhoodId?: number) {
+    if (!countryId) return { error: 'countryId es requerido' };
+    await this.migrator.normalizeSubNeighborhoodsByCountry(Number(countryId), neighborhoodId ? Number(neighborhoodId) : undefined);
+    return { ok: true };
+  }
+
   @Get('normalize-full-locations')
   async normalizeFullLocationsByCountry(@Query('countryId') countryId: number) {
     if (!countryId) return { error: 'countryId es requerido' };
@@ -91,6 +98,17 @@ export class LocationsController {
     const result = await this.migrator.compareNeighborhoodsWithTokko(Number(from), Number(to), subLocationId ? Number(subLocationId) : undefined, Number(countryId));
     return result;
    }
+
+  @Get('compare-subneighborhoods')
+  async compareSubNeighborhoodsWithTokko(
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Query('neighborhoodId') neighborhoodId?: number,
+    @Query('countryId', new DefaultValuePipe('1'), ParseIntPipe) countryId: number = 1,
+  ) {
+    const result = await this.migrator.compareSubNeighborhoodsWithTokko(Number(from), Number(to), neighborhoodId ? Number(neighborhoodId) : undefined, Number(countryId));
+    return result;
+  }
 
   @Get('countries')
   getCountries() {

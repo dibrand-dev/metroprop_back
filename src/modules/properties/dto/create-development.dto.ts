@@ -118,6 +118,10 @@ export class CreateDevelopmentDto {
   neighborhood_id?: number;
 
   @IsOptional()
+  @IsInt()
+  sub_neighborhood_id?: number;
+
+  @IsOptional()
   @IsNumber()
   geo_lat?: number;
 

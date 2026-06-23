@@ -522,6 +522,8 @@
   <span class="key">"state_id"</span>: <span class="number">146</span>,
   <span class="key">"location_id"</span>: <span class="string">24728</span>,
   <span class="key">"sub_location_id"</span>: <span class="number">24731</span>,
+  <span class="key">"neighborhood_id"</span>: <span class="number">24734</span>,
+  <span class="key">"sub_neighborhood_id"</span>: <span class="number">24737</span>,
   <span class="key">"full_location"</span>: <span class="string">"Buenos Aires, Argentina"</span>,
   <span class="key">"geo_lat"</span>: <span class="number">-34.6037</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.3816</span>
@@ -604,6 +606,7 @@
       <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad. Obtener con <a href="#ep-loc-cities"><code>GET /locations/cities?stateId=</code></a></td></tr>
       <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
       <tr><td><code>neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio. Obtener con <a href="#ep-loc-neighborhoods"><code>GET /locations/neighborhoods?locationId=</code></a></td></tr>
+      <tr><td><code>sub_neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la sublocalidad. Obtener con <a href="#ep-loc-sub"><code>GET /locations/sub-locations?locationId=</code></a></td></tr>
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
       <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa (true/false)</td></tr>
@@ -687,6 +690,8 @@
   <span class="key">"location_id"</span>: <span class="number">24728</span>,
   <span class="key">"sub_location_id"</span>: <span class="number">24731</span>,
   <span class="key">"geo_lat"</span>: <span class="number">-34.5921</span>,
+  <span class="key">"neighborhood_id"</span>: <span class="number">24734</span>,
+  <span class="key">"sub_neighborhood_id"</span>: <span class="number">24737</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.4089</span>,
   <span class="key">"show_exact_location"</span>: <span class="number">true</span>,
   <span class="key">"room_amount"</span>: <span class="number">3</span>,
@@ -886,6 +891,7 @@
       <tr><td><code>location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la localidad</td></tr>
       <tr><td><code>sub_location_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del barrio</td></tr>
       <tr><td><code>neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID del sub barrio</td></tr>
+      <tr><td><code>sub_neighborhood_id</code></td><td>integer</td><td><span class="badge badge-optional">opcional</span></td><td>ID de la sublocalidad</td></tr>
       <tr><td><code>geo_lat</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Latitud geográfica (entre -90 y 90)</td></tr>
       <tr><td><code>geo_long</code></td><td>numeric</td><td><span class="badge badge-optional">opcional</span></td><td>Longitud geográfica (entre -180 y 180)</td></tr>
       <tr><td><code>show_exact_location</code></td><td>boolean</td><td><span class="badge badge-optional">opcional</span></td><td>Mostrar ubicación exacta en el mapa</td></tr>
@@ -1010,6 +1016,8 @@
   <span class="key">"state_id"</span>: <span class="number">146</span>,
   <span class="key">"location_id"</span>: <span class="number">24728</span>,
   <span class="key">"sub_location_id"</span>: <span class="number">24731</span>,
+  <span class="key">"neighborhood_id"</span>: <span class="number">24734</span>,
+  <span class="key">"sub_neighborhood_id"</span>: <span class="number">24737</span>,
   <span class="key">"geo_lat"</span>: <span class="number">-34.5618</span>,
   <span class="key">"geo_long"</span>: <span class="number">-58.4520</span>,
   <span class="key">"show_exact_location"</span>: <span class="number">true</span>,
@@ -1148,6 +1156,8 @@
   <span class="key">"state_id"</span>: <span class="number">146</span>,
   <span class="key">"location_id"</span>: <span class="number">24728</span>,
   <span class="key">"sub_location_id"</span>: <span class="number">24731</span>,
+  <span class="key">"neighborhood_id"</span>: <span class="number">24734</span>,
+  <span class="key">"sub_neighborhood_id"</span>: <span class="number">24737</span>,
 
   <span class="comment">// Características</span>
   <span class="key">"room_amount"</span>: <span class="number">2</span>,

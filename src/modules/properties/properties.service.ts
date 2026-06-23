@@ -207,6 +207,7 @@ export class PropertiesService {
         location_id: propertyData.location_id ?? parentDev.location_id,
         sub_location_id: propertyData.sub_location_id ?? parentDev.sub_location_id,
         neighborhood_id: propertyData.neighborhood_id ?? parentDev.neighborhood_id,
+        sub_neighborhood_id: propertyData.sub_neighborhood_id ?? parentDev.sub_neighborhood_id,
         deleted: false,
       },
       { tags },
@@ -1321,6 +1322,7 @@ export class PropertiesService {
         'p.is_development',
         'p.sub_location_id',
         'p.neighborhood_id',
+        'p.sub_neighborhood_id',
         'p.location_id',
         'p_org.company_name',
         'p_org.company_logo',
@@ -1393,6 +1395,7 @@ export class PropertiesService {
       location_id: p.location_id,
       sub_location_id: p.sub_location_id,
       neighborhood_id: p.neighborhood_id,
+      sub_neighborhood_id: p.sub_neighborhood_id,
       delivery_date: p.development_delivery_date,
       organization: p.organization ? {
         id: p.organization.id,
@@ -1422,6 +1425,7 @@ export class PropertiesService {
         location_id: p.location_id,
         sub_location_id: p.sub_location_id,
         neighborhood_id: p.neighborhood_id,
+        sub_neighborhood_id: p.sub_neighborhood_id,
       //  images: unit.images ? prependImagePrefixToUrls(THUMB_PREFIX, unit.images) : [],
       })) : undefined,
     }));
@@ -1485,6 +1489,7 @@ export class PropertiesService {
           'p.is_development',
           'p.sub_location_id',
           'p.neighborhood_id',
+          'p.sub_neighborhood_id',
           'p.location_id',
           'p.development_delivery_date',
           'p.geo_lat',
@@ -1500,6 +1505,7 @@ export class PropertiesService {
           'units.currency',
           'units.price_square_meter',
           'units.neighborhood_id',
+          'units.sub_neighborhood_id',
           'units.sub_location_id',
           'units.location_id',
           'units.room_amount',
@@ -1553,6 +1559,7 @@ export class PropertiesService {
         location_id: p.location_id,
         sub_location_id: p.sub_location_id,
         neighborhood_id: p.neighborhood_id,
+        sub_neighborhood_id: p.sub_neighborhood_id,
         delivery_date: p.development_delivery_date,
         images: p.images ? prependImagePrefixToUrls(THUMB_PREFIX, p.images) : [],
         lat: p.geo_lat,
@@ -1566,6 +1573,7 @@ export class PropertiesService {
           location_id: p.location_id,
           sub_location_id: p.sub_location_id,
           neighborhood_id: p.neighborhood_id,
+          sub_neighborhood_id: p.sub_neighborhood_id,
           room_amount: unit.room_amount,
           bathroom_amount: unit.bathroom_amount,
           toilet_amount: unit.toilet_amount,
@@ -1853,6 +1861,8 @@ export class PropertiesService {
             filters.sub_location_id = location.id;
           } else if (location.type === 'neighborhood') {
             filters.neighborhood_id = location.id;
+          } else if (location.type === 'sub_neighborhood') {
+            filters.sub_neighborhood_id = location.id;
           }
         }
       }
@@ -1935,6 +1945,12 @@ export class PropertiesService {
     if (filters.neighborhood_id != null) {
       qb.andWhere('p.neighborhood_id = :neighborhood_id', {
         neighborhood_id: filters.neighborhood_id,
+      });
+    }
+
+    if (filters.sub_neighborhood_id != null) {
+      qb.andWhere('p.sub_neighborhood_id = :sub_neighborhood_id', {
+        sub_neighborhood_id: filters.sub_neighborhood_id,
       });
     }
 

@@ -90,6 +90,11 @@ export class SearchPropertiesDto {
   neighborhood_id?: number;
 
   @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  sub_neighborhood_id?: number;
+
+  @IsOptional()
   @IsString()
   northEastLat?: string;
 

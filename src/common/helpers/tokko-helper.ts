@@ -133,6 +133,8 @@ export interface TokkoToMetropropResponse {
   country_id?: number;
   state_id?: number;
   sub_location_id?: number;
+  neighborhood_id?: number;
+  sub_neighborhood_id?: number;
   geo_lat?: number;
   geo_long?: number;
   suite_amount?: number;
@@ -775,8 +777,9 @@ export class TokkoHelperService {
     state_id?: number;
     sub_location_id?: number;
     neighborhood_id?: number;
+    sub_neighborhood_id?: number;
   }> {
-    const result: { location_id?: number; country_id?: number; state_id?: number; sub_location_id?: number, neighborhood_id?: number } = {};
+    const result: { location_id?: number; country_id?: number; state_id?: number; sub_location_id?: number, neighborhood_id?: number, sub_neighborhood_id?: number } = {};
     let currentId: number | null = locationId;
 
     while (currentId != null) {
@@ -786,6 +789,9 @@ export class TokkoHelperService {
       switch (loc.type) {
         case 'neighborhood':
           result.neighborhood_id = loc.id;
+          break;
+        case 'sub_neighborhood':
+          result.sub_neighborhood_id = loc.id;
           break;
         case 'sub_location':
           result.sub_location_id = loc.id;

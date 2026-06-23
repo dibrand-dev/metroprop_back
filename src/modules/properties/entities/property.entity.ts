@@ -39,6 +39,7 @@ import { User } from '@/modules/users/entities/user.entity';
 @Index('idx_properties_state_id', ['state_id'])
 @Index('idx_properties_sub_location_id', ['sub_location_id'])
 @Index('idx_properties_neighborhood_id', ['neighborhood_id'])
+@Index('idx_properties_sub_neighborhood_id', ['sub_neighborhood_id'])
 @Index('idx_properties_reference_code', ['reference_code'])
 // @Index('idx_properties_branch', ['branch'])
 export class Property {
@@ -96,6 +97,9 @@ export class Property {
 
   @Column({ type: 'integer', nullable: true })
   neighborhood_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  sub_neighborhood_id?: number;
 
   // ========== Coordenadas Geográficas ==========
   @Column({ type: 'numeric', precision: 10, scale: 8, nullable: true })

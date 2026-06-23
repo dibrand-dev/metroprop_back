@@ -4,7 +4,6 @@ import axios from 'axios';
 import { DataSource, LessThan, MoreThan } from 'typeorm';
 import { Location } from '../../locations/entities/location.entity';
 import { ConfigService } from '@nestjs/config';
-import { LocationNew } from '@/modules/locations_new/entities/locations_new.entity';
 
 
 interface LocationDb {
@@ -52,6 +51,7 @@ export class TokkoMigratorService {
       //await this.normalizeLocationsByCountry(1);
       //await this.normalizeSubLocationsByCountry(1);
       //await this.normalizeNeighborhoodsByCountry(1);
+      await this.normalizeSubNeighborhoodsByCountry(1);
       //await this.normalizeFullLocationsByCountry(1);
 
       this.logger.log('Normalización de sublocations ejecutada para countryId=1');
@@ -74,7 +74,7 @@ export class TokkoMigratorService {
       if (Array.isArray(detail.states)) {
         for (const state of detail.states) {
           // Crear o actualizar el state en la DB
-          const dbState = await queryRunner.manager.findOne('locations_new', { where: { id: state.id } }) as LocationDb | null;
+          const dbState = await queryRunner.manager.findOne('locations', { where: { id: state.id } }) as LocationDb | null;
           const updateData: any = {
             name: state.name,
             type: 'state',
@@ -88,10 +88,10 @@ export class TokkoMigratorService {
           }
 
           if (dbState) {
-            await queryRunner.manager.update('locations_new', { id: state.id }, updateData);
+            await queryRunner.manager.update('locations', { id: state.id }, updateData);
             this.logger.log(`[normalizeStatesByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
           } else {
-            await queryRunner.manager.insert('locations_new', {
+            await queryRunner.manager.insert('locations', {
               id: state.id,
               migrated: false,
               ...updateData,
@@ -114,12 +114,12 @@ export class TokkoMigratorService {
     await queryRunner.connect();
     try {
       // Buscar states a procesar
-      let states: LocationNew[] = [];
+      let states: Location[] = [];
       if (stateId) {
-        const state = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: stateId, type: 'state' } });
+        const state = await queryRunner.manager.getRepository(Location).findOne({ where: { id: stateId, type: 'state' } });
         if (state) states = [state];
       } else {
-        states = await queryRunner.manager.getRepository(LocationNew).find({
+        states = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'state', country_id: countryId, migrated: false, failed_migration_try: LessThan(3) },
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
           take: 1
@@ -131,7 +131,7 @@ export class TokkoMigratorService {
         // Obtener info de Tokko
         const response = await axios.get(`${API_STATE}${state.id}/?lang=es_ar&format=json`);
         const detail = response.data;
-        await queryRunner.manager.update('locations_new', { id: state.id }, updateState);
+        await queryRunner.manager.update('locations', { id: state.id }, updateState);
         this.logger.log(`[normalizeLocationsByCountry] State actualizado: ${state.name} (ID: ${state.id})`);
 
         let childrenCount = detail.divisions ? detail.divisions.length : 0;
@@ -140,7 +140,7 @@ export class TokkoMigratorService {
         if (Array.isArray(detail.divisions)) {
           for (const location of detail.divisions) {
             try {
-              const dbLocation = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: location.id } });
+              const dbLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: location.id } });
               const updateLoc: any = {
                 name: location.name,
                 type: 'location',
@@ -155,10 +155,10 @@ export class TokkoMigratorService {
                 this.logger.log(`[normalizeLocationsByCountry] Location ya existe: ${location.name} (ID: ${location.id}). Se omite.`);
                 chidlrensInserted++;
                 // ########### NO UPDATES IF EXIST FOR THE MOMENT, TO AVOID OVERWRITING MANUAL FIXES ############
-                //await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
+                //await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
                 //this.logger.log(`[normalizeLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
               } else {
-                await queryRunner.manager.insert('locations_new', {
+                await queryRunner.manager.insert('locations', {
                   id: location.id,
                   ...updateLoc,
                 });
@@ -173,10 +173,10 @@ export class TokkoMigratorService {
 
         if(childrenCount > 0 && chidlrensInserted < childrenCount) {
           this.logger.warn(`[normalizeLocationsByCountry] No se marcó state ${state.id} como migrado porque hubo errores en las locations hijas. Total hijos: ${childrenCount}, insertados: ${chidlrensInserted}`);
-          await queryRunner.manager.increment('locations_new', { id: state.id }, 'failed_migration_try', 1);
+          await queryRunner.manager.increment('locations', { id: state.id }, 'failed_migration_try', 1);
         } else {
           // Al terminar, marcar el state como migrado
-          await queryRunner.manager.update('locations_new', { id: state.id }, { migrated: true });
+          await queryRunner.manager.update('locations', { id: state.id }, { migrated: true });
         }
         
       }
@@ -194,12 +194,12 @@ export class TokkoMigratorService {
     await queryRunner.connect();
     try {
       // Buscar locations a procesar
-      let locations: LocationNew[] = [];
+      let locations: Location[] = [];
       if (locationId) {
-        const loc = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: locationId, type: 'location' } });
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: locationId, type: 'location' } });
         if (loc) locations = [loc];
       } else {
-        locations = await queryRunner.manager.getRepository(LocationNew).find({
+        locations = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'location', country_id: countryId, migrated: false, failed_migration_try: LessThan(3) },
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
           take: 20
@@ -216,14 +216,14 @@ export class TokkoMigratorService {
         } else {
           updateLoc.migrated = true;
         }
-        await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
+        await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
         this.logger.log(`[normalizeSubLocationsByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
 
         // Procesar divisions
         if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
           let allDivisionsOk = true;
           for (const division of detail.divisions) {
-            const dbDivision = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: division.id } });
+            const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
             const updateDiv: any = {
               name: division.name,
               type: 'sub_location',
@@ -239,11 +239,11 @@ export class TokkoMigratorService {
                 this.logger.log(`[normalizeSubLocationsByCountry] Division ya existe: ${division.name} (ID: ${division.id}). Se omite.`);
                 // #############################################
                 // FOR THE MOMENT, IF EXISTS LEAVE IT BE
-                // await queryRunner.manager.update('locations_new', { id: division.id }, updateDiv);
+                // await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
                 // this.logger.log(`[normalizeSubLocationsByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
                 // #############################################
               } else {
-                await queryRunner.manager.insert('locations_new', {
+                await queryRunner.manager.insert('locations', {
                   id: division.id,
                   ...updateDiv,
                 });
@@ -256,10 +256,10 @@ export class TokkoMigratorService {
           }
           // Si todas las divisions OK, marcar location como migrada
           if (allDivisionsOk) {
-            await queryRunner.manager.update('locations_new', { id: location.id }, { migrated: true });
+            await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
           } else {            
             this.logger.warn(`[normalizeSubLocationsByCountry] No se marcó location ${location.id} como migrada porque hubo errores en las divisiones`);
-            await queryRunner.manager.increment('locations_new', { id: location.id }, 'failed_migration_try', 1);
+            await queryRunner.manager.increment('locations', { id: location.id }, 'failed_migration_try', 1);
           }
         }
       }
@@ -277,12 +277,12 @@ export class TokkoMigratorService {
     await queryRunner.connect();
     try {
       // Buscar locations a procesar
-      let locations: LocationNew[] = [];
+      let locations: Location[] = [];
       if (locationId) {
-        const loc = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: locationId, type: 'sub_location' } });
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: locationId, type: 'sub_location' } });
         if (loc) locations = [loc];
       } else {
-        locations = await queryRunner.manager.getRepository(LocationNew).find({
+        locations = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'sub_location', country_id: countryId, migrated: false, failed_migration_try: LessThan(5) },
           select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
           take: 50,
@@ -306,7 +306,7 @@ export class TokkoMigratorService {
           } else {
             updateLoc.migrated = true;
           }
-          await queryRunner.manager.update('locations_new', { id: location.id }, updateLoc);
+          await queryRunner.manager.update('locations', { id: location.id }, updateLoc);
           this.logger.log(`[normalizeNeighborhoodByCountry] Location actualizado: ${location.name} (ID: ${location.id})`);
 
           // Procesar divisions
@@ -314,7 +314,7 @@ export class TokkoMigratorService {
             this.logger.log(`[normalizeNeighborhoodByCountry] Procesando ${detail.divisions.length} divisiones para location ${location.name} (ID: ${location.id})`);
             let allDivisionsOk = true;
             for (const division of detail.divisions) {
-              const dbDivision = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: division.id } });
+              const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
               const updateDiv: any = {
                 name: division.name,
                 type: 'neighborhood',
@@ -330,12 +330,12 @@ export class TokkoMigratorService {
                   
                   // #############################################
                   // FOR THE MOMENT, IF EXISTS LEAVE IT BE
-                  // await queryRunner.manager.update('locations_new', { id: division.id }, updateDiv);
+                  // await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
                   // this.logger.log(`[normalizeNeighborhoodByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
                   // #############################################
 
                 } else {
-                  await queryRunner.manager.insert('locations_new', {
+                  await queryRunner.manager.insert('locations', {
                     id: division.id,
                     ...updateDiv,
                   });
@@ -349,11 +349,11 @@ export class TokkoMigratorService {
             }
             // Si todas las divisions OK, marcar location como migrada
             if (allDivisionsOk) {
-              await queryRunner.manager.update('locations_new', { id: location.id }, { migrated: true });
+              await queryRunner.manager.update('locations', { id: location.id }, { migrated: true });
             } else {
               this.logger.warn(`[normalizeNeighborhoodByCountry] No se marcó location ${location.id} como migrada porque hubo errores en las divisiones`);
               await queryRunner.manager.increment(
-                'locations_new',              
+                'locations',              
                 { id: location.id },      
                 'failed_migration_try',
                 1
@@ -383,7 +383,7 @@ export class TokkoMigratorService {
     try {
       // Buscar todas las locations del país con full_location vacío
       // Buscar los que tienen full_location NULL o string vacío
-      const locations: LocationNew[] = await queryRunner.manager.getRepository(LocationNew)
+      const locations: Location[] = await queryRunner.manager.getRepository(Location)
         .createQueryBuilder('location')
         .where('location.country_id = :countryId', { countryId })
         .andWhere('(location.full_location IS NULL OR location.full_location = \'\')')
@@ -407,26 +407,26 @@ export class TokkoMigratorService {
           if (loc.type === 'state') {
             updateData.full_location = detail.name || loc.name || '';
           } else if (loc.type === 'location') {
-            const parentState = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: loc.parent_id } });
+            const parentState = await queryRunner.manager.getRepository(Location).findOne({ where: { id: loc.parent_id } });
             const stateName = parentState?.name || '';
             updateData.full_location = detail.name ? `${detail.name}, ${stateName}` : (loc.name ? `${loc.name}, ${stateName}` : '');
           } else if (loc.type === 'sub_location') {
-            const parentLocation = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: loc.parent_id } });
+            const parentLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: loc.parent_id } });
             const locationName = parentLocation?.name || '';
-            const parentState = parentLocation ? await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: parentLocation.parent_id } }) : null;
+            const parentState = parentLocation ? await queryRunner.manager.getRepository(Location).findOne({ where: { id: parentLocation.parent_id } }) : null;
             const stateName = parentState?.name || '';
             updateData.full_location = detail.name ? `${detail.name}, ${locationName}, ${stateName}` : (loc.name ? `${loc.name}, ${locationName}, ${stateName}` : '');
           } else if (loc.type === 'neighborhood') {
-            const parentLocation = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: loc.parent_id } });
+            const parentLocation = await queryRunner.manager.getRepository(Location).findOne({ where: { id: loc.parent_id } });
             const locationName = parentLocation?.name || '';
-            const parentState = parentLocation ? await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: parentLocation.state_id } }) : null;
+            const parentState = parentLocation ? await queryRunner.manager.getRepository(Location).findOne({ where: { id: parentLocation.state_id } }) : null;
             const stateName = parentState?.name || '';
             updateData.full_location = detail.name ? `${detail.name}, ${locationName}, ${stateName}` : (loc.name ? `${loc.name}, ${locationName}, ${stateName}` : '');
           }
 
           if (detail.short_location) updateData.short_location = detail.short_location;
           if (Object.keys(updateData).length > 0) {
-            await queryRunner.manager.update('locations_new', { id: loc.id }, updateData);
+            await queryRunner.manager.update('locations', { id: loc.id }, updateData);
             this.logger.log(`[normalizeFullLocationsByCountry] Location actualizada: ${loc.id} (${loc.type})`);
           }
         } catch (err) {
@@ -449,9 +449,9 @@ export class TokkoMigratorService {
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
       for (const country of data.objects) {
-        const exists = await queryRunner.manager.findOne('locations_new', { where: { id: country.id } });
+        const exists = await queryRunner.manager.findOne('locations', { where: { id: country.id } });
         if (exists) continue;
-        await queryRunner.manager.insert('locations_new', {
+        await queryRunner.manager.insert('locations', {
           id: country.id,
           name: country.name,
           iso_code: country.iso_code || null,
@@ -468,7 +468,7 @@ export class TokkoMigratorService {
   // COMPARADORES ENTRE TOKKO Y DB PARA VALIDAR MIGRACION
 
   /**
-   * Compara los states de Tokko con los registros type='state' en locations_new.
+   * Compara los states de Tokko con los registros type='state' en locations.
    * Si no se pasa countryId, usa 1 (Argentina).
    */
   async compareStatesWithTokko(countryId?: number) {
@@ -483,8 +483,8 @@ export class TokkoMigratorService {
       const detail = response.data;
       const statesFromTokko: Array<{ id: number; name?: string }> = Array.isArray(detail.states) ? detail.states : [];
 
-      // 2) Obtener states desde la DB (locations_new)
-      const dbStates: LocationNew[] = await queryRunner.manager.getRepository(LocationNew).find({
+      // 2) Obtener states desde la DB (locations)
+      const dbStates: Location[] = await queryRunner.manager.getRepository(Location).find({
         where: { type: 'state', country_id: countryId },
         select: ['id', 'name'],
       });
@@ -517,7 +517,7 @@ export class TokkoMigratorService {
   }
 
   /**
-   * Compara locations (divisions) de Tokko con registros type='location' en locations_new.
+   * Compara locations (divisions) de Tokko con registros type='location' en locations.
    * Si se pasa stateId, procesa solo ese state; si no, procesa todos los states del country (countryId opcional).
    * signature: compareLocationsWithTokko(stateId?: number, countryId?: number)
    */
@@ -528,12 +528,12 @@ export class TokkoMigratorService {
       this.logger.log(`[compareLocationsWithTokko] Iniciando comparación. stateId=${stateId ?? 'ALL'} countryId=${countryId}`);
 
       // 1) Obtener lista de states a procesar
-      let statesToProcess: LocationNew[] = [];
+      let statesToProcess: Location[] = [];
       if (stateId) {
-        const s = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: Number(stateId), type: 'state' } });
+        const s = await queryRunner.manager.getRepository(Location).findOne({ where: { id: Number(stateId), type: 'state' } });
         if (s) statesToProcess = [s];
       } else {
-        statesToProcess = await queryRunner.manager.getRepository(LocationNew).find({
+        statesToProcess = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'state', country_id: Number(countryId) },
           select: ['id', 'name'],
         });
@@ -549,7 +549,7 @@ export class TokkoMigratorService {
           const divisions: Array<{ id: number; name?: string }> = Array.isArray(detail.divisions) ? detail.divisions : [];
 
           // Obtener locations en DB con parent_id = state.id y type = 'location'
-          const dbLocations: LocationNew[] = await queryRunner.manager.getRepository(LocationNew).find({
+          const dbLocations: Location[] = await queryRunner.manager.getRepository(Location).find({
             where: { type: 'location', parent_id: state.id },
             select: ['id', 'name'],
           });
@@ -592,7 +592,7 @@ export class TokkoMigratorService {
   }
 
   /**
-   * Compara sublocations (divisions de una location) con registros type='sub_location' en locations_new.
+   * Compara sublocations (divisions de una location) con registros type='sub_location' en locations.
    * Si se pasa locationId, procesa solo esa location; si no, procesa todas las locations (puede ser costoso).
    */
   async compareSubLocationsWithTokko(from: number, to: number, locationId?: number, countryId: number = 1) {
@@ -602,13 +602,13 @@ export class TokkoMigratorService {
       this.logger.log(`[compareSubLocationsWithTokko] Iniciando comparación. locationId=${locationId ?? 'ALL'} countryId=${countryId}`);
 
       // 1) Obtener lista de locations a procesar
-      let locationsToProcess: LocationNew[] = [];
+      let locationsToProcess: Location[] = [];
       if (locationId) {
-        const loc = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: locationId, type: 'location' } });
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: locationId, type: 'location' } });
         if (loc) locationsToProcess = [loc];
       } else {
         // Ojo: puede ser muchas locations; el usuario ya dijo que está bien por ahora
-        locationsToProcess = await queryRunner.manager.getRepository(LocationNew).find({
+        locationsToProcess = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'location', country_id: Number(countryId) },
           select: ['id', 'name', 'parent_id'],
         });
@@ -625,7 +625,7 @@ export class TokkoMigratorService {
           const divisions: Array<{ id: number; name?: string }> = Array.isArray(detail.divisions) ? detail.divisions : [];
 
           // Obtener sublocations en DB con parent_id = location.id y type = 'sub_location'
-          const dbSublocations: LocationNew[] = await queryRunner.manager.getRepository(LocationNew).find({
+          const dbSublocations: Location[] = await queryRunner.manager.getRepository(Location).find({
             where: { type: 'sub_location', parent_id: location.id },
             select: ['id', 'name'],
           });
@@ -668,7 +668,7 @@ export class TokkoMigratorService {
   }
 
   /**
-   * Compara neighborhoods (divisions de una sub_location) con registros type='neighborhood' en locations_new.
+   * Compara neighborhoods (divisions de una sub_location) con registros type='neighborhood' en locations.
    * Si se pasa subLocationId, procesa solo esa sublocation; si no, procesa todas las sublocations (costoso).
    */
   async compareNeighborhoodsWithTokko(from: number, to: number, subLocationId?: number, countryId: number = 1) {
@@ -678,13 +678,13 @@ export class TokkoMigratorService {
       this.logger.log(`[compareNeighborhoodsWithTokko] Iniciando comparación. subLocationId=${subLocationId ?? 'ALL'} countryId=${countryId}`);
 
       // 1) Obtener lista de sublocations a procesar
-      let sublocationsToProcess: LocationNew[] = [];
+      let sublocationsToProcess: Location[] = [];
       if (subLocationId) {
-        const loc = await queryRunner.manager.getRepository(LocationNew).findOne({ where: { id: subLocationId, type: 'sub_location' } });
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: subLocationId, type: 'sub_location' } });
         if (loc) sublocationsToProcess = [loc];
       } else {
         // Puede ser muchas filas; el usuario ya indicó que está bien por ahora
-        sublocationsToProcess = await queryRunner.manager.getRepository(LocationNew).find({
+        sublocationsToProcess = await queryRunner.manager.getRepository(Location).find({
           where: { type: 'sub_location', country_id: Number(countryId) },
           select: ['id', 'name', 'parent_id', 'state_id'],
         });
@@ -699,7 +699,7 @@ export class TokkoMigratorService {
           const divisions: Array<{ id: number; name?: string }> = Array.isArray(detail.divisions) ? detail.divisions : [];
 
           // Obtener neighborhoods en DB con parent_id = subloc.id y type = 'neighborhood'
-          const dbNeighborhoods: LocationNew[] = await queryRunner.manager.getRepository(LocationNew).find({
+          const dbNeighborhoods: Location[] = await queryRunner.manager.getRepository(Location).find({
             where: { type: 'neighborhood', parent_id: subloc.id },
             select: ['id', 'name'],
           });
@@ -735,6 +735,183 @@ export class TokkoMigratorService {
       return results;
     } catch (err) {
       this.logger.error('[compareNeighborhoodsWithTokko] Error general', err);
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
+   * Normaliza sub_neighborhoods (divisions de cada neighborhood) de un país o de un neighborhood específico
+   */
+  async normalizeSubNeighborhoodsByCountry(countryId: number, neighborhoodId?: number) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      // Buscar neighborhoods a procesar
+      let neighborhoods: Location[] = [];
+      if (neighborhoodId) {
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: neighborhoodId, type: 'neighborhood' } });
+        if (loc) neighborhoods = [loc];
+      } else {
+        neighborhoods = await queryRunner.manager.getRepository(Location).find({
+          where: { type: 'neighborhood', country_id: countryId, migrated: false, failed_migration_try: LessThan(5) },
+          select: ['id', 'name', 'type', 'migrated', 'country_id', 'parent_id', 'full_location', 'short_location'],
+          take: 50,
+        });
+      }
+
+      this.logger.log(`[normalizeSubNeighborhoodsByCountry] Procesando ${neighborhoods.length} neighborhoods para country ${countryId}`);
+
+      for (const neighborhood of neighborhoods) {
+        // wait 1 second between requests to avoid hitting rate limits
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        try {
+          this.logger.log(`[normalizeSubNeighborhoodsByCountry] Procesando neighborhood ${neighborhood.name} (ID: ${neighborhood.id}) con parent_id ${neighborhood.parent_id} y full_location "${neighborhood.full_location}"`);
+          // Obtener info de Tokko
+          const response = await axios.get(`${API_LOCATION}${neighborhood.id}/?lang=es_ar&format=json`);
+          const detail = response.data;
+          // Actualizar neighborhood en DB
+          const updateLoc: any = {};
+          if (Array.isArray(detail.divisions) && detail.divisions.length > 0) {
+            updateLoc.migrated = false;
+          } else {
+            updateLoc.migrated = true;
+          }
+          await queryRunner.manager.update('locations', { id: neighborhood.id }, updateLoc);
+          this.logger.log(`[normalizeSubNeighborhoodsByCountry] Neighborhood actualizado: ${neighborhood.name} (ID: ${neighborhood.id})`);
+
+          // Procesar divisions
+          if (Array.isArray(detail.divisions)) {
+            this.logger.log(`[normalizeSubNeighborhoodsByCountry] Procesando ${detail.divisions.length} divisiones para neighborhood ${neighborhood.name} (ID: ${neighborhood.id})`);
+            let allDivisionsOk = true;
+            for (const division of detail.divisions) {
+              const dbDivision = await queryRunner.manager.getRepository(Location).findOne({ where: { id: division.id } });
+              const updateDiv: any = {
+                name: division.name,
+                type: 'sub_neighborhood',
+                parent_id: neighborhood.id,
+                state_id: neighborhood.state_id,
+                country_id: countryId,
+                migrated: true,
+                full_location: division.name + ', ' + neighborhood.name,
+              };
+              if (division.short_location) updateDiv.short_location = division.short_location;
+              try {
+                if (dbDivision) {
+
+                  // #############################################
+                  // FOR THE MOMENT, IF EXISTS LEAVE IT BE
+                  // await queryRunner.manager.update('locations', { id: division.id }, updateDiv);
+                  // this.logger.log(`[normalizeSubNeighborhoodsByCountry] Division actualizada: ${division.name} (ID: ${division.id})`);
+                  // #############################################
+
+                } else {
+                  await queryRunner.manager.insert('locations', {
+                    id: division.id,
+                    ...updateDiv,
+                  });
+                  this.logger.log(`[normalizeSubNeighborhoodsByCountry] Division insertada: ${division.name} (ID: ${division.id})`);
+                }
+              } catch (err) {
+                allDivisionsOk = false;
+                this.logger.error(`[normalizeSubNeighborhoodsByCountry] Error actualizando division ${division.id}`, err);
+                this.logger.error(err);
+              }
+            }
+            // Si todas las divisions OK, marcar neighborhood como migrado
+            if (allDivisionsOk) {
+              await queryRunner.manager.update('locations', { id: neighborhood.id }, { migrated: true });
+            } else {
+              this.logger.warn(`[normalizeSubNeighborhoodsByCountry] No se marcó neighborhood ${neighborhood.id} como migrado porque hubo errores en las divisiones`);
+              await queryRunner.manager.increment(
+                'locations',
+                { id: neighborhood.id },
+                'failed_migration_try',
+                1
+              );
+            }
+          }
+        } catch (err) {
+          this.logger.error(`[normalizeSubNeighborhoodsByCountry] Error procesando neighborhood ${neighborhood.id}`, err);
+          this.logger.error(err);
+          continue;
+        }
+      }
+    } catch (e) {
+      this.logger.error(`[normalizeSubNeighborhoodsByCountry] Error para country ${countryId}`, e);
+    }
+    await queryRunner.release();
+  }
+
+  /**
+   * Compara sub_neighborhoods (divisions de un neighborhood) con registros type='sub_neighborhood' en locations.
+   * Si se pasa neighborhoodId, procesa solo ese neighborhood; si no, procesa todos los neighborhoods (costoso).
+   */
+  async compareSubNeighborhoodsWithTokko(from: number, to: number, neighborhoodId?: number, countryId: number = 1) {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      this.logger.log(`[compareSubNeighborhoodsWithTokko] Iniciando comparación. neighborhoodId=${neighborhoodId ?? 'ALL'} countryId=${countryId}`);
+
+      // 1) Obtener lista de neighborhoods a procesar
+      let neighborhoodsToProcess: Location[] = [];
+      if (neighborhoodId) {
+        const loc = await queryRunner.manager.getRepository(Location).findOne({ where: { id: neighborhoodId, type: 'neighborhood' } });
+        if (loc) neighborhoodsToProcess = [loc];
+      } else {
+        // Puede ser muchas filas; el usuario ya indicó que está bien por ahora
+        neighborhoodsToProcess = await queryRunner.manager.getRepository(Location).find({
+          where: { type: 'neighborhood', country_id: Number(countryId) },
+          select: ['id', 'name', 'parent_id', 'state_id'],
+        });
+      }
+
+      const results: Array<any> = [];
+
+      for (const neighborhood of neighborhoodsToProcess.slice(from, to)) {
+        try {
+          const response = await axios.get(`${API_LOCATION}${neighborhood.id}/?lang=es_ar&format=json`);
+          const detail = response.data;
+          const divisions: Array<{ id: number; name?: string }> = Array.isArray(detail.divisions) ? detail.divisions : [];
+
+          // Obtener sub_neighborhoods en DB con parent_id = neighborhood.id y type = 'sub_neighborhood'
+          const dbSubNeighborhoods: Location[] = await queryRunner.manager.getRepository(Location).find({
+            where: { type: 'sub_neighborhood', parent_id: neighborhood.id },
+            select: ['id', 'name'],
+          });
+
+          const dbIds = new Set(dbSubNeighborhoods.map(n => n.id));
+          const tokkoIds = new Set(divisions.map(d => d.id));
+
+          const missingInDb = divisions.filter(d => !dbIds.has(d.id));
+          const extraInDb = dbSubNeighborhoods.filter(n => !tokkoIds.has(n.id));
+
+          results.push({
+            neighborhoodId: neighborhood.id,
+            neighborhoodName: neighborhood.name,
+            tokkoCount: divisions.length,
+            dbCount: dbSubNeighborhoods.length,
+            ok: missingInDb.length === 0 && extraInDb.length === 0,
+            missingInDb: missingInDb.map(d => ({ id: d.id, name: d.name })),
+            extraInDb: extraInDb.map(n => ({ id: n.id, name: n.name })),
+          });
+
+          this.logger.log(`[compareSubNeighborhoodsWithTokko] Neighborhood ${neighborhood.id} processed: tokko=${divisions.length} db=${dbSubNeighborhoods.length}`);
+        } catch (err) {
+          this.logger.error(`[compareSubNeighborhoodsWithTokko] Error procesando neighborhood ${neighborhood.id}`, err);
+          results.push({
+            neighborhoodId: neighborhood.id,
+            neighborhoodName: neighborhood.name,
+            error: true,
+            message: err,
+          });
+        }
+      }
+
+      return results;
+    } catch (err) {
+      this.logger.error('[compareSubNeighborhoodsWithTokko] Error general', err);
       throw err;
     } finally {
       await queryRunner.release();

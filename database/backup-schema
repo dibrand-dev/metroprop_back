@@ -356,6 +356,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
 	neighborhood_id int4 NULL,
+	sub_neighborhood_id int4 NULL,
 	roofed_surface_measurement varchar(10) DEFAULT 'M2'::character varying NULL,
 	brightness int4 NULL,
 	garage_coverage int4 NULL,
@@ -386,6 +387,7 @@ CREATE INDEX IF NOT EXISTS idx_properties_state_id ON public.properties USING bt
 CREATE INDEX IF NOT EXISTS idx_properties_status ON public.properties USING btree (status);
 CREATE INDEX IF NOT EXISTS idx_properties_sub_location_id ON public.properties USING btree (sub_location_id);
 CREATE INDEX IF NOT EXISTS idx_properties_neighborhood_id ON public.properties USING btree (neighborhood_id);
+CREATE INDEX IF NOT EXISTS idx_properties_sub_neighborhood_id ON public.properties USING btree (sub_neighborhood_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_properties_publication_id ON public.properties USING btree (publication_id) WHERE (publication_id IS NOT NULL);
 
 
@@ -569,6 +571,7 @@ CREATE TABLE IF NOT EXISTS public.branches (
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
 	neighborhood_id int4 NULL,
+	sub_neighborhood_id int4 NULL,
 	external_reference varchar(255) NULL,
 	CONSTRAINT pk_branches PRIMARY KEY (id)
 );
@@ -578,6 +581,7 @@ CREATE INDEX IF NOT EXISTS idx_branches_organization ON public.branches USING bt
 CREATE INDEX IF NOT EXISTS idx_branches_state_id ON public.branches USING btree (state_id);
 CREATE INDEX IF NOT EXISTS idx_branches_sub_location_id ON public.branches USING btree (sub_location_id);
 CREATE INDEX IF NOT EXISTS idx_branches_neighborhood_id ON public.branches USING btree (neighborhood_id);
+CREATE INDEX IF NOT EXISTS idx_branches_sub_neighborhood_id ON public.branches USING btree (sub_neighborhood_id);
 
 
 -- public.organizations definition
@@ -617,6 +621,7 @@ CREATE TABLE IF NOT EXISTS public.organizations (
 	state_id int4 NULL,
 	sub_location_id int4 NULL,
 	neighborhood_id int4 NULL,
+	sub_neighborhood_id int4 NULL,
 	professional_type public."organizations_professional_type_enum" NULL,
 	tokko_key varchar NULL,
 	CONSTRAINT pk_organizations PRIMARY KEY (id)
@@ -626,6 +631,8 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_organizations_cuit_unique ON public.organi
 CREATE INDEX IF NOT EXISTS idx_organizations_location_id ON public.organizations USING btree (location_id);
 CREATE INDEX IF NOT EXISTS idx_organizations_state_id ON public.organizations USING btree (state_id);
 CREATE INDEX IF NOT EXISTS idx_organizations_sub_location_id ON public.organizations USING btree (sub_location_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_neighborhood_id ON public.organizations USING btree (neighborhood_id);
+CREATE INDEX IF NOT EXISTS idx_organizations_sub_neighborhood_id ON public.organizations USING btree (sub_neighborhood_id);
 CREATE UNIQUE INDEX IF NOT EXISTS uk_organizations_partner_external_ref ON public.organizations USING btree (source_partner_id, external_reference) WHERE ((source_partner_id IS NOT NULL) AND (external_reference IS NOT NULL));
 
 

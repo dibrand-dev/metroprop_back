@@ -130,6 +130,11 @@ export class BasePropertyFieldsDto {
   neighborhood_id?: number;
 
   @IsOptional()
+  @IsInt()
+  @IsPositive()
+  sub_neighborhood_id?: number;
+
+  @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @Min(-90)
   @Max(90)

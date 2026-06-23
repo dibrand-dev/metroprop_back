@@ -54,7 +54,7 @@ export class PartnerApiController {
   @ApiTags('Locations')
   @ApiOperation({
     summary: 'Obtener lista de países',
-    description: 'Retorna todos los países disponibles para usar en location_id, state_id, country_id y sub_location_id.',
+    description: 'Retorna todos los países disponibles para usar en location_id, state_id, country_id, sub_location_id, neighborhood_id y sub_neighborhood_id.',
   })
   @ApiResponse({ status: 200, description: 'Lista de países' })
   getCountries() {
@@ -103,6 +103,17 @@ export class PartnerApiController {
   @ApiResponse({ status: 200, description: 'Lista de barrios' })
   getSubLocationNeighborhoods(@Query('subLocationId') subLocationId: number) {
     return this.locationsService.getSubLocationNeighborhoods(subLocationId);
+  }
+
+  @Get('locations/sub-neighborhoods')
+  @ApiTags('Locations')
+  @ApiOperation({
+    summary: 'Obtener subbarrios de un barrio',
+    description: 'Retorna subbarrios (sub_neighborhood_id) de un barrio dado su neighborhood_id.',
+  })
+  @ApiResponse({ status: 200, description: 'Lista de subbarrios' })
+  getSubNeighborhoods(@Query('neighborhoodId') neighborhoodId: number) {
+    return this.locationsService.getSubNeighborhoods(neighborhoodId);
   }
 
   // ====== ORGANIZATION (real) ======

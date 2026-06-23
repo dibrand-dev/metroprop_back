@@ -22,6 +22,7 @@ import e from 'express';
 @Index('idx_organizations_state_id', ['state_id'])
 @Index('idx_organizations_sub_location_id', ['sub_location_id'])
 @Index('idx_organizations_neighborhood_id', ['neighborhood_id'])
+@Index('idx_organizations_sub_neighborhood_id', ['sub_neighborhood_id'])
 @Index('uk_organizations_partner_external_ref', ['source_partner_id', 'external_reference'], { 
   unique: true, 
   where: 'source_partner_id IS NOT NULL AND external_reference IS NOT NULL' 
@@ -74,6 +75,9 @@ export class Organization {
 
   @Column({ type: 'integer', nullable: true })
   neighborhood_id?: number;
+
+  @Column({ type: 'integer', nullable: true })
+  sub_neighborhood_id?: number;
 
   @Column({ type: 'varchar', nullable: true })
   full_location?: string;

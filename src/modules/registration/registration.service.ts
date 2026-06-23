@@ -223,6 +223,7 @@ export class RegistrationService {
       location_id: dto.location_id?.toString(),
       sub_location_id: dto.sub_location_id,
       neighborhood_id: dto.neighborhood_id,
+      sub_neighborhood_id: dto.sub_neighborhood_id,
       professional_type: dto.professional_type,
       cuit: dto.cuit,
       external_reference: dto.external_reference,
@@ -259,6 +260,7 @@ export class RegistrationService {
       location_id?: string;
       sub_location_id?: number;
       neighborhood_id?: number;
+      sub_neighborhood_id?: number;
       professional_type?: ProfessionalType;
       cuit?: string;
       external_reference?: string;
@@ -291,6 +293,7 @@ export class RegistrationService {
         location_id: organizationData.location_id,
         sub_location_id: organizationData.sub_location_id,
         neighborhood_id: organizationData.neighborhood_id,
+        sub_neighborhood_id: organizationData.sub_neighborhood_id,
         professional_type: organizationData.professional_type,
         cuit: organizationData.cuit,
         external_reference: organizationData.external_reference,
@@ -317,6 +320,7 @@ export class RegistrationService {
         location_id: organizationData.location_id,
         sub_location_id: organizationData.sub_location_id,
         neighborhood_id: organizationData.neighborhood_id,
+        sub_neighborhood_id: organizationData.sub_neighborhood_id,
         organization: savedOrg,
         deleted: false,
       });

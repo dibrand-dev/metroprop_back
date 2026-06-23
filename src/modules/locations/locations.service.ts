@@ -31,6 +31,10 @@ export class LocationsService {
     return this.locationRepository.find({ where: { type: 'neighborhood', parent_id: subLocationId }, order: { name: 'ASC' } });
   }
 
+  async getSubNeighborhoods(neighborhoodId: number) {
+    return this.locationRepository.find({ where: { type: 'sub_neighborhood', parent_id: neighborhoodId }, order: { name: 'ASC' } });
+  }
+
   async findById(id: number): Promise<Location | null> {
     return this.locationRepository.findOne({ where: { id } });
   }
