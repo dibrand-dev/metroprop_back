@@ -29,7 +29,7 @@ export class TokkoMigratorService {
   
 
   constructor(private readonly dataSource: DataSource, private readonly configService: ConfigService) {}
-  @Cron(CronExpression.EVERY_2ND_MONTH)
+  @Cron(CronExpression.EVERY_MINUTE)
   async handleMigration() {
     this.logger.log('Iniciando migración automática de locations desde Tokko...');
     const enabled = this.configService.get<string>('FEATURE_FLAG_TOKKO_SYNC');
