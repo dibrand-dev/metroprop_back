@@ -19,6 +19,7 @@ export interface TokkoPropertyResponse {
   age: number;
   apartment_door: string;
   appartments_per_floor: number;
+  floors_in_building: number;
   bathroom_amount: number;
   block_number: string;
   branch: any; // Ignorado según especificación
@@ -127,6 +128,7 @@ export interface TokkoToMetropropResponse {
   apartment?: string;
   floor?: string;
   apartments_per_floor?: number;
+  floors_in_building?: number;
   location_id?: number;
   country_id?: number;
   state_id?: number;
@@ -276,11 +278,11 @@ export class TokkoHelperService {
       expenses: tokkoData.expenses || undefined,
       transaction_requirements: tokkoData.transaction_requirements || undefined,
       development: tokkoData.development || undefined,
-      
       // Mapeos con equivalencias específicas (inverso)
       street: tokkoData.address || tokkoData.real_address || undefined, // address/real_address -> street
       apartment: tokkoData.apartment_door || undefined, // apartment_door -> apartment
       apartments_per_floor: tokkoData.appartments_per_floor || undefined, // appartments_per_floor -> apartments_per_floor
+      floors_in_building: tokkoData.floors_in_building || undefined, // floors_in_building -> floors_in_building
       garage_coverage: this.mapTokkoGarageCoverage(tokkoData), // covered/uncovered -> garage_coverage
       surface_length: this.parseIntegerString(tokkoData.depth_measure), // depth_measure -> surface_length  
       surface_front: this.parseIntegerString(tokkoData.front_measure), // front_measure -> surface_front

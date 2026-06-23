@@ -199,6 +199,9 @@ export class Property {
   apartments_per_floor?: number;
 
   @Column({ type: 'integer', nullable: true })
+  floors_in_building?: number;
+
+  @Column({ type: 'integer', nullable: true })
   warehouse_units?: number;
 
   @Column({ type: 'integer', nullable: true })

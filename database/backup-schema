@@ -367,6 +367,7 @@ CREATE TABLE IF NOT EXISTS public.properties (
 	hired_plan_id int4 NULL,
 	purchased_plan_id int4 NULL,
 	apartments_per_floor int4 NULL,
+	floors_in_building int4 NULL,
 	warehouse_units int4 NULL,
 	number_of_guests int4 NULL,
 	business_type varchar(255) NULL,

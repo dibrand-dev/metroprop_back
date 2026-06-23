@@ -103,6 +103,7 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
     'garage_coverage',
     'semiroofed_surface',
     'apartments_per_floor',  // Departamentos por piso
+    'floors_in_building',    // Pisos en el edificio
   ],
   // ── Terreno ──────────────────────────────────────────────────────────────
   [PropertyType.TERRENO]: [
@@ -166,6 +167,7 @@ export const FIELDS_BY_PROPERTY_TYPE: Record<PropertyType, string[]> = {
     'garage_coverage',
     'semiroofed_surface',
     'apartments_per_floor',  // Departamentos por piso
+    'floors_in_building',    // Pisos en el edificio
   ],
   // ── Fondo de comercio ────────────────────────────────────────────────────
   [PropertyType.FONDO_DE_COMERCIO]: [

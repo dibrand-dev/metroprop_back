@@ -270,6 +270,11 @@ export class BasePropertyFieldsDto {
   @IsOptional()
   @IsInt()
   @Min(0)
+  floors_in_building?: number;
+
+  @IsOptional()
+  @IsInt()
+  @Min(0)
   warehouse_units?: number;
 
   @IsOptional()
