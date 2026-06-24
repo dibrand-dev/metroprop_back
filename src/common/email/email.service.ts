@@ -154,8 +154,8 @@ export class EmailService {
                       <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
                       <p style="margin:0;">
-                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
-                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                        <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
                       </p>
                       <p style="margin-top:30px;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
                     </td>
@@ -243,8 +243,8 @@ export class EmailService {
                       <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
                       <p style="margin:0;">
-                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
-                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                        <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
                       </p>
                       <p style="margin:30px 0;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
                     </td>
@@ -334,8 +334,8 @@ export class EmailService {
                       <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
                       <p style="margin:0;">
-                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
-                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                        <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
                       </p>
                       <p style="margin:30px 0;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
                     </td>
@@ -410,8 +410,8 @@ export class EmailService {
                       <img src="${ this.configService.get('FRONTEND_URL')}/icons/youtube.png" alt="icono" width="20" style="vertical-align:middle;">
                       </p>
                       <p style="margin:0;">
-                        <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
-                        <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                        <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
+                        <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
                       </p>
                       <p style="margin-top:30px;text-align:left;">Recibes este e-mail porque eres usuario registrado en Metroprop al amparo de nuestra Política de Privacidad. Este e-mail se ha enviado desde Metroprop.</p>
                     </td>
@@ -570,8 +570,8 @@ export class EmailService {
                       <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
                     </p>
                     <p style="margin:0 0 8px 0;">
-                      <a href="#" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> |
-                      <a href="#" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                      <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> |
+                      <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
                     </p>
                     <p style="margin:12px 0 0 0; text-align:left; font-size:11px; color:#aaa;">
                       Recibís este e-mail porque tenés una alerta de búsqueda activa en Metroprop.<br>
@@ -704,8 +704,8 @@ export class EmailService {
                     <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
                   </p>
                   <p style="margin:0 0 16px 0;">
-                    <a href="#" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
-                    <a href="#" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
+                    <a href="https://www.metroprop.co/policy" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
+                    <a href="https://www.metroprop.co/terms" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
                   </p>
                   <p style="margin:0; text-align:center; font-size:11px; color:#aaa; line-height:1.5;">
                     Recibís este e-mail porque sos usuario registrado en Metroprop al amparo de nuestra Política de Privacidad.<br>
@@ -788,8 +788,8 @@ export class EmailService {
                     <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
                   </p>
                   <p style="margin:0 0 16px 0;">
-                    <a href="#" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
-                    <a href="#" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
+                    <a href="https://www.metroprop.co/policy" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
+                    <a href="https://www.metroprop.co/terms" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
                   </p>
                   <p style="margin:0; text-align:center; font-size:11px; color:#aaa; line-height:1.5;">
                    Este e-mail se ha enviado desde Metroprop.
