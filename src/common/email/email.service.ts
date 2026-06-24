@@ -491,7 +491,7 @@ export class EmailService {
       const imageSrc = p.firstImageUrl
         ? this.resolveS3ImageUrl(p.firstImageUrl)
         : `${frontendUrl}/images/property-noimage.jpg`;
-      const imageHtml = `<img src="${imageSrc}" alt="${p.publication_title}" width="200" style="display:block;width:200px;aspect-ratio: 3/2;">`;
+      const imageHtml = `<img src="${imageSrc}" alt="${p.publication_title}" width="200" style="border:none;aspect-ratio: 3 / 2;display:block;width:200px;">`;
 
       const addressLine = [p.street, p.number].filter(Boolean).join(' ');
       const opLabel = OPERATION_TYPE_LABELS[p.operation_type as OperationType] ;
