@@ -780,6 +780,22 @@ export class EmailService {
                   Metroprop &mdash; <a href="${frontendUrl}" style="color:#007bff;text-decoration:none;">metroprop.co</a>
                 </td>
               </tr>
+              <tr>
+                <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5; border-top:1px solid #E5E5E5;">
+                  <p style="margin:0 0 16px 0;">
+                    <img src="${frontendUrl}/icons/fb.png" alt="Facebook" width="20" style="vertical-align:middle; margin-right:50px;">
+                    <img src="${frontendUrl}/icons/instagram.png" alt="Instagram" width="20" style="vertical-align:middle; margin-right:50px;">
+                    <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
+                  </p>
+                  <p style="margin:0 0 16px 0;">
+                    <a href="#" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
+                    <a href="#" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
+                  </p>
+                  <p style="margin:0; text-align:center; font-size:11px; color:#aaa; line-height:1.5;">
+                   Este e-mail se ha enviado desde Metroprop.
+                  </p>
+                </td>
+              </tr>
             </table>
           </td></tr>
         </table>
