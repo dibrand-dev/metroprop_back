@@ -138,14 +138,27 @@ export class UsersController {
   @HttpCode(HttpStatus.OK)
   @UseGuards(UserOwnershipGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
-  async remove(@Param('id', ParseIntPipe) id: number, @Req() req: any) {
+  async remove(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() body: { password?: string },
+    @Req() req: any,
+  ) {
     const requester = req.user;
 
-    if (requester.role_id === UserRole.USER_ROL_ADMIN) {
-      if (requester.id === id) {
-        throw new ForbiddenException('Un administrador no puede eliminarse a sí mismo.');
+    // si el requ rol es admin , super admin .. o no tiene una organization id entonces tiene que traer un password y corroborar sino tira error
+    if (requester.role_id === UserRole.USER_ROL_ADMIN || requester.role_id === UserRole.USER_ROL_SUPER_ADMIN || !requester.organization_id) {
+      if (!body?.password) {
+        throw new ForbiddenException('No tienes permisos para eliminar este usuario.');
+      }
+      const validatedUser = await this.usersService.searchUserByCondition(
+        { id: requester.id, deleted: false },
+        body.password,
+      );
+      if (!validatedUser) {
+        throw new ForbiddenException('Contraseña incorrecta. No se pudo eliminar la cuenta.');
       }
     }
+
 
     await this.usersService.remove(id);
     return { success: true, message: 'Usuario eliminado correctamente.' };

@@ -10,6 +10,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserFiltersDto } from './dto/user-filters.dto';
 import { Organization } from '../organizations/entities/organization.entity';
 import { UserRole } from '../../common/enums';
+import { Branch } from '../branches/entities/branch.entity';
 
 @Injectable()
 export class UsersService {
@@ -230,6 +231,7 @@ export class UsersService {
     await this.usersRepository.manager.transaction(async (manager) => {
       const userRepository = manager.getRepository(User);
       const propertyRepository = manager.getRepository(Property);
+      const branchRepository = manager.getRepository(Branch);
 
       const user = await userRepository.findOne({
         where: { id },
@@ -240,36 +242,35 @@ export class UsersService {
         throw new NotFoundException('User not found');
       }
 
-      const organizationAdminId = user.organization?.admin_user?.id;
-      const isOrganizationAdmin = organizationAdminId === user.id;
-      const isAdminUser = user.role_id === UserRole.USER_ROL_ADMIN || isOrganizationAdmin;
+      const now = new Date();
 
-      if (isAdminUser) {
-        throw new BadRequestException('admin user cannot be deleted');
-      }
-
-      const propertyWhereConditions = user.organization?.id
-        ? { user_id: id, organization_id: user.organization.id }
-        : { user_id: id };
-
-      const assignedPropertiesCount = await propertyRepository.count({
-        where: propertyWhereConditions,
-      });
-
-      if (assignedPropertiesCount > 0) {
-        if (!organizationAdminId) {
-          throw new BadRequestException('No se pudieron reasignar las propiedades porque la organización no tiene admin_user');
+      // si el user es admin de la inmo o el user no tiene inmo entonces estamos dando de baja la cuenta, osea todo lo que tiene
+      // si no es el caso, entonces estamos borrando a un user colaborador o supervisor de una inmobiliaria, asique vamos a tomar sus propiedades y asignarlas al admin de la inmo
+      if (user.role_id === UserRole.USER_ROL_ADMIN || !user.organization_id) {
+        if (user.organization_id) {
+          // dar de baja todos los usuarios y branches que compartan la misma organization id
+          await userRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
+          await branchRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
         }
 
-        await propertyRepository.update(propertyWhereConditions, {
-          user_id: organizationAdminId,
-        });
+        await propertyRepository.update({ user_id: id, deleted: false }, { deleted: true, deleted_at: now });
+      } else if (user.role_id === UserRole.USER_ROL_COLLABORATOR || user.role_id === UserRole.USER_ROL_SUPERVISOR) {
+        const organizationAdminId = user.organization?.admin_user?.id;
+
+        if (organizationAdminId) {
+          const assignedPropertiesCount = await propertyRepository.count({
+            where: { user_id: id, organization_id: user.organization_id },
+          });
+
+          if (assignedPropertiesCount > 0) {
+            await propertyRepository.update({ user_id: id, organization_id: user.organization_id }, {
+              user_id: organizationAdminId,
+            });
+          }
+        }
       }
 
-      const result = await userRepository.delete(id);
-      if (result.affected === 0) {
-        throw new NotFoundException('User not found');
-      }
+      
     });
   }
 

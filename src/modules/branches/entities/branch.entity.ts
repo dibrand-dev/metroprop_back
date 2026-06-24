@@ -93,6 +93,9 @@ export class Branch {
   @Column({ type: 'varchar', length: 255, nullable: true })
   external_reference?: string;
 
+  @Column({ type: 'integer', nullable: true })
+  organization_id?: number;
+
   // Relaciones
   @ManyToOne(() => Organization, (org) => org.branches, { 
     onDelete: 'CASCADE',
