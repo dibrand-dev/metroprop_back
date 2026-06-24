@@ -488,9 +488,10 @@ export class EmailService {
     };
 
     const cardHtmlArray = properties.map((p) => {
-      const imageHtml = p.firstImageUrl
-        ? `<img src="${this.resolveS3ImageUrl(p.firstImageUrl)}" alt="${p.publication_title}" width="200" style="display:block;width:200px;height:100%;min-height:190px;object-fit:cover;">`
-        : `<div style="width:200px;height:190px;background-color:#e9ecef;"></div>`;
+      const imageSrc = p.firstImageUrl
+        ? this.resolveS3ImageUrl(p.firstImageUrl)
+        : `${frontendUrl}/images/property-noimage.jpg`;
+      const imageHtml = `<img src="${imageSrc}" alt="${p.publication_title}" width="200" style="display:block;width:200px;height:100%;min-height:190px;object-fit:cover;">`;
 
       const addressLine = [p.street, p.number].filter(Boolean).join(' ');
       const opLabel = OPERATION_TYPE_LABELS[p.operation_type as OperationType] ;
