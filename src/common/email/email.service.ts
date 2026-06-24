@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import sgMail from '@sendgrid/mail';
-import { API_BASE_URL, PASSWORD_DEFAULT } from '../constants';
-import { OperationType } from '../enums';
+import { API_BASE_URL, OPERATION_TYPE_LABELS, PASSWORD_DEFAULT, PROPERTY_TYPE_LABELS } from '../constants';
+import { OperationType, PropertyType } from '../enums';
 
 export interface EmailOptions {
   to: string;
@@ -88,6 +88,34 @@ export class EmailService {
         throw new Error(`Email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
       }
     }
+  }
+
+  /**
+   * Convierte URLs virtual-hosted de S3 (bucket.s3.region.amazonaws.com) a
+   * path-style (s3.region.amazonaws.com/bucket). Cuando el bucket contiene
+   * puntos (ej: "www.metroprop.co"), el certificado wildcard de S3
+   * (*.s3.region.amazonaws.com) no valida y los proxys de imágenes de los
+   * clientes de correo (Gmail) no pueden descargar la imagen.
+   */
+  toPathStyleS3(url: string): string {
+    const match = url.match(
+      /^https?:\/\/([^/]+)\.s3\.([^.]+)\.amazonaws\.com\/(.+)$/i,
+    );
+    if (!match) return url;
+    const [, bucket, region, key] = match;
+    return `https://s3.${region}.amazonaws.com/${bucket}/${key}`;
+  }
+
+  /**
+   * Resuelve una imagen de S3 a una URL utilizable en emails: si recibe una
+   * key relativa la antepone con el bucket configurado, y siempre normaliza la
+   * URL a path-style para evitar fallos de certificado SSL.
+   */
+  resolveS3ImageUrl(raw: string): string {
+    const full = raw.startsWith('http')
+      ? raw
+      : `${this.configService.get('AWS_S3_BUCKET_URL')}/${raw}`;
+    return this.toPathStyleS3(full);
   }
 
   async sendWelcomeEmail(to: string, name: string, verificationToken: string): Promise<void> {
@@ -441,6 +469,7 @@ export class EmailService {
       street?: string;
       number?: string;
       operation_type: number;
+      property_type: number;
       price: number;
       currency: string;
       total_surface?: number;
@@ -453,13 +482,6 @@ export class EmailService {
   ): Promise<void> {
     const frontendUrl = this.configService.get('FRONTEND_URL', 'https://metroprop.co');
 
-    const operationLabel = (type: number) => {
-      if (type === OperationType.VENTA) return 'Venta';
-      if (type === OperationType.ALQUILER) return 'Alquiler';
-      if (type === OperationType.ALQUILER_TEMPORAL) return 'Alquiler Temporal';
-      return '';
-    };
-
     const formatPrice = (price: number, currency: string) => {
       const formatted = new Intl.NumberFormat('es-AR').format(price);
       return `${currency} ${formatted}`;
@@ -467,14 +489,15 @@ export class EmailService {
 
     const cardHtmlArray = properties.map((p) => {
       const imageHtml = p.firstImageUrl
-        ? `<img src="${p.firstImageUrl.startsWith('http') ? p.firstImageUrl : `${this.configService.get('AWS_S3_BUCKET_URL')}/${p.firstImageUrl}`}" alt="${p.publication_title}" width="100%" style="display:block; border-radius:8px 8px 0 0; max-height:200px; object-fit:cover;">`
-        : `<div style="width:100%;height:160px;background-color:#e9ecef;border-radius:8px 8px 0 0;"></div>`;
+        ? `<img src="${this.resolveS3ImageUrl(p.firstImageUrl)}" alt="${p.publication_title}" width="200" style="display:block;width:200px;height:100%;min-height:190px;object-fit:cover;">`
+        : `<div style="width:200px;height:190px;background-color:#e9ecef;"></div>`;
 
       const addressLine = [p.street, p.number].filter(Boolean).join(' ');
-      const opLabel = operationLabel(p.operation_type);
+      const opLabel = OPERATION_TYPE_LABELS[p.operation_type as OperationType] ;
+      const propertyType = PROPERTY_TYPE_LABELS[p.property_type as PropertyType] ;
       const priceLine = formatPrice(p.price, p.currency);
       const priceM2 = p.price_square_meter
-        ? `<span style="font-size:12px;color:#888;"> · ${formatPrice(p.price_square_meter, p.currency)}/m²</span>`
+        ? `<span style="font-size:13px;color:#999;font-weight:600;">&nbsp;|&nbsp;${formatPrice(p.price_square_meter, p.currency)} m²</span>`
         : '';
       const specs = [
         p.total_surface ? `${p.total_surface} m² tot.` : null,
@@ -482,19 +505,20 @@ export class EmailService {
         p.bathroom_amount ? `${p.bathroom_amount} baños` : null,
       ]
         .filter(Boolean)
-        .join('&nbsp;&nbsp;·&nbsp;&nbsp;');
+        .join('&nbsp;&nbsp;');
 
       return `
-        <table width="280" cellpadding="0" cellspacing="0" border="0" style="border-radius:8px;overflow:hidden;border:1px solid #e0e0e0;display:inline-table;vertical-align:top;margin:8px;">
-          <tr><td>${imageHtml}</td></tr>
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="border:1px solid #e0e0e0;border-radius:10px;overflow:hidden;margin:0 0 16px 0;">
           <tr>
-            <td style="padding:14px;">
-              <p style="margin:0 0 4px 0;font-size:12px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">${opLabel}</p>
-              <p style="margin:0 0 6px 0;font-size:14px;color:#333;font-weight:600;line-height:1.3;">${p.publication_title}</p>
-              <p style="margin:0 0 8px 0;font-size:20px;font-weight:800;color:#1a1a1a;">${priceLine}${priceM2}</p>
-              ${addressLine ? `<p style="margin:0 0 6px 0;font-size:13px;color:#555;">${addressLine}</p>` : ''}
-              ${specs ? `<p style="margin:0 0 12px 0;font-size:13px;color:#555;">${specs}</p>` : ''}
-              <a href="${frontendUrl}/propertyDetail/${p.id}" style="display:inline-block;background-color:#007bff;color:#fff;text-decoration:none;padding:8px 20px;border-radius:4px;font-size:13px;font-weight:bold;">
+            <td width="200" valign="top" style="width:200px;padding:0;font-size:0;line-height:0;">${imageHtml}</td>
+            <td valign="top" style="padding:16px 18px;">
+              <p style="margin:0 0 8px 0;font-size:13px;color:#333;font-weight:600;">${opLabel} - ${propertyType}</p>
+              <p style="margin:0 0 4px 0;font-size:19px;font-weight:800;color:#1a1a1a;line-height:1.2;">${priceLine}${priceM2}</p>
+              <hr style="border:none;border-top:1px solid #ececec;margin:12px 0;">
+              ${addressLine ? `<p style="margin:0 0 6px 0;font-size:14px;color:#333;font-weight:600;">${addressLine}</p>` : ''}
+              ${specs ? `<p style="margin:0 0 6px 0;font-size:13px;color:#555;">${specs}</p>` : ''}
+              <p style="margin:0 0 14px 0;font-size:13px;color:#777;line-height:1.4;">${p.publication_title}</p>
+              <a href="${frontendUrl}/propertyDetail/${p.id}" style="display:block;text-align:center;background-color:#3b5bfd;color:#fff;text-decoration:none;padding:11px 20px;border-radius:6px;font-size:14px;font-weight:bold;">
                 Ver propiedad
               </a>
             </td>
@@ -511,70 +535,68 @@ export class EmailService {
         <meta charset="UTF-8">
         <title>Nuevas propiedades para vos</title>
       </head>
-      <body style="margin:0; padding:0; font-family: Arial, sans-serif; background-color:#f5f5f5;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:20px 0;">
+      <body style="margin:0; padding:0; font-family: Arial, Helvetica, sans-serif; background-color:#2b2b2b;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="padding:24px 0; background-color:#2b2b2b;">
           <tr>
             <td align="center">
-              <table width="620" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:8px; overflow:hidden;">
+              <table width="600" cellpadding="0" cellspacing="0" border="0" style="background-color:#ffffff; border-radius:10px; overflow:hidden;">
 
                 <!-- Header -->
                 <tr>
-                  <td align="center" style="padding:24px 20px; background-color:#F5F5F5;">
-                    <img src="${frontendUrl}/images/metroprop.png" alt="Metroprop Logo" width="150" style="display:block;">
+                  <td align="center" style="padding:22px 20px; background-color:#ffffff;">
+                    <img src="${frontendUrl}/images/metroprop.png" alt="Metroprop Logo" width="170" style="display:block;">
                   </td>
                 </tr>
 
                 <!-- Saludo -->
                 <tr>
-                  <td style="padding:32px 32px 16px 32px; color:#333333; font-size:16px; line-height:1.6;">
-                    <p style="margin:0 0 12px 0; font-size:24px; font-weight:800; color:#1a1a1a;">
-                      ¡Hola, ${userName}!
+                  <td align="center" style="padding:24px 32px 8px 32px; color:#333333;">
+                    <p style="margin:0 0 10px 0; font-size:24px; font-weight:800; color:#1a1a1a;">
+                      ¡Hola ${userName}!
                     </p>
-                    <p style="margin:0 0 8px 0; font-size:16px; color:#555;">
-                      Encontramos nuevas propiedades que podrían interesarte según tu alerta
-                      <strong>"${alertTitle}"</strong>.
+                    <p style="margin:0; font-size:15px; color:#555;">
+                      Se publicaron nuevas propiedades que coinciden con tu alerta:
                     </p>
-                    <p style="margin:0 0 24px 0; font-size:15px; color:#777;">
-                      No dejes pasar estas oportunidades, ¡el mercado se mueve rápido!
-                    </p>
+                  </td>
+                </tr>
+
+                <!-- Título de la alerta -->
+                <tr>
+                  <td style="padding:18px 28px 4px 28px;">
+                    <p style="margin:0; font-size:15px; font-weight:700; color:#3b5bfd;">${alertTitle}</p>
                   </td>
                 </tr>
 
                 <!-- Propiedades -->
                 <tr>
-                  <td style="padding:0 24px 24px 24px; text-align:center;">
+                  <td style="padding:14px 28px 8px 28px;">
                     ${propertiesGrid}
                   </td>
                 </tr>
 
                 <!-- CTA final -->
                 <tr>
-                  <td align="center" style="padding:16px 32px 32px 32px;">
-                    <a href="${frontendUrl}/results?q=${queryStringParams}" style="display:inline-block;background-color:#007bff;color:#fff;text-decoration:none;padding:14px 48px;border-radius:4px;font-size:15px;font-weight:bold;">
+                  <td align="center" style="padding:8px 32px 28px 32px;">
+                    <a href="${frontendUrl}/results?q=${queryStringParams}" style="display:inline-block;background-color:#3b5bfd;color:#fff;text-decoration:none;padding:13px 44px;border-radius:6px;font-size:15px;font-weight:bold;">
                       Ver todas las propiedades
                     </a>
                   </td>
                 </tr>
 
-                <!-- Divider -->
-                <tr>
-                  <td style="padding:0 32px;"><hr style="border:none;border-top:1px solid #e0e0e0;"></td>
-                </tr>
-
                 <!-- Footer -->
                 <tr>
-                  <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
+                  <td align="center" style="padding:24px 20px; font-size:12px; color:#777777; background-color:#f7f7f7; border-top:1px solid #ececec;">
                     <p style="margin:0 0 16px 0;">
-                      <img src="${frontendUrl}/icons/fb.png" alt="Facebook" width="20" style="vertical-align:middle; margin-right:50px;">
-                      <img src="${frontendUrl}/icons/instagram.png" alt="Instagram" width="20" style="vertical-align:middle; margin-right:50px;">
-                      <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
+                      <img src="${frontendUrl}/icons/fb.png" alt="Facebook" width="22" style="vertical-align:middle; margin:0 18px;">
+                      <img src="${frontendUrl}/icons/instagram.png" alt="Instagram" width="22" style="vertical-align:middle; margin:0 18px;">
+                      <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="22" style="vertical-align:middle; margin:0 18px;">
                     </p>
-                    <p style="margin:0 0 8px 0;">
-                      <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> |
-                      <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
+                    <p style="margin:0 0 12px 0;">
+                      <a href="https://www.metroprop.co/policy" style="color:#777777; text-decoration:none;">Políticas de privacidad</a>&nbsp;|&nbsp;
+                      <a href="https://www.metroprop.co/terms" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
                     </p>
-                    <p style="margin:12px 0 0 0; text-align:left; font-size:11px; color:#aaa;">
-                      Recibís este e-mail porque tenés una alerta de búsqueda activa en Metroprop.<br>
+                    <p style="margin:0; font-size:11px; color:#aaa; line-height:1.5;">
+                      Recibís este e-mail porque tenés una alerta de búsqueda activa en Metroprop.
                       Si ya no deseás recibirlos, podés desactivar tu alerta desde tu cuenta.
                     </p>
                   </td>

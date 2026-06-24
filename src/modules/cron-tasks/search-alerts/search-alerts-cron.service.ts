@@ -131,6 +131,7 @@ export class SearchAlertsCronService {
       publication_title: p.publication_title,
       street: p.street,
       number: p.number,
+      property_type: p.property_type as number,
       operation_type: p.operation_type as number,
       price: Number(p.price),
       currency: p.currency,

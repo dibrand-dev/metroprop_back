@@ -1,8 +1,52 @@
-import { PropertyType, PropertySubtype } from './enums';
+import { PropertyType, PropertySubtype, OperationType } from './enums';
 
 
 export const PASSWORD_DEFAULT = 'demo'; // Contraseña por defecto para usuarios creados desde registro profesional. Cambiar a algo más seguro en producción.
 
+export const PROPERTY_TYPE_LABELS = {
+  [PropertyType.CASA]: 'Casa',
+  [PropertyType.DEPARTAMENTO]: 'Departamento',
+  [PropertyType.TERRENO]: 'Terreno',
+  [PropertyType.PH]: 'PH',
+  [PropertyType.GALPON_BODEGA]: 'Galpón / Bodega',
+  [PropertyType.BOVEDA_NICHO_PARCELA]: 'Bóveda / Nicho / Parcela',
+  [PropertyType.CAMA_NAUTICA]: 'Cama náutica',
+  [PropertyType.CAMPO]: 'Campo',
+  [PropertyType.CONSULTORIO]: 'Consultorio',
+  [PropertyType.DEPOSITO]: 'Depósito',
+  [PropertyType.EDIFICIO]: 'Edificio',
+  [PropertyType.FONDO_DE_COMERCIO]: 'Fondo de comercio',
+  [PropertyType.GARAGE]: 'Garage',
+  [PropertyType.HOTEL]: 'Hotel',
+  [PropertyType.LOCAL_COMERCIAL]: 'Local comercial',
+  [PropertyType.OFICINA_COMERCIAL]: 'Oficina comercial',
+  [PropertyType.QUINTA_VACACIONAL]: 'Quinta vacacional',
+  [PropertyType.EMPRENDIMIENTO]: 'Emprendimiento',
+};
+
+export const PROPERTY_SUBTYPE_LABELS = {
+  [PropertySubtype.BUNGALOW]: 'Bungalow',
+  [PropertySubtype.CABANA]: 'Cabaña',
+  [PropertySubtype.CHALET]: 'Chalet',
+  [PropertySubtype.CONDOMINIO]: 'Condominio',
+  [PropertySubtype.DUPLEX]: 'Duplex',
+  [PropertySubtype.TRIPLEX]: 'Triplex',
+  [PropertySubtype.CASA_DE_PLAYA]: 'Casa de playa',
+  [PropertySubtype.PH]: 'PH',
+  [PropertySubtype.PREFABRICADA]: 'Prefabricada',
+  [PropertySubtype.APARTESTUDIO]: 'Apartestudio',
+  [PropertySubtype.LOFT]: 'Loft',
+  [PropertySubtype.PENTHOUSE]: 'Penthouse',
+  [PropertySubtype.PISO]: 'Piso',
+  [PropertySubtype.SEMIPISO]: 'Semipiso',
+  [PropertySubtype.ESTANDAR]: 'Estándar',
+};
+
+export const OPERATION_TYPE_LABELS = {
+  [OperationType.VENTA]: 'Venta',
+  [OperationType.ALQUILER]: 'Alquiler',
+  [OperationType.ALQUILER_TEMPORAL]: 'Alquiler temporal',
+};
 /**
  * Mapa de subtipos válidos por tipo de propiedad.
  * Los tipos sin subtipos no aparecen en el mapa (o tienen array vacío).

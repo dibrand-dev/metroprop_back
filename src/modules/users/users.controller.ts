@@ -159,7 +159,6 @@ export class UsersController {
       }
     }
 
-
     await this.usersService.remove(id);
     return { success: true, message: 'Usuario eliminado correctamente.' };
   }
