@@ -307,21 +307,21 @@ export class LeadsService {
       where: { id: lead.property_id },
       select: ['id', 'reference_code', 'publication_id', 'user_id', 'organization_id', 'publication_title'],
     });
-
+ 
     if (!property) return;
-
-    const organization = await this.organizationRepository.findOne({
-      where: { id: property.organization_id },
-      select: ['id', 'source_partner_id', 'company_name', 'tokko_key'],
-    });
-
-    if (!organization) return;
-
+    let organization: any;
+    if(property.organization_id !== null && property.organization_id !== undefined) {
+      organization = await this.organizationRepository.findOne({
+        where: { id: property.organization_id },
+        select: ['id', 'source_partner_id', 'company_name', 'tokko_key'],
+      });
+    }
+  
     const message = lead.message ?? '';
     const contactCountryCode = lead.country_code;
     const contactPhone = lead.phone;
     let partner: any;
-    if (organization.source_partner_id) {
+    if (organization && organization.source_partner_id !== null && organization.source_partner_id !== undefined) {
       partner = await this.partnerRepository.findOne({
         where: { id: organization.source_partner_id },
         select: ['id', 'name'],
@@ -357,7 +357,7 @@ export class LeadsService {
         return;
       }
     }
-
+    
     if (!property.user_id) return;
 
     const assignedUser = await this.userRepository.findOne({

@@ -673,15 +673,15 @@ export class EmailService {
               </tr>
               <tr>
                 <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
-                  <p style="margin:0; font-size:26px; font-weight:800;text-align:center;">¡Nueva consulta!</p>
-                  <p style="margin:30px 0 0 16px;">Un usuario se interesó en una de tus propiedades publicadas.</p>
-                  
-                  <ul style="list-style:none; padding: 15px 15px 15px 0;  background-color:#ffffff; margin:10px 10px 10px 0;border-radius: 8px;border:1px solid #006AFF;">
-                    <li style="margin-bottom: 8px;">Propiedad: <strong>${propertyLabel}</strong></li>
-                    <li style="margin-bottom: 8px;">Zona: ${propertyZone}</li>
-                    <li style="margin-bottom: 8px;">Interesado: ${lead.name}</li>                    
-                    <li style="margin-bottom: 8px;">Contacto: ${lead.phone ? `${lead.phone}` : ''} / ${lead.email ? `${lead.email}` : ''}</li>
-                    <li style="margin-bottom: 8px;">Mensaje: ${message}</li>
+                  <p style="margin:0; font-size:26px; font-weight:800;text-align:center;color:#0B1B57;">¡Nueva consulta!</p>
+                  <p style="margin:28px 0 24px 0;">Un usuario se interesó en una de tus propiedades publicadas.</p>
+
+                  <ul style="list-style:none; padding: 24px 28px; background-color:#ffffff; margin:0;border-radius: 8px;border:1px solid #006AFF;">
+                    <li style="margin-bottom: 24px;">Propiedad : <strong>${propertyLabel}</strong></li>
+                    <li style="margin-bottom: 24px;">Zona : ${propertyZone}</li>
+                    <li style="margin-bottom: 24px;">Interesado: ${lead.name}</li>
+                    <li style="margin-bottom: 24px;">Contacto: ${lead.phone ? `${lead.phone}` : ''} / ${lead.email ? `${lead.email}` : ''}</li>
+                    <li style="margin-bottom: 0;">Mensaje: ${message}</li>
                   </ul>
                   <div style="text-align:center; margin-top:30px;">
                     <a href="${contactsUrl}" style="background-color:#007bff;color:#fff;text-decoration:none;padding:12px 28px;border-radius:4px;font-weight:bold;display:inline-block;">
@@ -691,20 +691,29 @@ export class EmailService {
                 </td>
               </tr>
               <tr>
-                <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
-                  <p style="margin:0 0 16px;">${partnerName ? `Este contacto también se envió a tu CRM ${partnerName}.` : ''}</p>
+                <td style="padding:24px 30px 30px;color:#333;font-size:16px;line-height:1.6;">
+                  ${partnerName ? `<p style="margin:0 0 24px;text-align:center;">Este contacto también se envió a tu CRM ${partnerName}.</p>` : ''}
+                  <p style="margin:0;font-weight:bold;text-align:center;">Equipo Metroprop</p>
                 </td>
               </tr>
               <tr>
-                <td style="padding:30px;color:#333;font-size:16px;line-height:1.6;">
-                  <p style="margin:0 0 16px;font-weight:bold;text-align:center;">Equipo Metroprop</p>
+                <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5; border-top:1px solid #E5E5E5;">
+                  <p style="margin:0 0 16px 0;">
+                    <img src="${frontendUrl}/icons/fb.png" alt="Facebook" width="20" style="vertical-align:middle; margin-right:50px;">
+                    <img src="${frontendUrl}/icons/instagram.png" alt="Instagram" width="20" style="vertical-align:middle; margin-right:50px;">
+                    <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
+                  </p>
+                  <p style="margin:0 0 16px 0;">
+                    <a href="#" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
+                    <a href="#" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
+                  </p>
+                  <p style="margin:0; text-align:center; font-size:11px; color:#aaa; line-height:1.5;">
+                    Recibís este e-mail porque sos usuario registrado en Metroprop al amparo de nuestra Política de Privacidad.<br>
+                    Este e-mail se ha enviado desde Metroprop.
+                  </p>
                 </td>
               </tr>
-              <tr>
-                <td align="center" style="padding:16px;font-size:12px;color:#999;background:#f7f7f7;">
-                  Metroprop &mdash; <a href="${frontendUrl}" style="color:#007bff;text-decoration:none;">metroprop.co</a>
-                </td>
-              </tr>
+
             </table>
           </td></tr>
         </table>
