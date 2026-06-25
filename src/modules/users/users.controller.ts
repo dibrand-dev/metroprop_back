@@ -137,17 +137,19 @@ export class UsersController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @UseGuards(UserOwnershipGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR, UserRole.USER_ROL_COLLABORATOR)
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { password?: string },
     @Req() req: any,
   ) {
     const requester = req.user;
-
+    console.log('Requester:', requester);
+    console.log('Target user ID to delete:', id);
+    console.log('Request body:', body);
     // si el requ rol es admin , super admin .. o no tiene una organization id entonces tiene que traer un password y corroborar sino tira error
     if (requester.role_id === UserRole.USER_ROL_ADMIN || requester.role_id === UserRole.USER_ROL_SUPER_ADMIN || !requester.organization_id) {
-      if (!body?.password) {
+      if (requester.id == id && !body?.password) {
         throw new ForbiddenException('No tienes permisos para eliminar este usuario.');
       }
       const validatedUser = await this.usersService.searchUserByCondition(
@@ -159,7 +161,7 @@ export class UsersController {
       }
     }
 
-    await this.usersService.remove(id);
+    await this.usersService.remove(id, body?.password ? true : false);
     return { success: true, message: 'Usuario eliminado correctamente.' };
   }
 
@@ -290,7 +292,7 @@ export class UsersController {
     
     return this.usersService.updatePassword(targetUserId, body.newPassword, requester.id);
   }
-
+/*
   @Post('close-account')
   @HttpCode(HttpStatus.OK)
   async closeAccount(
@@ -318,7 +320,7 @@ export class UsersController {
       };
     }
   }
-  
+  */
   @Post(':id/disable')
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)

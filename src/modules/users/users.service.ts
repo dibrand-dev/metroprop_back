@@ -227,7 +227,7 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async remove(id: number): Promise<void> {
+  async remove(id: number, deleteOwnAccount: boolean): Promise<void> {
     await this.usersRepository.manager.transaction(async (manager) => {
       const userRepository = manager.getRepository(User);
       const propertyRepository = manager.getRepository(Property);
@@ -241,22 +241,24 @@ export class UsersService {
       if (!user) {
         throw new NotFoundException('User not found');
       }
-
+      console.log('Deleting user:', user);
       const now = new Date();
 
       // si el user es admin de la inmo o el user no tiene inmo entonces estamos dando de baja la cuenta, osea todo lo que tiene
       // si no es el caso, entonces estamos borrando a un user colaborador o supervisor de una inmobiliaria, asique vamos a tomar sus propiedades y asignarlas al admin de la inmo
-      if (user.role_id === UserRole.USER_ROL_ADMIN || !user.organization_id) {
+      if (deleteOwnAccount) {
+        console.log('User deleting own account.');
         if (user.organization_id) {
+          console.log('Deleting all users and branches associated with organization_id:', user.organization_id);
           // dar de baja todos los usuarios y branches que compartan la misma organization id
           await userRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
           await branchRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
         }
 
         await propertyRepository.update({ user_id: id, deleted: false }, { deleted: true, deleted_at: now });
-      } else if (user.role_id === UserRole.USER_ROL_COLLABORATOR || user.role_id === UserRole.USER_ROL_SUPERVISOR) {
-        const organizationAdminId = user.organization?.admin_user?.id;
+      } else {
 
+        const organizationAdminId = user.organization?.admin_user?.id;
         if (organizationAdminId) {
           const assignedPropertiesCount = await propertyRepository.count({
             where: { user_id: id, organization_id: user.organization_id },
@@ -268,9 +270,9 @@ export class UsersService {
             });
           }
         }
-      }
+      } 
 
-      
+      return await userRepository.update({ id }, { deleted: true, deleted_at: now });
     });
   }
 
