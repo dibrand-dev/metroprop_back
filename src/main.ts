@@ -28,7 +28,7 @@ async function bootstrap() {
   app.useGlobalFilters(new AllExceptionsFilter());
 
   // CORS Configuration
-  const port = configService.get<number>('PORT', 3000);
+  const port = configService.get<number>('PORT', 3000); 
   // The server's own origin is always allowed (covers Swagger UI at same host:port)
   const serverOrigin = `http://localhost:${port}`;
   const rawOrigins = process.env.CORS_ORIGIN || serverOrigin;
