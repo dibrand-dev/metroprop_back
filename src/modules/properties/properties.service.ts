@@ -191,13 +191,12 @@ export class PropertiesService {
       throw new NotFoundException(`Emprendimiento con ID ${developmentId} no encontrado`);
     }
 
-    if(parentDev?.price == null || parentDev?.price > dto.price) { 
+    if(parentDev?.price == 0 || parentDev?.price > dto.price) { 
       parentDev.price = dto.price; // seteamos el menor precio de unidad al emprenidmiento para que tenga un valor minimo
       parentDev.price_square_meter = dto.price_square_meter;
       parentDev.currency = dto.currency != null ? dto.currency as Currency : Currency.USD;
       await this.propertyRepository.save(parentDev);
     }
-    
 
     const { tags, images, videos, multimedia360, attached, is_development, development_id, ...propertyData } = dto as any;
 
@@ -223,6 +222,7 @@ export class PropertiesService {
     );
 
     const result = await this.findOne(savedProperty.id!);
+
     return warnings.length > 0
       ? { data: result, created: true, warnings }
       : { data: result, created: true };
@@ -283,6 +283,7 @@ export class PropertiesService {
       );
     }
 
+
     const { tags, images, videos, multimedia360, attached, is_development, development_id, ...propertyData } = dto as any;
 
     const { warnings } = await this.propertyWriteService.updatePropertyCore(
@@ -292,6 +293,20 @@ export class PropertiesService {
     );
 
     const result = await this.findOne(unitId);
+
+    
+    const parentDev = await this.propertyRepository.findOne({
+        where: { id: developmentId, is_development: true, deleted: false },
+    });
+    // Seteamso el menor precio al emprendimiento para que tenga un valor minimo, si es que la unidad tiene un precio menor al del emprendimiento
+    if(parentDev && (parentDev?.price == 0 || parentDev?.price > result.price)) { 
+      parentDev.price = result.price; // seteamos el menor precio de unidad al emprenidmiento para que tenga un valor minimo
+      parentDev.price_square_meter = result.price_square_meter;
+      parentDev.currency = result.currency != null ? result.currency as Currency : Currency.USD;
+      await this.propertyRepository.save(parentDev);
+    }
+    
+
     return warnings.length > 0 ? { data: result, warnings } : { data: result };
   }
 
