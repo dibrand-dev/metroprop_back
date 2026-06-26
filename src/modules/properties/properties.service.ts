@@ -186,9 +186,18 @@ export class PropertiesService {
     const parentDev = await this.propertyRepository.findOne({
       where: { id: developmentId, is_development: true, deleted: false },
     });
+
     if (!parentDev) {
       throw new NotFoundException(`Emprendimiento con ID ${developmentId} no encontrado`);
     }
+
+    if(parentDev?.price == null || parentDev?.price > dto.price) { 
+      parentDev.price = dto.price; // seteamos el menor precio de unidad al emprenidmiento para que tenga un valor minimo
+      parentDev.price_square_meter = dto.price_square_meter;
+      parentDev.currency = dto.currency != null ? dto.currency as Currency : Currency.USD;
+      await this.propertyRepository.save(parentDev);
+    }
+    
 
     const { tags, images, videos, multimedia360, attached, is_development, development_id, ...propertyData } = dto as any;
 

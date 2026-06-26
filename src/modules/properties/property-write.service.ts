@@ -53,12 +53,14 @@ export class PropertyWriteService {
     const { organizationId, branchId, userId, tags, videos, multimedia360, images, attached } = context;
     const warnings: string[] = [];
 
+    /*
     console.log('[createPropertyCore] INICIO', JSON.stringify({ scalars, organizationId, branchId, userId }, null, 2));
     if (images) console.log('[createPropertyCore] images:', JSON.stringify(images, null, 2));
     if (attached) console.log('[createPropertyCore] attached:', JSON.stringify(attached, null, 2));
     if (tags) console.log('[createPropertyCore] tags:', JSON.stringify(tags, null, 2));
     if (videos) console.log('[createPropertyCore] videos:', JSON.stringify(videos, null, 2));
     if (multimedia360) console.log('[createPropertyCore] multimedia360:', JSON.stringify(multimedia360, null, 2));
+    */
     let savedProperty: Property | undefined;
     try {
       // Calcular y asignar price_square_meter usando la función unificada
@@ -69,17 +71,17 @@ export class PropertyWriteService {
         ...(branchId !== undefined ? { branch_id: branchId } : {}),
         ...(userId !== undefined ? { user_id: userId } : {})
       });
-      console.log('[createPropertyCore] newProperty:', JSON.stringify(newProperty, null, 2));
+    //  console.log('[createPropertyCore] newProperty:', JSON.stringify(newProperty, null, 2));
       const saved = (await this.propertyRepo.save(newProperty)) as unknown as Property;
-      console.log('[createPropertyCore] savedProperty:', JSON.stringify(saved, null, 2));
+    //  console.log('[createPropertyCore] savedProperty:', JSON.stringify(saved, null, 2));
       if (!saved?.id) {
-        console.error('[createPropertyCore] ERROR: savedProperty.id es undefined/null');
+     //   console.error('[createPropertyCore] ERROR: savedProperty.id es undefined/null');
         throw new Error('No se pudo guardar la propiedad, id indefinido');
       }
       // Buscar la entidad completa desde la base de datos (con relaciones si es necesario)
       const found = await this.propertyRepo.findOne({ where: { id: saved.id } });
       savedProperty = found === null ? undefined : found;
-      console.log('[createPropertyCore] savedProperty (from DB):', JSON.stringify(savedProperty, null, 2));
+     // console.log('[createPropertyCore] savedProperty (from DB):', JSON.stringify(savedProperty, null, 2));
     } catch (err) {
       console.error('[createPropertyCore] ERROR al guardar propiedad:', err);
       throw err;
