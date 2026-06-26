@@ -1944,38 +1944,63 @@ export class PropertiesService {
       qb.andWhere('p.status = :status', { status: PropertyStatus.DISPONIBLE });
     }
 
-    if (filters.country_id != null) {
-      qb.andWhere('p.country_id = :country_id', {
-        country_id: filters.country_id,
-      });
-    }
+    if(filters.polygon || (filters.southWestLat != null && filters.southWestLng != null && filters.northEastLat != null && filters.northEastLng != null)) {
+      if (filters.polygon) {
+        const polygonPoints = this.parsePolygon(filters.polygon);
+        this.applyPolygonFilter(qb, polygonPoints);
+      } else if (
+        filters.southWestLat != null && filters.southWestLng != null &&
+        filters.northEastLat != null && filters.northEastLng != null
+      ) {
+        // Parsear strings a números
+        const swLat = parseFloat(filters.southWestLat);
+        const swLng = parseFloat(filters.southWestLng);
+        const neLat = parseFloat(filters.northEastLat);
+        const neLng = parseFloat(filters.northEastLng);
+        if ([swLat, swLng, neLat, neLng].some(v => isNaN(v))) {
+          throw new BadRequestException('Las coordenadas del bounding box deben ser números válidos');
+        }
+        const minLat = Math.min(swLat, neLat);
+        const maxLat = Math.max(swLat, neLat);
+        const minLng = Math.min(swLng, neLng);
+        const maxLng = Math.max(swLng, neLng);
+        qb.andWhere('p.geo_lat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
+        qb.andWhere('p.geo_long BETWEEN :minLng AND :maxLng', { minLng, maxLng });
+      }
+    } else {
+      if (filters.country_id != null) {
+        qb.andWhere('p.country_id = :country_id', {
+          country_id: filters.country_id,
+        });
+      }
 
-    if (filters.state_id != null) {
-      qb.andWhere('p.state_id = :state_id', { state_id: filters.state_id });
-    }
+      if (filters.state_id != null) {
+        qb.andWhere('p.state_id = :state_id', { state_id: filters.state_id });
+      }
 
-    if (filters.location_id != null) {
-      qb.andWhere('p.location_id = :location_id', {
-        location_id: filters.location_id,
-      });
-    }
+      if (filters.location_id != null) {
+        qb.andWhere('p.location_id = :location_id', {
+          location_id: filters.location_id,
+        });
+      }
 
-    if (filters.sub_location_id != null) {
-      qb.andWhere('p.sub_location_id = :sub_location_id', {
-        sub_location_id: filters.sub_location_id,
-      });
-    }
+      if (filters.sub_location_id != null) {
+        qb.andWhere('p.sub_location_id = :sub_location_id', {
+          sub_location_id: filters.sub_location_id,
+        });
+      }
 
-    if (filters.neighborhood_id != null) {
-      qb.andWhere('p.neighborhood_id = :neighborhood_id', {
-        neighborhood_id: filters.neighborhood_id,
-      });
-    }
+      if (filters.neighborhood_id != null) {
+        qb.andWhere('p.neighborhood_id = :neighborhood_id', {
+          neighborhood_id: filters.neighborhood_id,
+        });
+      }
 
-    if (filters.sub_neighborhood_id != null) {
-      qb.andWhere('p.sub_neighborhood_id = :sub_neighborhood_id', {
-        sub_neighborhood_id: filters.sub_neighborhood_id,
-      });
+      if (filters.sub_neighborhood_id != null) {
+        qb.andWhere('p.sub_neighborhood_id = :sub_neighborhood_id', {
+          sub_neighborhood_id: filters.sub_neighborhood_id,
+        });
+      }
     }
 
     if (Array.isArray(filters.property_type) && filters.property_type.length > 0) {
@@ -2110,28 +2135,7 @@ export class PropertiesService {
       }
     }
 
-    if (filters.polygon) {
-      const polygonPoints = this.parsePolygon(filters.polygon);
-      this.applyPolygonFilter(qb, polygonPoints);
-    } else if (
-      filters.southWestLat != null && filters.southWestLng != null &&
-      filters.northEastLat != null && filters.northEastLng != null
-    ) {
-      // Parsear strings a números
-      const swLat = parseFloat(filters.southWestLat);
-      const swLng = parseFloat(filters.southWestLng);
-      const neLat = parseFloat(filters.northEastLat);
-      const neLng = parseFloat(filters.northEastLng);
-      if ([swLat, swLng, neLat, neLng].some(v => isNaN(v))) {
-        throw new BadRequestException('Las coordenadas del bounding box deben ser números válidos');
-      }
-      const minLat = Math.min(swLat, neLat);
-      const maxLat = Math.max(swLat, neLat);
-      const minLng = Math.min(swLng, neLng);
-      const maxLng = Math.max(swLng, neLng);
-      qb.andWhere('p.geo_lat BETWEEN :minLat AND :maxLat', { minLat, maxLat });
-      qb.andWhere('p.geo_long BETWEEN :minLng AND :maxLng', { minLng, maxLng });
-    }
+   
 
 /*
     if (filters.q) {
