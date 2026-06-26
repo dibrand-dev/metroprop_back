@@ -53,8 +53,6 @@ export async function calculateSquareMetterPrice(
   const priceNum = data.price !== undefined && data.price !== null ? Number(data.price) : NaN;
   if (isNaN(priceNum) || priceNum <= 0) return undefined;
 
-  const halfPriceNum = priceNum / 2;
-
   let roofedNum = data.roofed_surface !== undefined && data.roofed_surface !== null ? Number(data.roofed_surface) : NaN;
   const semiroofedNum = data.semiroofed_surface !== undefined && data.semiroofed_surface !== null ? Number(data.semiroofed_surface) : 0;
 
@@ -67,14 +65,17 @@ export async function calculateSquareMetterPrice(
     }
   }
 
-  let roofedValue = 0;
-  if (!isNaN(roofedNum) && roofedNum > 0) {
-    roofedValue = priceNum / roofedNum;
-  }
-  let semiroofedValue = 0;
   if (!isNaN(semiroofedNum) && semiroofedNum > 0) {
-    semiroofedValue = halfPriceNum / semiroofedNum;
+    roofedNum += semiroofedNum / 2;
   }
 
-  return roofedValue + semiroofedValue;
+  let valuePerM = 0;
+  if (!isNaN(roofedNum) && roofedNum > 0) {
+
+    console.log("Calculating price per square meter: priceNum =", priceNum, ", roofedNum =", roofedNum);
+    valuePerM = priceNum / roofedNum;
+  }
+  
+
+  return valuePerM;
 }
