@@ -330,7 +330,7 @@ export class RegistrationService {
       // 3. Create Admin User
       // Check if user with this email already exists
       const existingUser = await manager.findOne(User, {
-        where: { email: adminUser.email },
+        where: { email: adminUser.email, deleted: false },
       });
 
       if (existingUser) {

@@ -15,7 +15,7 @@ import { Branch } from '../../branches/entities/branch.entity';
 import { UserRole } from '../../../common/enums';
 
 @Entity('users')
-@Index('uk_users_email', ['email'], { unique: true, where: 'email IS NOT NULL' })
+@Index('uk_users_email', ['email'], { unique: true, where: 'email IS NOT NULL AND deleted = false' })
 export class User {
   @PrimaryGeneratedColumn() // ahora integer autoincrement (serial en SQL)
   id!: number;

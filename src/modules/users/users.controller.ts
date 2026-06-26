@@ -134,24 +134,63 @@ export class UsersController {
     return this.usersService.update(id, updateUserDto);
   }
 
+  @Post('close-account')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(UserOwnershipGuard, RolesGuard)
+  @Roles(
+    UserRole.USER_ROL_ADMIN,
+    UserRole.USER_ROL_COLLABORATOR,
+  )
+  async closeAccount(
+    @Body() body: { id: number; password?: string }, // password opcional
+    @Req() req: any, // para acceder al usuario del token
+  ) {
+    // Validar que el id del token coincida con el id del body
+    const tokenUserId = req.user?.id;
+    if (tokenUserId !== body.id) {
+      throw new ForbiddenException('El ID del usuario logueado no coincide con el ID solicitado');
+    }
+
+    let user: any;
+    let filters: { id: number; password?: string } = { id: body.id };
+    if (body.password) {
+      filters.password = body.password;
+    } 
+
+    // Si viene password, se valida junto con la condición
+    user = await this.usersService.searchUserByCondition(
+      filters
+    );
+
+    if (user) {
+      await this.usersService.remove(body.id, true);
+      return {
+        success: true,
+        message: 'Cuenta eliminada exitosamente',
+      };
+    } else {
+      return {
+        success: false,
+        message: body.password
+          ? 'Contraseña incorrecta. No se pudo eliminar la cuenta.'
+          : 'No se pudo eliminar la cuenta.',
+      };
+    }
+  }
+
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @UseGuards(UserOwnershipGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_SUPERVISOR, UserRole.USER_ROL_COLLABORATOR)
+  @Roles(UserRole.USER_ROL_ADMIN, UserRole.USER_ROL_SUPER_ADMIN)
   async remove(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { password?: string },
     @Req() req: any,
   ) {
     const requester = req.user;
-    console.log('Requester:', requester);
-    console.log('Target user ID to delete:', id);
-    console.log('Request body:', body);
-    // si el requ rol es admin , super admin .. o no tiene una organization id entonces tiene que traer un password y corroborar sino tira error
-    if (requester.role_id === UserRole.USER_ROL_ADMIN || requester.role_id === UserRole.USER_ROL_SUPER_ADMIN || !requester.organization_id) {
-      if (requester.id == id && !body?.password) {
-        throw new ForbiddenException('No tienes permisos para eliminar este usuario.');
-      }
+    // si el requ rol es admin .. o no tiene una organization id entonces tiene que traer un password y corroborar sino tira error
+    if ( requester.role_id !== UserRole.USER_ROL_ADMIN && (requester.role_id === UserRole.USER_ROL_ADMIN || !requester.organization_id)) {
+   
       const validatedUser = await this.usersService.searchUserByCondition(
         { id: requester.id, deleted: false },
         body.password,
@@ -161,7 +200,8 @@ export class UsersController {
       }
     }
 
-    await this.usersService.remove(id, body?.password ? true : false);
+
+    await this.usersService.remove(id, false, requester.role_id === UserRole.USER_ROL_ADMIN);
     return { success: true, message: 'Usuario eliminado correctamente.' };
   }
 
@@ -292,35 +332,8 @@ export class UsersController {
     
     return this.usersService.updatePassword(targetUserId, body.newPassword, requester.id);
   }
-/*
-  @Post('close-account')
-  @HttpCode(HttpStatus.OK)
-  async closeAccount(
-    @Body()
-    body: {
-      id: number;
-      password: string;
-    },
-  ) {
-    const user = await this.usersService.searchUserByCondition(
-      { id: body.id, deleted: false },
-      body.password,
-    );
 
-    if (user) {
-      await this.usersService.remove(body.id);
-      return {
-        success: true,
-        message: 'Cuenta eliminada exitosamente',
-      };
-    } else {
-      return {
-        success: false,
-        message: 'Contraseña incorrecta. No se pudo eliminar la cuenta.',
-      };
-    }
-  }
-  */
+  
   @Post(':id/disable')
   @HttpCode(HttpStatus.OK)
   @UseGuards(RolesGuard)

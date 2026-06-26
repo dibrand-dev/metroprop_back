@@ -21,7 +21,7 @@ export class UsersService {
 
   async create(createUserDto: CreateUserDto): Promise<User> {
     const existingUser = await this.usersRepository.findOne({
-      where: { email: createUserDto.email },
+      where: { email: createUserDto.email, deleted: false },
     });
 
     if (existingUser) {
@@ -130,7 +130,7 @@ export class UsersService {
   async findById(id: number): Promise<User> {
 
     const user = await this.usersRepository.findOne({
-      where: { id },
+      where: { id, deleted: false },
       relations: ['organization'],
     });
 
@@ -142,7 +142,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.findOne({ where: { email, deleted: false } });
   }
 
   async searchUserByCondition(
@@ -227,28 +227,25 @@ export class UsersService {
     return this.usersRepository.save(user);
   }
 
-  async remove(id: number, deleteOwnAccount: boolean): Promise<void> {
+  async remove(id: number, deleteOwnAccount: boolean, hardDelete: boolean = false): Promise<void> {
     await this.usersRepository.manager.transaction(async (manager) => {
       const userRepository = manager.getRepository(User);
       const propertyRepository = manager.getRepository(Property);
       const branchRepository = manager.getRepository(Branch);
 
       const user = await userRepository.findOne({
-        where: { id },
+        where: { id, deleted: false },
         relations: ['organization', 'organization.admin_user'],
       });
 
       if (!user) {
         throw new NotFoundException('User not found');
       }
-      console.log('Deleting user:', user);
       const now = new Date();
 
-      // si el user es admin de la inmo o el user no tiene inmo entonces estamos dando de baja la cuenta, osea todo lo que tiene
-      // si no es el caso, entonces estamos borrando a un user colaborador o supervisor de una inmobiliaria, asique vamos a tomar sus propiedades y asignarlas al admin de la inmo
-      if (deleteOwnAccount) {
-        console.log('User deleting own account.');
-        if (user.organization_id) {
+      if (user.organization == null ||  user.organization?.admin_user?.id == user.id) {
+         
+          if (user.organization_id) {
           console.log('Deleting all users and branches associated with organization_id:', user.organization_id);
           // dar de baja todos los usuarios y branches que compartan la misma organization id
           await userRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
@@ -256,21 +253,18 @@ export class UsersService {
         }
 
         await propertyRepository.update({ user_id: id, deleted: false }, { deleted: true, deleted_at: now });
+
       } else {
+        const assignedPropertiesCount = await propertyRepository.count({
+          where: { user_id: id, organization_id: user.organization_id },
+        });
 
-        const organizationAdminId = user.organization?.admin_user?.id;
-        if (organizationAdminId) {
-          const assignedPropertiesCount = await propertyRepository.count({
-            where: { user_id: id, organization_id: user.organization_id },
+        if (assignedPropertiesCount > 0) {
+          await propertyRepository.update({ user_id: id, organization_id: user.organization_id }, {
+            user_id: user.organization.admin_user?.id
           });
-
-          if (assignedPropertiesCount > 0) {
-            await propertyRepository.update({ user_id: id, organization_id: user.organization_id }, {
-              user_id: organizationAdminId,
-            });
-          }
         }
-      } 
+      }
 
       return await userRepository.update({ id }, { deleted: true, deleted_at: now });
     });
