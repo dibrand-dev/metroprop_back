@@ -136,9 +136,10 @@ export class UsersController {
 
   @Post('close-account')
   @HttpCode(HttpStatus.OK)
-  @UseGuards(UserOwnershipGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles(
     UserRole.USER_ROL_ADMIN,
+    UserRole.USER_ROL_SUPERVISOR,
     UserRole.USER_ROL_COLLABORATOR,
   )
   async closeAccount(
