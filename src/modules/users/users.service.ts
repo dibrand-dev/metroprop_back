@@ -182,7 +182,7 @@ export class UsersService {
    */
   async findByEmailWithOrganization(email: string, safe: boolean = false): Promise<User | null> {
     const user = await this.usersRepository.findOne({
-      where: { email },
+      where: { email, deleted: false },
       relations: [
         'organization',
         'organization.branches',
