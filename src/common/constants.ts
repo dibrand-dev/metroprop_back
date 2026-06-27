@@ -1,7 +1,7 @@
 import { PropertyType, PropertySubtype, OperationType } from './enums';
 
 
-export const PASSWORD_DEFAULT = 'demo'; // Contraseña por defecto para usuarios creados desde registro profesional. Cambiar a algo más seguro en producción.
+export const PASSWORD_DEFAULT = 'metroprop2026'; // Contraseña por defecto para usuarios creados desde registro profesional. Cambiar a algo más seguro en producción.
 
 export const PROPERTY_TYPE_LABELS = {
   [PropertyType.CASA]: 'Casa',

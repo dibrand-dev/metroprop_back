@@ -760,6 +760,7 @@ export class TokkoSyncService implements OnModuleInit {
 				password: PASSWORD_DEFAULT,
 				role_id: UserRole.USER_ROL_ADMIN,
 				organizationId: savedOrg.id,
+				is_verified: true,
 			} as any);
 
 			await this.organizationRepo.update(savedOrg.id!, {
