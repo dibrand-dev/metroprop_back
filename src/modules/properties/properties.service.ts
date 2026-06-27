@@ -924,13 +924,29 @@ export class PropertiesService {
     return property;
   }
 
+  async findByTokkoPublicationId(publication_id: string): Promise<Property> {
+    const property = await this.propertyRepository.findOne({
+      where: {
+        publication_id,
+        deleted: false,
+        status: PropertyStatus.DISPONIBLE,
+      }
+    });
+
+    if (!property) {
+      throw new NotFoundException(`Propiedad con Publication ID ${publication_id} no encontrada`);
+    }
+
+    return property;
+  }
+
   async findTokkoProperty(tokko_id: string, publication_id: string): Promise<Property> {
     const property = await this.propertyRepository.findOne({
       where: {
         tokko_id,
         publication_id,
         deleted: false,
-      }      
+      }
     });
 
     if (!property) {

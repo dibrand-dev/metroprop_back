@@ -137,6 +137,9 @@ export class BranchesService {
       //  deleted: false,
       } as any,
       relations: ['organization'],
+      order: {
+        id: 'ASC',
+      },
     });
   }
 

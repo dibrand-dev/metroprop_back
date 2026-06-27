@@ -401,6 +401,15 @@ export class PropertiesController {
     return this.propertiesService.findByReferenceCode(params.reference_code);  
   }
 
+  /**
+   * GET /properties/tokko/:publication_id
+   * Obtener propiedad por publication_id de Tokko
+   */
+  @Get('tokko/:publication_id')
+  findByPublicationId(@Param() params: { publication_id: string }) {
+    return this.propertiesService.findByTokkoPublicationId(params.publication_id);  
+  }
+
   
   /**
    * POST /properties/trigger-image-upload-cron
