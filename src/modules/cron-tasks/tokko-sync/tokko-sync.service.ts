@@ -60,7 +60,7 @@ export class TokkoSyncService implements OnModuleInit {
 		if (!apiKey) {
 			this.logger.warn('[TokkoSync] TOKKO_METROPROP_API_KEY not set — skipping sync');
 			return;
-		}
+		} 
 
 		const enabled = this.configService.get<string>('FEATURE_FLAG_TOKKO_SYNC');
 		if (enabled === 'false') {
