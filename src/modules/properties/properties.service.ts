@@ -216,6 +216,8 @@ export class PropertiesService {
         sub_location_id: propertyData.sub_location_id ?? parentDev.sub_location_id,
         neighborhood_id: propertyData.neighborhood_id ?? parentDev.neighborhood_id,
         sub_neighborhood_id: propertyData.sub_neighborhood_id ?? parentDev.sub_neighborhood_id,
+        geo_lat: propertyData.geo_lat ?? parentDev.geo_lat,
+        geo_long: propertyData.geo_long ?? parentDev.geo_long,
         deleted: false,
       },
       { tags },
@@ -293,8 +295,6 @@ export class PropertiesService {
     );
 
     const result = await this.findOne(unitId);
-
-    
     const parentDev = await this.propertyRepository.findOne({
         where: { id: developmentId, is_development: true, deleted: false },
     });

@@ -382,7 +382,7 @@ export class PropertiesController {
     const hasOrgId = typeof user.organization_id === 'number' && Number.isFinite(user.organization_id);
 
     if(user.role_id !== UserRole.USER_ROL_SUPER_ADMIN) {
-      if(!hasOrgId || user.role_id === UserRole.USER_ROL_COLLABORATOR) {
+      if(!hasOrgId) {
         searchDto.user_id = user.id;
       } else {
         searchDto.organization_id = user?.organization_id ?? user?.organization?.id;
@@ -520,7 +520,15 @@ export class PropertiesController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, PropertyOwnershipGuard)
   @HttpCode(HttpStatus.NO_CONTENT)
-  remove(@Param('id', ParseIntPipe) id: number) {
+  remove(@Param('id', ParseIntPipe) id: number, @Req() request: Request) {
+
+    const user = (request as any).user;
+    const hasOrgId = typeof user.organization_id === 'number' && Number.isFinite(user.organization_id);
+
+    if(user.role_id === UserRole.USER_ROL_COLLABORATOR && hasOrgId) {
+      throw new BadRequestException('No tienes permisos para eliminar propiedades.');
+    }
+
     return this.propertiesService.remove(id);
   }
 
