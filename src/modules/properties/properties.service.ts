@@ -1937,6 +1937,12 @@ export class PropertiesService {
       return { qb, orderBy, orderDirection };
     }
 
+    if(filters.is_development != null && filters.is_development === true) {
+      qb.andWhere('p.is_development = :is_development', {
+        is_development: true,
+      });
+    }
+
     /* ############# HARDCODED ARGENTINA POR AHORA ################# */
     filters.country_id = COUNTRY_ARGENTINA_ID;
 

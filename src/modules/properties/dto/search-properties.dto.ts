@@ -264,6 +264,11 @@ export class SearchPropertiesDto {
   @IsInt({ each: true })
   tags?: number[];
 
+
+  @IsOptional()
+  @IsBoolean()
+  is_development?: boolean;
+
   // ========== Texto libre ==========
 
   @IsOptional()
