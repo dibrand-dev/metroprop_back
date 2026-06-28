@@ -174,21 +174,23 @@ export class EmailService {
                     </td>
                   </tr>
                   <!-- Footer -->
+
+                  
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
                       <p style="margin:30px;">
-                      <a href="https://www.tiktok.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://www.instagram.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://x.com/metropropco">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle;">
-                      </a>
-                      <a href="https://www.facebook.com/metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
+                        <a href="https://www.tiktok.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.instagram.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://x.com/metropropco">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.facebook.com/metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
                       </p>
                       <p style="margin:0;">
                         <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
@@ -274,18 +276,18 @@ export class EmailService {
                   <!-- Footer -->
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#ffffff;">
-                      <p style="margin:30px;">
+                     <p style="margin:30px;">
                         <a href="https://www.tiktok.com/@metroprop">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
                         </a>
                         <a href="https://www.instagram.com/@metroprop">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
                         </a>
                         <a href="https://x.com/metropropco">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
                         </a>
                         <a href="https://www.facebook.com/metroprop">
-                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
                         </a>
                       </p>
                       <p style="margin:0;">
@@ -375,19 +377,20 @@ export class EmailService {
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#ffffff;">
                       <p style="margin:30px;">
-                      <a href="https://www.tiktok.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://www.instagram.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://x.com/metropropco">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle;">
-                      </a>
-                      <a href="https://www.facebook.com/metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      </p><p style="margin:0;">
+                        <a href="https://www.tiktok.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.instagram.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://x.com/metropropco">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.facebook.com/metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                      </p>
+                      <p style="margin:0;">
                         <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
                         <a href="https://www.metroprop.co/terms" style="color:#007bff; text-decoration:none;">Términos y condiciones</a>
                       </p>
@@ -459,18 +462,18 @@ export class EmailService {
                   <tr>
                     <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5;">
                       <p style="margin:30px;">
-                      <a href="https://www.tiktok.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://www.instagram.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://x.com/metropropco">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle;">
-                      </a>
-                      <a href="https://www.facebook.com/metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
+                        <a href="https://www.tiktok.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.instagram.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://x.com/metropropco">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.facebook.com/metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
                       </p>
                       <p style="margin:0;">
                         <a href="https://www.metroprop.co/policy" style="color:#007bff; text-decoration:none;">Políticas de privacidad</a> | 
@@ -622,20 +625,20 @@ export class EmailService {
                 <!-- Footer -->
                 <tr>
                   <td align="center" style="padding:24px 20px; font-size:12px; color:#777777; background-color:#f7f7f7; border-top:1px solid #ececec;">
-                    <p style="margin:30px;">
-                      <a href="https://www.tiktok.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://www.instagram.com/@metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                      <a href="https://x.com/metropropco">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle;">
-                      </a>
-                      <a href="https://www.facebook.com/metroprop">
-                        <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:50px;">
-                      </a>
-                    </p>
+                   <p style="margin:30px;">
+                        <a href="https://www.tiktok.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.instagram.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://x.com/metropropco">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.facebook.com/metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                      </p>
                     <p style="margin:0 0 12px 0;">
                       <a href="https://www.metroprop.co/policy" style="color:#777777; text-decoration:none;">Políticas de privacidad</a>&nbsp;|&nbsp;
                       <a href="https://www.metroprop.co/terms" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
@@ -765,11 +768,20 @@ export class EmailService {
               </tr>
               <tr>
                 <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5; border-top:1px solid #E5E5E5;">
-                  <p style="margin:0 0 16px 0;">
-                    <img src="${frontendUrl}/icons/fb.png" alt="Facebook" width="20" style="vertical-align:middle; margin-right:50px;">
-                    <img src="${frontendUrl}/icons/instagram.png" alt="Instagram" width="20" style="vertical-align:middle; margin-right:50px;">
-                    <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
-                  </p>
+                 <p style="margin:30px;">
+                        <a href="https://www.tiktok.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.instagram.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://x.com/metropropco">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.facebook.com/metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                      </p>
                   <p style="margin:0 0 16px 0;">
                     <a href="https://www.metroprop.co/policy" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
                     <a href="https://www.metroprop.co/terms" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
@@ -849,11 +861,20 @@ export class EmailService {
               </tr>
               <tr>
                 <td align="center" style="padding:20px; font-size:12px; color:#777777; background-color:#F5F5F5; border-top:1px solid #E5E5E5;">
-                  <p style="margin:0 0 16px 0;">
-                    <img src="${frontendUrl}/icons/fb.png" alt="Facebook" width="20" style="vertical-align:middle; margin-right:50px;">
-                    <img src="${frontendUrl}/icons/instagram.png" alt="Instagram" width="20" style="vertical-align:middle; margin-right:50px;">
-                    <img src="${frontendUrl}/icons/youtube.png" alt="YouTube" width="20" style="vertical-align:middle;">
-                  </p>
+                 <p style="margin:30px;">
+                        <a href="https://www.tiktok.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/tiktok.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.instagram.com/@metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/instagram.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://x.com/metropropco">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/x.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                        <a href="https://www.facebook.com/metroprop">
+                          <img src="${ this.configService.get('FRONTEND_URL')}/icons/fb.png" alt="icono" width="20" style="vertical-align:middle; margin-right:20px;">
+                        </a>
+                      </p>
                   <p style="margin:0 0 16px 0;">
                     <a href="https://www.metroprop.co/policy" style="color:#777777; text-decoration:none;">Políticas de privacidad</a> |
                     <a href="https://www.metroprop.co/terms" style="color:#777777; text-decoration:none;">Términos y condiciones</a>
