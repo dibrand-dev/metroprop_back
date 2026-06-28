@@ -131,7 +131,7 @@ export class BranchesService {
   }
 
   async getByOrganization(organizationId: number) {
-    return this.repo.find({
+   /* return this.repo.find({
       where: {
         organization: { id: organizationId },
       //  deleted: false,
@@ -140,7 +140,24 @@ export class BranchesService {
       order: {
         id: 'ASC',
       },
-    });
+    }); */
+    const qb = this.repo
+    .createQueryBuilder('branch')
+    .leftJoin('branch.organization', 'organization')
+    .leftJoin('properties', 'property', 'property.branch_id = branch.id AND property.deleted = false')
+    .leftJoin('users_branches', 'ub', 'ub.branch_id = branch.id')
+    .leftJoin('users', 'user', 'user.id = ub.user_id AND user.deleted = false')
+    .where('organization.id = :organizationId', { organizationId })
+    .groupBy('branch.id')
+    .addGroupBy('organization.id')
+    .select([
+      'branch.*',
+      'organization.id AS organization_id',
+      'COUNT(DISTINCT property.id) AS properties_count',
+      'COUNT(DISTINCT user.id) AS users_count',
+    ])
+    .orderBy('branch.id', 'ASC');
+    return qb.getRawMany();
   }
 
   async uploadLogoToS3(file: Express.Multer.File, branchId: number): Promise<string | null> {
