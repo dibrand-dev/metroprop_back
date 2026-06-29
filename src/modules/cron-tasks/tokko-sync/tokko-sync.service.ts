@@ -19,6 +19,7 @@ import { MediaUploadStatus, PropertyStatus, UserRole } from '../../../common/enu
 import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
 import { PASSWORD_DEFAULT } from '@/common/constants';
 import { PropertyWriteService } from '@/modules/properties/property-write.service';
+import { EmailService } from '@/common/email/email.service';
 
 
 @Injectable()
@@ -46,6 +47,7 @@ export class TokkoSyncService implements OnModuleInit {
 		private readonly configService: ConfigService,
 		private readonly fileLogger: TokkoSyncLoggerService,
 		private readonly propertyWriteService: PropertyWriteService,
+		private readonly emailService: EmailService,  
 		
 		
 	) {}
@@ -766,6 +768,12 @@ export class TokkoSyncService implements OnModuleInit {
 			await this.organizationRepo.update(savedOrg.id!, {
 				admin_user: { id: adminUser.id } as any,
 			});
+
+			this.emailService.sendProfessionalWelcomeEmailValidated(
+				adminUser.email,
+				adminUser.name
+			);
+
 			savedOrg.admin_user = adminUser as any;
 		} catch (err) {
 			// If the email already exists, log and continue — org is still valid

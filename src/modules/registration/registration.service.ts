@@ -233,7 +233,7 @@ export class RegistrationService {
     const adminUser = {
       name: dto.admin_name,
       email: dto.admin_email,
-      password: PASSWORD_DEFAULT, // Usar "demo" como password por defecto
+      password: PASSWORD_DEFAULT, 
       phone: dto.admin_phone,
       avatar: dto.admin_avatar,
       is_verified: dto.admin_is_verified ?? false, // Por defecto no verificado a menos que se indique lo contrario

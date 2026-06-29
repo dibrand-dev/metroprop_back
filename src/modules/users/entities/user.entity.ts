@@ -122,5 +122,6 @@ export class User {
   })
   branches?: Branch[];
 
+  
 
 }
