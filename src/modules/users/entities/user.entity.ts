@@ -16,11 +16,12 @@ import { UserRole } from '../../../common/enums';
 
 @Entity('users')
 @Index('uk_users_email', ['email'], { unique: true, where: 'email IS NOT NULL AND deleted = false' })
+@Index('uk_users_google_id', ['google_id'], { unique: true, where: 'google_id IS NOT NULL AND deleted = false' })
 export class User {
   @PrimaryGeneratedColumn() // ahora integer autoincrement (serial en SQL)
   id!: number;
 
-  @Column({ type: 'varchar', length: 255, nullable: true, unique: true })
+  @Column({ type: 'varchar', length: 255, nullable: true })
   google_id?: string;
 
   @Column({ type: 'varchar', length: 255, nullable: false })
