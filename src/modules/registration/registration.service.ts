@@ -35,11 +35,11 @@ export class RegistrationService {
     let wasLinked = false;
 
     // 1. Buscar usuario por google_id
-    user = await this.usersService['usersRepository'].findOne({ where: { google_id: dto.google_id } });
+    user = await this.usersService['usersRepository'].findOne({ where: { google_id: dto.google_id, deleted: false } });
     
     if (!user && dto.email) {
       // 2. Si no existe, buscar por email (usuario existente sin Google)
-      user = await this.usersService['usersRepository'].findOne({ where: { email: dto.email } });
+      user = await this.usersService['usersRepository'].findOne({ where: { email: dto.email, deleted: false } });
       
       if (user) {
         // Usuario existe, asociar google_id
