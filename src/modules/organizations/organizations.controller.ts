@@ -68,6 +68,7 @@ export class OrganizationsController {
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
   @UseGuards(RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.organizationsService.remove(id);
   }

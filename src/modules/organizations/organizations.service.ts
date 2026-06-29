@@ -155,12 +155,19 @@ export class OrganizationsService {
     return updatedOrg;
   }
 
-  async remove(id: number) {
-    const org = await this.findOne(id);
-    org.deleted = true; // borrado lógico
-    org.deleted_at = new Date();
-    return this.repo.save(org);
+ async remove(id: number) {
+  const org = await this.repo.findOne({
+    where: { id },
+    relations: ['users', 'branches', 'properties'],
+  });
+
+  if (!org) {
+    throw new Error('Organization not found');
   }
+ 
+  return this.repo.remove(org);
+}
+
 
   /**
    * Sube un logo de organización a S3 usando el key relativo (ej: 147/logo.jpg)
