@@ -12,6 +12,7 @@ import {
   Matches,
   IsBoolean,
   IsEnum,
+  ValidateIf,
 } from 'class-validator';
 import {
   OperationType,
@@ -182,6 +183,7 @@ export class BasePropertyFieldsDto {
   @IsPositive()
   surface?: number;
 
+  @ValidateIf(o => o.property_type !== PropertyType.GALPON_BODEGA && o.property_type !== PropertyType.BOVEDA_NICHO_PARCELA && o.property_type !== PropertyType.TERRENO)
   @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsPositive()
