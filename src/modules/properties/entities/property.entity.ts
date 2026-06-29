@@ -399,10 +399,14 @@ export class Property {
   attached?: PropertyAttached[];
 
   
-  // Relación con Organization
-  @ManyToOne(() => Organization, { nullable: true, eager: false })
+  @ManyToOne(() => Organization, (org) => org.properties, {
+    onDelete: 'CASCADE',
+    nullable: true,
+    eager: false,
+  })
   @JoinColumn({ name: 'organization_id' })
   organization?: Organization;
+
 
   // Relación con User (asignado)
   @ManyToOne(() => User, { nullable: true, eager: false, createForeignKeyConstraints: false })

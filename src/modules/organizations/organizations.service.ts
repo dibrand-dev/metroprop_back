@@ -155,19 +155,22 @@ export class OrganizationsService {
     return updatedOrg;
   }
 
- async remove(id: number) {
-  const org = await this.repo.findOne({
-    where: { id },
-    relations: ['users', 'branches', 'properties'],
-  });
+  async remove(id: number) {
+    const org = await this.repo.findOneBy({ id });
+    if (!org) {
+      throw new Error('Organization not found');
+    }
 
-  if (!org) {
-    throw new Error('Organization not found');
+    const result = await this.repo.remove(org);
+
+    if (result) {
+      this.logger.log(`Organization with ID ${id} has been deleted.`);
+    } else {
+      this.logger.error(`Failed to delete organization with ID ${id}.`);
+    }
+
+    return result;
   }
- 
-  return this.repo.remove(org);
-}
-
 
   /**
    * Sube un logo de organización a S3 usando el key relativo (ej: 147/logo.jpg)

@@ -14,6 +14,7 @@ import { User } from '../../users/entities/user.entity';
 import { Partner } from '../../partners/entities/partner.entity';
 import { FiscalCondition, ProfessionalType } from '../../../common/enums';
 import e from 'express';
+import { Property } from '@/modules/properties/entities/property.entity';
 
 @Entity('organizations')
 @Index('idx_organizations_cuit_unique', ['cuit'], { unique: true, where: 'deleted = false' })
@@ -153,4 +154,9 @@ export class Organization {
   @ManyToOne(() => Partner, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'source_partner_id' })
   source_partner?: Partner;
+
+  @OneToMany(() => Property, (property) => property.organization, {
+    eager: false,
+  })
+  properties?: Property[];
 }
