@@ -19,11 +19,11 @@ export class BranchesService {
   ) {}
 
   findAll() {
-    return this.repo.find({ relations: ['organization'] });
+    return this.repo.find({ relations: ['organization'], where: { deleted: false }, order: { id: 'ASC' } });
   }
 
   async findOne(id: number) {
-    const branch = await this.repo.findOne({ where: { id }, relations: ['organization'] });
+    const branch = await this.repo.findOne({ where: { id, deleted: false }, relations: ['organization'] });
     if (!branch) throw new NotFoundException('Branch not found');
     return branch;
   }
