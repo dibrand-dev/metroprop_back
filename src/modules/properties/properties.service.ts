@@ -2102,24 +2102,49 @@ export class PropertiesService {
       qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
         bathroom_amount: filters.bathroom_amount,
       });
+
+      if(filters.bathroom_amount.includes(4)) {
+        qb.andWhere('p.bathroom_amount > (:...bathroom_amount)', {
+        bathroom_amount: 4,
+      });
+
+      }
     }
 
     if (Array.isArray(filters.room_amount) && filters.room_amount.length > 0) {
       qb.andWhere('p.room_amount IN (:...room_amount)', {
         room_amount: filters.room_amount,
       });
+
+      if(filters.room_amount.includes(4)) {
+        qb.andWhere('p.room_amount > (:...room_amount)', {
+          room_amount: 4,
+        });
+      }
     }
 
     if (Array.isArray(filters.suite_amount) && filters.suite_amount.length > 0) {
       qb.andWhere('p.suite_amount IN (:...suite_amount)', {
         suite_amount: filters.suite_amount,
       });
+
+      if(filters.suite_amount.includes(4)) {
+        qb.andWhere('p.suite_amount > (:...suite_amount)', {
+          suite_amount: 4,
+        });
+      }
     }
 
     if (Array.isArray(filters.parking_lot_amount) && filters.parking_lot_amount.length > 0) {
       qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
         parking_lot_amount: filters.parking_lot_amount,
       });
+
+      if(filters.parking_lot_amount.includes(4)) {
+        qb.andWhere('p.parking_lot_amount > (:...parking_lot_amount)', {
+          parking_lot_amount: 4,
+        });
+      }
     }
 
     if (filters.age) {
