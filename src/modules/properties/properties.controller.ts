@@ -533,10 +533,10 @@ export class PropertiesController {
   }
 
   /**
-   * PATCH /properties/delete-batch
+   * POST /properties/delete-batch
    * Eliminar varias propiedades
    */
-  @Patch('delete-batch')
+  @Post('delete-batch')
   @UseGuards(JwtAuthGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
   deleteBatch(
@@ -546,7 +546,10 @@ export class PropertiesController {
     },
     @Req() req: Request,
   ) {
-    return this.propertiesService.deleteBatch(body);
+    if((req as any).user.role_id === UserRole.USER_ROL_COLLABORATOR || (req as any).user.role_id === UserRole.USER_ROL_SUPERVISOR) {
+      throw new BadRequestException('No tienes permisos para eliminar propiedades.');
+    }
+    return this.propertiesService.deleteBatch(body, (req as any).user);
   }
 
 }
