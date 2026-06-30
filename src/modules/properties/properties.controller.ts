@@ -532,4 +532,21 @@ export class PropertiesController {
     return this.propertiesService.remove(id);
   }
 
+  /**
+   * PATCH /properties/delete-batch
+   * Eliminar varias propiedades
+   */
+  @Patch('delete-batch')
+  @UseGuards(JwtAuthGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  deleteBatch(
+    @Body()
+    body: {
+      ids: number | number[];
+    },
+    @Req() req: Request,
+  ) {
+    return this.propertiesService.deleteBatch(body);
+  }
+
 }

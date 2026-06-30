@@ -1248,6 +1248,29 @@ export class PropertiesService {
     return { message: `Propiedad ${id} eliminada correctamente` };
   }
 
+  async deleteBatch(
+    body: {
+      ids: number | number[];
+    },
+    requestingUser?: RequestingUser,
+  ): Promise<{ message: string; deleted: number; ids: number[] }> {
+    const { ids } = body;
+    const { targetIds, notFoundIds } = await this.resolveTargetIds(ids);
+
+    if (requestingUser) {
+      await this.assertBulkOwnership(requestingUser, targetIds);
+    }
+
+    const deleted = targetIds.length;
+    await Promise.all(targetIds.map((id) => this.remove(id)));
+
+    return {
+      message: `Propiedades eliminadas correctamente`,
+      deleted,
+      ids: targetIds,
+    };
+  }
+
   /**
    * Obtener toda la multimedia de una propiedad (imágenes, videos, videos 360, adjuntos)
    */
