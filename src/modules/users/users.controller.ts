@@ -148,7 +148,7 @@ export class UsersController {
   ) {
     // Validar que el id del token coincida con el id del body
     const tokenUserId = req.user?.id;
-    if (tokenUserId !== body.id) {
+    if (tokenUserId != body.id) {
       throw new ForbiddenException('El ID del usuario logueado no coincide con el ID solicitado');
     }
 

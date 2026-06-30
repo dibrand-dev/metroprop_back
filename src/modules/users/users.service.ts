@@ -155,15 +155,14 @@ export class UsersService {
       : select;
 
     const user = await this.usersRepository.findOne({
-      where,
-      select: selectedFields,
+      where: { id: where.id },
+      select: ['id', 'password'], 
       relations: ['branches'],
     });
 
     if (!user) {
       return null;
     }
-
     if (password) {
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
