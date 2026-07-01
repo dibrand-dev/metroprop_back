@@ -36,6 +36,7 @@ export class AdsBannersService {
       name: dto.name,
       placements: dto.placements,
       status: dto.status ?? true,
+      link: dto.link,
     });
 
     // Save first to get the id
@@ -76,6 +77,10 @@ export class AdsBannersService {
     }
     if (dto.status !== undefined) {
       banner.status = dto.status;
+    }
+
+    if(dto.link !== undefined) {
+      banner.link = dto.link;
     }
 
     // If a new file was uploaded, replace in S3
