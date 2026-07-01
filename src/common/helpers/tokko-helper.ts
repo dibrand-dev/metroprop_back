@@ -11,6 +11,7 @@ import { CreatePropertyDto } from '../../modules/properties/dto/create-property.
 import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
+import { DataSource } from 'typeorm';
 
 export interface TokkoPropertyResponse {
   id?: number;
@@ -216,6 +217,7 @@ export class TokkoHelperService {
     private readonly usersService: UsersService,
     private readonly organizationsService: OrganizationsService,
     private readonly locationsService: LocationsService,
+    private readonly dataSource: DataSource
   ) {}
 
   /**
@@ -744,7 +746,7 @@ export class TokkoHelperService {
     if (!operationType) return OperationType.VENTA;
     const op = operationType.toLowerCase();
     if (op.includes('alquiler temporal')) return OperationType.ALQUILER_TEMPORAL;
-    if (op.includes('alquiler')) return OperationType.ALQUILER;
+    if (op.includes('alquiler') || op.includes('renta')) return OperationType.ALQUILER;
     return OperationType.VENTA;
   }
 
@@ -767,6 +769,140 @@ export class TokkoHelperService {
   // ========== LOCATION HIERARCHY ==========
 
   /**
+   * Returns the Tokko API URL for the immediate parent of a location detail response.
+   * Tokko encodes the parent as a relative URL in one of three fields.
+   */
+  private getTokkoParentUrl(detail: any): string | null {
+    const relative = detail.parent_division ?? detail.state ?? detail.country ?? null;
+    return relative ? `https://www.tokkobroker.com/${relative}/?lang=es_ar&format=json` : null;
+  }
+
+  /**
+   * Derives the child location type that corresponds to a given parent type.
+   */
+  private deriveChildLocationType(parentType: string): string | null {
+    const typeMap: Record<string, string> = {
+      country:      'state',
+      state:        'location',
+      location:     'sub_location',
+      sub_location: 'neighborhood',
+      neighborhood: 'sub_neighborhood',
+    };
+    return typeMap[parentType] ?? null;
+  }
+
+  /**
+   * Guarantees that a location record exists in the local DB.
+   * If the record is missing, it fetches the location from the Tokko API, resolves
+   * its parent recursively (up to MAX_DEPTH levels), and inserts the new record.
+   */
+  private async ensureLocationExists(locationId: number, depth = 0): Promise<void> {
+    const MAX_DEPTH = 8;
+    if (depth > MAX_DEPTH) {
+      throw new Error(`Location hierarchy exceeded max depth (${MAX_DEPTH}) for id ${locationId}`);
+    }
+
+    const existing = await this.locationsService.findById(locationId);
+    if (existing) return;
+
+    console.warn(`Location ${locationId} not found locally — fetching from Tokko API.`);
+
+    let detailResponse = await axios.get(
+      `https://www.tokkobroker.com/api/v1/location/${locationId}/?lang=es_ar&format=json`,
+    );
+    let detail = detailResponse.data;
+    if (!detail?.id) {
+      detailResponse = await axios.get(
+        `https://www.tokkobroker.com/api/v1/state/${locationId}/?lang=es_ar&format=json`,
+      );
+      detail = detailResponse.data;
+      if (!detail?.id) {
+        detailResponse = await axios.get(
+          `https://www.tokkobroker.com/api/v1/country/${locationId}/?lang=es_ar&format=json`,
+        );
+        detail = detailResponse.data;
+        if (!detail?.id) {
+          throw new Error(`Tokko returned an invalid response for location ${locationId}`);
+        }
+      }
+    }
+
+    const parentUrl = this.getTokkoParentUrl(detail);
+
+    // No parent URL means this is a root-level location (e.g. a country) — insert as-is.
+    if (!parentUrl) {
+      console.warn(`Location ${locationId} has no parent reference — inserting as root entry.`);
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      try {
+        await queryRunner.manager.insert('locations', {
+          id: detail.id,
+          name: detail.name,
+          type: detail.type || 'country',
+          parent_id: null,
+          state_id: null,
+          country_id: null,
+          migrated: false,
+          full_location: detail.name,
+        });
+      } finally {
+        await queryRunner.release();
+      }
+      return;
+    }
+
+    const parentDetailResponse = await axios.get(parentUrl);
+    const parentDetail = parentDetailResponse.data;
+
+    // Parent data is unusable — create the child as a parentless record so we have something.
+    if (!parentDetail?.id) {
+      console.warn(`Tokko returned no valid parent for location ${locationId} — inserting without parent.`);
+      const queryRunner = this.dataSource.createQueryRunner();
+      await queryRunner.connect();
+      try {
+        await queryRunner.manager.insert('locations', {
+          id: detail.id,
+          name: detail.name,
+          type: detail.type || 'location',
+          parent_id: null,
+          state_id: null,
+          country_id: null,
+          migrated: false,
+          full_location: detail.name,
+        });
+      } finally {
+        await queryRunner.release();
+      }
+      return;
+    }
+
+    // Ensure the parent exists before inserting the child (recursive)
+    await this.ensureLocationExists(parentDetail.id, depth + 1);
+
+    const parentDB = await this.locationsService.findById(parentDetail.id);
+    if (!parentDB) {
+      throw new Error(`Parent location ${parentDetail.id} unavailable after resolution attempt`);
+    }
+
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    try {
+      await queryRunner.manager.insert('locations', {
+        id: detail.id,
+        name: detail.name,
+        type: this.deriveChildLocationType(parentDB.type),
+        parent_id: parentDB.id,
+        state_id: parentDB.state_id,
+        country_id: parentDB.country_id,
+        migrated: false,
+        full_location: `${detail.name}, ${parentDB.name}`,
+      });
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  /**
    * Given a Tokko location id, walks the parent chain in our locations table
    * and returns the correct ids for each hierarchy level:
    * sub_location_id, location_id, state_id, country_id.
@@ -779,35 +915,44 @@ export class TokkoHelperService {
     neighborhood_id?: number;
     sub_neighborhood_id?: number;
   }> {
-    const result: { location_id?: number; country_id?: number; state_id?: number; sub_location_id?: number, neighborhood_id?: number, sub_neighborhood_id?: number } = {};
+    const result: {
+      location_id?: number;
+      country_id?: number;
+      state_id?: number;
+      sub_location_id?: number;
+      neighborhood_id?: number;
+      sub_neighborhood_id?: number;
+    } = {};
+
     let currentId: number | null = locationId;
 
     while (currentId != null) {
-      const loc = await this.locationsService.findById(currentId);
-      if (!loc) break;
+      let loc = await this.locationsService.findById(currentId);
+
+      if (!loc) {
+        try {
+          await this.ensureLocationExists(currentId);
+          loc = await this.locationsService.findById(currentId);
+        } catch (error) {
+          console.error(`Failed to resolve location ${currentId} from Tokko API:`, error);
+        }
+
+        if (!loc) {
+          console.error(`Location ${currentId} could not be resolved — stopping hierarchy walk.`);
+          break;
+        }
+      }
 
       switch (loc.type) {
-        case 'neighborhood':
-          result.neighborhood_id = loc.id;
-          break;
-        case 'sub_neighborhood':
-          result.sub_neighborhood_id = loc.id;
-          break;
-        case 'sub_location':
-          result.sub_location_id = loc.id;
-          break;
-        case 'location':
-          result.location_id = loc.id;
-          break;
-        case 'state':
-          result.state_id = loc.id;
-          break;
+        case 'sub_neighborhood': result.sub_neighborhood_id = loc.id; break;
+        case 'neighborhood':     result.neighborhood_id     = loc.id; break;
+        case 'sub_location':     result.sub_location_id     = loc.id; break;
+        case 'location':         result.location_id         = loc.id; break;
+        case 'state':            result.state_id            = loc.id; break;
         case 'country':
           result.country_id = loc.id;
           currentId = null;
           continue;
-        default:
-          break;
       }
 
       currentId = loc.parent_id ?? null;
