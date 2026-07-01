@@ -413,7 +413,7 @@ export class TokkoSyncService implements OnModuleInit {
 	 */
 	private async processDeletedProperty(item: any): Promise<string> {
 
-		this.fileLogger.warn('SYNC_DELETE processDeletedProperty started');
+		this.fileLogger.warn('SYNC_DELETE  processDeletedProperty started');
 
 
 		if (!item || typeof item !== 'object') {
@@ -421,7 +421,7 @@ export class TokkoSyncService implements OnModuleInit {
 			return 'skipped';
 		}
 
-		const publicationId = item.publication_id != null ? String(item.publication_id) : null;
+		const publicationId = item.id != null ? String(item.id) : null;
 		if (!publicationId) {
 			this.fileLogger.warn(`DELETE_SKIPPED tokko_id=${item.id ?? 'N/A'} reason="no publication_id"`);
 			return 'skipped';
