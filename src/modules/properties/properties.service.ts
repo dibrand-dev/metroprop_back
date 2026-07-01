@@ -2065,6 +2065,11 @@ export class PropertiesService {
       qb.andWhere('p.property_type IN (:...property_type)', {
         property_type: filters.property_type,
       });
+    } else {
+      // No property_type filter → exclude developments
+      qb.andWhere('p.property_type != :excluded_property_type', {
+        excluded_property_type: PropertyType.EMPRENDIMIENTO,
+      });
     }
 
     if(filters.created_from != null) {

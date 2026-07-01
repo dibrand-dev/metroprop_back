@@ -21,12 +21,12 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
 
 @Controller('ads-banners')
-@UseGuards(JwtAuthGuard, RolesGuard)
-@Roles(UserRole.USER_ROL_SUPER_ADMIN)
 export class AdsBannersController {
   constructor(private readonly adsBannersService: AdsBannersService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   findAll() {
     return this.adsBannersService.findAll();
   }
@@ -37,6 +37,8 @@ export class AdsBannersController {
   }
 
   @Post()
+   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   @UseInterceptors(FileInterceptor('file', { storage: undefined }))
   create(
     @Body() dto: CreateAdsBannerDto,
@@ -46,6 +48,8 @@ export class AdsBannersController {
   }
 
   @Patch(':id')
+   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   @UseInterceptors(FileInterceptor('file', { storage: undefined }))
   update(
     @Param('id', ParseIntPipe) id: number,
@@ -56,11 +60,15 @@ export class AdsBannersController {
   }
 
   @Patch(':id/disable')
+   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   disable(@Param('id', ParseIntPipe) id: number) {
     return this.adsBannersService.disable(id);
   }
 
   @Delete(':id')
+   @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   remove(@Param('id', ParseIntPipe) id: number) {
     return this.adsBannersService.remove(id);
   }
