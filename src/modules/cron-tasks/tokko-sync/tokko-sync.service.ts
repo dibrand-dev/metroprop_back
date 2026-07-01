@@ -98,6 +98,9 @@ export class TokkoSyncService implements OnModuleInit {
 		outcome: 'created' | 'updated' | 'skipped' | 'not_found';
 		message: string;
 	}> {
+		this.logger.log(`[TokkoSync-ONE] syncSingleProperty publication_id=${publicationId}`);
+		this.fileLogger.info(`TokkoSync-ONE publication_id=${publicationId}`);
+
 		const apiKey = this.configService.get<string>('TOKKO_METROPROP_API_KEY');
 		if (!apiKey) {
 			return { outcome: 'skipped', message: 'TOKKO_METROPROP_API_KEY not configured' };
@@ -108,19 +111,19 @@ export class TokkoSyncService implements OnModuleInit {
 			return { outcome: 'skipped', message: 'Partner "tokko" not configured' };
 		}
 
-		this.logger.log(`[TokkoSync] syncSingleProperty publication_id=${publicationId}`);
-		this.fileLogger.info(`SINGLE_SYNC_START publication_id=${publicationId}`);
+		this.logger.log(`[TokkoSync-ONE] syncSingleProperty publication_id=${publicationId}`);
+		this.fileLogger.info(`TokkoSync-ONE publication_id=${publicationId}`);
 
 		const result = await this.tokkoHelperService.fetchFreePortalPropertyById(apiKey, publicationId);
 
 		if ('error' in result) {
 			if (result.notFound) {
-				this.fileLogger.warn(`SINGLE_SYNC_NOT_FOUND publication_id=${publicationId}`   + result.details ? ` details=${result.details}` : '');
+				this.fileLogger.warn(`TokkoSync-ONE_NOT_FOUND publication_id=${publicationId}`   + result.details ? ` details=${result.details}` : '');
 				return { outcome: 'not_found', message: result.error };
 			}
 			const msg = result.details ? `${result.error}: ${result.details}` : result.error;
-			this.logger.error(`[TokkoSync] syncSingleProperty HTTP error: ${msg}`);
-			this.fileLogger.error(`SINGLE_SYNC_ERROR publication_id=${publicationId} ${msg}`);
+			this.logger.error(`[TokkoSync-ONE] syncSingleProperty HTTP error: ${msg}`);
+			this.fileLogger.error(`TokkoSync-ONE_ERROR publication_id=${publicationId} ${msg}`);
 			return { outcome: 'skipped', message: msg };
 		}
 
@@ -129,12 +132,12 @@ export class TokkoSyncService implements OnModuleInit {
 		try {
 			const outcome = await this.processProperty(item);
 			const msg = `publication_id=${publicationId} outcome=${outcome}`;
-			this.logger.log(`[TokkoSync] syncSingleProperty done — ${msg}`);
-			this.fileLogger.info(`SINGLE_SYNC_DONE ${msg}`);
+			this.logger.log(`[TokkoSync-ONE] syncSingleProperty done — ${msg}`);
+			this.fileLogger.info(`TokkoSync-ONE_DONE ${msg}`);
 			return { outcome, message: `Property ${outcome} successfully` };
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
-			this.logger.error(`[TokkoSync] syncSingleProperty failed — ${msg}`);
+			this.logger.error(`[TokkoSync-ONE] syncSingleProperty failed — ${msg}`);
 			this.fileLogger.logItemFailed(item, err);
 			return { outcome: 'skipped', message: msg };
 		}
@@ -285,6 +288,7 @@ export class TokkoSyncService implements OnModuleInit {
 	): Promise<void> {
 		const label = `[TokkoSync:${syncType}]`;
 		this.logger.log(`${label} Starting sync cycle`);
+		this.fileLogger.info(`${label} Starting sync cycle`);
 
 		// Load or create state row for this API key + sync type
 		let state = await this.syncStateRepo.findOne({
@@ -312,9 +316,8 @@ export class TokkoSyncService implements OnModuleInit {
 			state.started_at = new Date();
 			state.completed_at = null;
 			state = await this.syncStateRepo.save(state);
-			this.logger.log(
-				`${label} New run — syncing from ${state.sync_from_date.toISOString()}`,
-			);
+			this.fileLogger.info(`TokkoSync New run started — syncing from ${state.sync_from_date.toISOString()}`);
+			this.logger.log(`${label} New run — syncing from ${state.sync_from_date.toISOString()}`);
 		} else {
 			this.logger.log(
 				`${label} Resuming run at offset ${state.current_offset}/${state.total_count}`,
@@ -346,6 +349,7 @@ export class TokkoSyncService implements OnModuleInit {
 
 		if ('error' in result) {
 			this.logger.error(`${label} API fetch failed: ${result.error} — ${result.details ?? ''}`);
+			this.fileLogger.error(`${label} API fetch failed: ${result.error} — ${result.details ?? ''}`);
 			return;
 		}
 
@@ -408,6 +412,10 @@ export class TokkoSyncService implements OnModuleInit {
 	 * in the Tokko "filter=deleted" feed.
 	 */
 	private async processDeletedProperty(item: any): Promise<string> {
+
+		this.fileLogger.warn('SYNC_DELETE processDeletedProperty started');
+
+
 		if (!item || typeof item !== 'object') {
 			this.fileLogger.warn('DELETE_SKIPPED reason="invalid payload"');
 			return 'skipped';

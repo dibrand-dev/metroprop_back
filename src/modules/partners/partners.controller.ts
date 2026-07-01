@@ -24,6 +24,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/enums';
+import { TokkoSyncLoggerService } from '../cron-tasks/tokko-sync/tokko-sync-logger.service';
 
 @ApiExcludeController()
 @Controller('partners')
@@ -33,6 +34,7 @@ export class PartnersController {
     private readonly partnerApiService: PartnerApiService,
     private readonly tokkoHelperService: TokkoHelperService,
     private readonly tokkoSyncService: TokkoSyncService,
+    private readonly fileLogger: TokkoSyncLoggerService,
   ) {}
 
   @Get('checkstatus')
@@ -216,10 +218,14 @@ export class PartnersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   syncOneTokko(@Body() body: { publication_id: string }) {
+    console.log("SYNC-ONE START: request body:", body);
     if (!body?.publication_id) {
       throw new BadRequestException('publication_id is required');
     }
-    return this.tokkoSyncService.syncSingleProperty(String(body.publication_id));
+    const publicationId = String(body.publication_id);
+    this.fileLogger.info(`TokkoSync-ONE REQUESTED, publication_id=${publicationId}`);
+    console.log("SYNC-ONE: calling syncSingleProperty with publication_id:", publicationId);
+    return this.tokkoSyncService.syncSingleProperty(publicationId);
   }
 
   /**
