@@ -21,6 +21,11 @@ export class TokkoSyncLoggerService {
 		return path.join(this.logsDir, `tokko-sync-${this.dateStamp}.log`);
 	}
 
+	
+	private get leadsLogPath(): string {
+		return path.join(this.logsDir, `tokko-sync-leads-${this.dateStamp}.log`);
+	}
+
 	private get errorLogPath(): string {
 		return path.join(this.logsDir, `tokko-sync-errors-${this.dateStamp}.log`);
 	}
@@ -65,6 +70,10 @@ export class TokkoSyncLoggerService {
 		const line = detail ? `${msg} — ${detail}` : msg;
 		this.write(this.mainLogPath, `ERROR ${line}`);
 		this.write(this.errorLogPath, `ERROR ${line}`);
+	}
+
+	leads(msg: string): void {
+		this.write(this.leadsLogPath, `LEADS ${msg}`);
 	}
 
 	/** Writes to the main log AND to the per-organization log file. */

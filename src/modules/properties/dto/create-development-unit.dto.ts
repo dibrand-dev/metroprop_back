@@ -15,12 +15,7 @@ import { ApiPropertyOptional } from '@nestjs/swagger';
 import { BasePropertyFieldsDto } from '../../../common/dto/base-property-fields.dto';
 import { CreateImageDto, CreateVideoDto, CreateMultimedia360Dto, CreateAttachedDto } from './create-property.dto';
 
-/**
- * DTO para crear una unidad dentro de un emprendimiento.
- * Una unidad es una propiedad normal (`is_development = false`) vinculada al
- * emprendimiento padre a través de `development_id`, que se resuelve
- * automáticamente por el servidor a partir del reference_code del emprendimiento.
- */
+
 export class CreateDevelopmentUnitDto extends BasePropertyFieldsDto {
   
   // ========== MULTIMEDIA ==========

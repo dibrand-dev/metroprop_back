@@ -48,7 +48,7 @@ export class Property {
   id?: number;
 
   // ========== Identificadores ==========
-  @Column({ type: 'varchar', length: 100, unique: true, nullable: false })
+  @Column({ type: 'varchar', length: 100, nullable: false })
   reference_code!: string;
 
   @Column({ type: 'varchar', length: 100, nullable: true })

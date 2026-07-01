@@ -36,7 +36,7 @@ export class CreateDraftPropertyDto {
 
   @IsNotEmpty()
   @IsString()
-  reference_code: string = Math.random().toString(36).substring(2, 8).toUpperCase(); 
+  reference_code: string = `${Math.random().toString(36).substring(2, 8).toUpperCase()}-${Date.now()}`; 
 
   @IsNotEmpty()
   @IsString()

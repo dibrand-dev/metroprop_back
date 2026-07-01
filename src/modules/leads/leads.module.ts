@@ -9,14 +9,14 @@ import { LeadsService } from './leads.service';
 import { LeadsController } from './leads.controller';
 import { EmailModule } from '../../common/email/email.module';
 import { PropertiesModule } from '../properties/properties.module';
-
+import { TokkoSyncLoggerService } from '../cron-tasks/tokko-sync/tokko-sync-logger.service';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Lead, Property, Organization, Partner, User]),
     EmailModule,
     PropertiesModule,
   ],
-  providers: [LeadsService],
+  providers: [LeadsService, TokkoSyncLoggerService],
   controllers: [LeadsController],
   exports: [LeadsService],
 })

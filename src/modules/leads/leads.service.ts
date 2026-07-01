@@ -14,6 +14,7 @@ import { notifyTokkoContact } from '../../common/helpers/tokko-helper';
 import { TOKKO_PARTNER_NAME, API_BASE_URL } from '../../common/constants';
 import { PropertiesService, PropertyCard } from '../properties/properties.service';
 import { ConfigService } from '@nestjs/config';
+import { TokkoSyncLoggerService } from '../cron-tasks/tokko-sync/tokko-sync-logger.service';
 
 @Injectable()
 export class LeadsService {
@@ -50,6 +51,8 @@ export class LeadsService {
     private readonly userRepository: Repository<User>,
     private readonly emailService: EmailService,
     private readonly propertiesService: PropertiesService,
+    private readonly fileLogger: TokkoSyncLoggerService,
+    
   ) {}
 
   async findAll(filters: LeadFiltersDto = {}): Promise<Lead[]> {
@@ -327,32 +330,55 @@ export class LeadsService {
         select: ['id', 'name'],
       });
 
-      if (partner && 1 > 2) {
+      if (partner != null && partner != undefined) {
         switch (partner.name) {
           case TOKKO_PARTNER_NAME:
-            await notifyTokkoContact({
-              api_key: organization.tokko_key ?? '',
-              publication_id: property.publication_id ?? property.reference_code,
-              name: lead.name,
-              mail: lead.email,
-              comment: message,
-              phone: contactPhone ? `+${contactCountryCode ?? ''} ${contactPhone}`.trim() : undefined,
-              errorContext: {
-                lead: {
-                  id: lead.id,
-                  name: lead.name,
-                  email: lead.email,
-                  phone: lead.phone,
-                  country_code: lead.country_code,
-                  property_id: lead.property_id!,
-                  message: lead.message,
+            if(
+              this.configService.get<string>('TOKKO_METROPROP_API_KEY') !== undefined && 
+              property.publication_id !== undefined && property.publication_id !== null && 
+              lead.name !== undefined && lead.email !== undefined && message !== undefined && 
+              lead.email !== null && lead.name !== null && message !== null
+            ) {
+              await notifyTokkoContact({
+                api_key: this.configService.get<string>('TOKKO_METROPROP_API_KEY') || '',
+                publication_id: property.publication_id,
+                name: lead.name,
+                mail: lead.email,
+                comment: message,
+                phone: contactPhone ? `+${contactCountryCode ?? ''} ${contactPhone}`.trim() : undefined,
+                errorContext: {
+                  lead: {
+                    id: lead.id,
+                    name: lead.name,
+                    email: lead.email,
+                    phone: lead.phone,
+                    country_code: lead.country_code,
+                    property_id: lead.property_id!,
+                    message: lead.message,
+                  },
                 },
-              },
-            });
+              });
+            } else {
+              this.logger.warn(`No se pudo notificar a Tokko por falta de datos. Datos recibidos: ${JSON.stringify({
+                api_key: this.configService.get<string>('TOKKO_METROPROP_API_KEY'),
+                publication_id: property.publication_id,
+                name: lead.name,
+                mail: lead.email,
+                comment: message,
+                phone: contactPhone ? `+${contactCountryCode ?? ''} ${contactPhone}`.trim() : undefined,
+              })}`);
+              this.fileLogger.leads(`No se pudo notificar a Tokko por falta de datos. Datos recibidos: ${JSON.stringify({
+                api_key: this.configService.get<string>('TOKKO_METROPROP_API_KEY'),
+                publication_id: property.publication_id,
+                name: lead.name,
+                mail: lead.email,
+                comment: message,
+                phone: contactPhone ? `+${contactCountryCode ?? ''} ${contactPhone}`.trim() : undefined,
+              })}`);
+            }
             break;
-
-          default:
-            this.logger.warn(`Partner "${partner.name}" sin handler de notificación implementado`);
+            default:
+              this.logger.warn(`Partner "${partner.name}" sin handler de notificación implementado`);
         }
         return;
       }

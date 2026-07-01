@@ -114,15 +114,17 @@ export class PropertiesService {
     // DEBUG: Confirmar si entra realmente a este método
     console.log('[DEBUG][PropertiesService.create] Entró al método. propertyData:', JSON.stringify(propertyData, null, 2));
 
-    // Verificar que no exista una propiedad con el mismo reference_code
-    const existingProperty = await this.propertyRepository.findOne({
-      where: { reference_code: propertyData.reference_code },
-    });
+    // Verificar que no exista una propiedad con el mismo reference_code, si viene de tokko es posible que tenga reference_codes repetidos
+    if( propertyData.tokko_id == null  ) {
+      const existingProperty = await this.propertyRepository.findOne({
+        where: { reference_code: propertyData.reference_code, deleted: false },
+      });
 
-    if (existingProperty) {
-      throw new BadRequestException(
-        'Una propiedad con este código de referencia ya existe',
-      );
+      if (existingProperty) {
+        throw new BadRequestException(
+          'Una propiedad con este código de referencia ya existe',
+        );
+      }
     }
 
     // Crear la propiedad base y sincronizar tags, videos, multimedia360, images y attached
@@ -148,11 +150,13 @@ export class PropertiesService {
   ): Promise<{ data: Property; warnings?: string[] }> {
     const { images, tags, videos, multimedia360, attached, ...propertyData } = createDevelopmentDto as any;
 
-    const existingProperty = await this.propertyRepository.findOne({
-      where: { reference_code: propertyData.reference_code },
-    });
-    if (existingProperty) {
-      throw new BadRequestException('Una propiedad con este código de referencia ya existe');
+    if(propertyData.tokko_id == null) { // si llegara a tener un tokko_id deberiamos permitir posibles reference_code duplicados
+      const existingProperty = await this.propertyRepository.findOne({
+        where: { reference_code: propertyData.reference_code, deleted: false },
+      });
+      if (existingProperty) {
+        throw new BadRequestException('Una propiedad con este código de referencia ya existe');
+      }
     }
 
     const { property: savedProperty, warnings } = await this.propertyWriteService.createPropertyCore(
