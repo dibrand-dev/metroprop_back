@@ -775,8 +775,11 @@ export class TokkoHelperService {
    * Tokko encodes the parent as a relative URL in one of three fields.
    */
   private getTokkoParentUrl(detail: any): string | null {
-    const relative = detail.parent_division ?? detail.state ?? detail.country ?? null;
-    return relative ? `https://www.tokkobroker.com/${relative}/?lang=es_ar&format=json` : null;
+    const relative: string | null = detail.parent_division ?? detail.state ?? detail.country ?? null;
+    if (!relative) return null;
+    // relative is already an absolute path like "/api/v1/location/25666/" — just prepend the host.
+    const path = relative.startsWith('/') ? relative : `/${relative}`;
+    return `https://www.tokkobroker.com${path}?lang=es_ar&format=json`;
   }
 
   /**
@@ -810,27 +813,26 @@ export class TokkoHelperService {
     this.fileLogger.warn(`Location ${locationId} not found locally — fetching from Tokko API. https://www.tokkobroker.com/api/v1/location/${locationId}/?lang=es_ar&format=json`);
     console.warn(`Location ${locationId} not found locally — fetching from Tokko API.`);
 
-    let detailResponse = await axios.get(
-      `https://www.tokkobroker.com/api/v1/location/${locationId}/?lang=es_ar&format=json`,
-    );
-    let detail = detailResponse.data;
-    if (!detail?.id) {
-          this.fileLogger.warn(`Location ${locationId} not found...try as State. https://www.tokkobroker.com/api/v1/state/${locationId}/?lang=es_ar&format=json`);
+    const TOKKO_ENDPOINTS = ['location', 'state', 'country'];
+    let detail: any = null;
 
-      detailResponse = await axios.get(
-        `https://www.tokkobroker.com/api/v1/state/${locationId}/?lang=es_ar&format=json`,
-      );
-      detail = detailResponse.data;
-      if (!detail?.id) {
-        this.fileLogger.warn(`Location ${locationId} not found...try as Country. https://www.tokkobroker.com/api/v1/country/${locationId}/?lang=es_ar&format=json`);
-        detailResponse = await axios.get(
-          `https://www.tokkobroker.com/api/v1/country/${locationId}/?lang=es_ar&format=json`,
-        );
-        detail = detailResponse.data;
-        if (!detail?.id) {
-          throw new Error(`Tokko returned an invalid response for location ${locationId}`);
+    for (const endpoint of TOKKO_ENDPOINTS) {
+      const url = `https://www.tokkobroker.com/api/v1/${endpoint}/${locationId}/?lang=es_ar&format=json`;
+      try {
+        const response = await axios.get(url);
+        if (response.data?.id) {
+          detail = response.data;
+          break;
         }
+        this.fileLogger.warn(`Location ${locationId} not found at /${endpoint}/ — trying next endpoint.`);
+      } catch (err: any) {
+        const status = err?.response?.status ?? 'unknown';
+        this.fileLogger.warn(`Location ${locationId} returned HTTP ${status} at /${endpoint}/ — trying next endpoint.`);
       }
+    }
+
+    if (!detail?.id) {
+      throw new Error(`Location ${locationId} not found in any Tokko endpoint (location / state / country).`);
     }
 
     const parentUrl = this.getTokkoParentUrl(detail);
