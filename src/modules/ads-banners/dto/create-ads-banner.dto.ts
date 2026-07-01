@@ -11,7 +11,8 @@ export class CreateAdsBannerDto {
  
   @IsNumber()
   @IsEnum(BannerPlacement)
-  placements!: BannerPlacement;
+  @IsOptional()
+  placements?: BannerPlacement;
 
   @IsString()
   link!: string;

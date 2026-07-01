@@ -22,8 +22,8 @@ export class AdsBanner {
   @Column({ type: 'varchar', length: 500, nullable: true })
   link!: string;
 
-  @Column({ type: 'int' })
-  placements!: number;
+  @Column({ type: 'int', nullable: true })
+  placements?: number;
 
   @Column({ type: 'boolean', default: true })
   status!: boolean;
