@@ -34,7 +34,7 @@ export class AdsBannersService {
 
     const banner = this.repo.create({
       name: dto.name,
-      placements: JSON.stringify(dto.placements),
+      placements: dto.placements,
       status: dto.status ?? true,
     });
 
@@ -72,7 +72,7 @@ export class AdsBannersService {
       banner.name = dto.name;
     }
     if (dto.placements) {
-      banner.placements = JSON.stringify(dto.placements);
+      banner.placements = dto.placements;
     }
     if (dto.status !== undefined) {
       banner.status = dto.status;
