@@ -247,9 +247,10 @@ export enum PlanName {
  * Ubicaciones de banners publicitarios.
  */
 export enum BannerPlacement {
-  HEADER = 1,
-  FOOTER = 2,
-  SIDEBAR = 3,
+  HOME_TOP = 1,
+  HOME_BOTTOM = 2,
+  RESULTS = 3,
+  DETAIL = 4
 }
 
 export enum FiscalCondition {
