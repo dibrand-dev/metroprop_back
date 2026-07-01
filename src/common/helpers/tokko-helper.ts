@@ -12,6 +12,7 @@ import axios from 'axios';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DataSource } from 'typeorm';
+import { TokkoSyncLoggerService } from '@/modules/cron-tasks/tokko-sync/tokko-sync-logger.service';
 
 export interface TokkoPropertyResponse {
   id?: number;
@@ -217,7 +218,8 @@ export class TokkoHelperService {
     private readonly usersService: UsersService,
     private readonly organizationsService: OrganizationsService,
     private readonly locationsService: LocationsService,
-    private readonly dataSource: DataSource
+    private readonly dataSource: DataSource,
+    private readonly fileLogger: TokkoSyncLoggerService,
   ) {}
 
   /**
@@ -805,6 +807,7 @@ export class TokkoHelperService {
     const existing = await this.locationsService.findById(locationId);
     if (existing) return;
 
+    this.fileLogger.warn(`Location ${locationId} not found locally — fetching from Tokko API. https://www.tokkobroker.com/api/v1/location/${locationId}/?lang=es_ar&format=json`);
     console.warn(`Location ${locationId} not found locally — fetching from Tokko API.`);
 
     let detailResponse = await axios.get(
@@ -812,11 +815,14 @@ export class TokkoHelperService {
     );
     let detail = detailResponse.data;
     if (!detail?.id) {
+          this.fileLogger.warn(`Location ${locationId} not found...try as State. https://www.tokkobroker.com/api/v1/state/${locationId}/?lang=es_ar&format=json`);
+
       detailResponse = await axios.get(
         `https://www.tokkobroker.com/api/v1/state/${locationId}/?lang=es_ar&format=json`,
       );
       detail = detailResponse.data;
       if (!detail?.id) {
+        this.fileLogger.warn(`Location ${locationId} not found...try as Country. https://www.tokkobroker.com/api/v1/country/${locationId}/?lang=es_ar&format=json`);
         detailResponse = await axios.get(
           `https://www.tokkobroker.com/api/v1/country/${locationId}/?lang=es_ar&format=json`,
         );
@@ -831,6 +837,7 @@ export class TokkoHelperService {
 
     // No parent URL means this is a root-level location (e.g. a country) — insert as-is.
     if (!parentUrl) {
+      this.fileLogger.warn(`Location ${locationId} has no parent reference — inserting as root entry.`);
       console.warn(`Location ${locationId} has no parent reference — inserting as root entry.`);
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
@@ -856,7 +863,7 @@ export class TokkoHelperService {
 
     // Parent data is unusable — create the child as a parentless record so we have something.
     if (!parentDetail?.id) {
-      console.warn(`Tokko returned no valid parent for location ${locationId} — inserting without parent.`);
+      this.fileLogger.warn(`Tokko returned no valid parent for location ${locationId} — inserting without parent.`);
       const queryRunner = this.dataSource.createQueryRunner();
       await queryRunner.connect();
       try {
@@ -930,15 +937,18 @@ export class TokkoHelperService {
       let loc = await this.locationsService.findById(currentId);
 
       if (!loc) {
+
+        this.fileLogger.warn(`Location ${currentId} not found locally — attempting to fetch from Tokko API.`);
+
         try {
           await this.ensureLocationExists(currentId);
           loc = await this.locationsService.findById(currentId);
         } catch (error) {
-          console.error(`Failed to resolve location ${currentId} from Tokko API:`, error);
+          this.fileLogger.error(`Failed to resolve location ${currentId} from Tokko API:`, error);
         }
 
         if (!loc) {
-          console.error(`Location ${currentId} could not be resolved — stopping hierarchy walk.`);
+          this.fileLogger.error(`Location ${currentId} could not be resolved — stopping hierarchy walk.`);
           break;
         }
       }
