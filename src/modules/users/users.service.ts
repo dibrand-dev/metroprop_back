@@ -155,8 +155,8 @@ export class UsersService {
       : select;
 
     const user = await this.usersRepository.findOne({
-      where: { id: where.id },
-      select: ['id', 'password'], 
+      where,
+      select: selectedFields, 
       relations: ['branches'],
     });
 

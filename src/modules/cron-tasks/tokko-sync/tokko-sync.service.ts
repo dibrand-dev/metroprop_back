@@ -17,7 +17,7 @@ import { BranchesService } from '../../branches/branches.service';
 import { UsersService } from '../../users/users.service';
 import { MediaUploadStatus, PropertyStatus, UserRole } from '../../../common/enums';
 import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
-import { PASSWORD_DEFAULT } from '@/common/constants';
+import { PASSWORD_DEFAULT, TOKKO_PARTNER_NAME } from '@/common/constants';
 import { PropertyWriteService } from '@/modules/properties/property-write.service';
 import { EmailService } from '@/common/email/email.service';
 
@@ -793,7 +793,7 @@ export class TokkoSyncService implements OnModuleInit {
 			return this.tokkoPartnerId;
 		}
 
-		const tokkoPartner = await this.partnersService.findByName('tokko');
+		const tokkoPartner = await this.partnersService.findByName(TOKKO_PARTNER_NAME);
 
 		if (!tokkoPartner) {
 			this.logger.warn('[TokkoSync] Partner "tokko" not found; skipping sync run');

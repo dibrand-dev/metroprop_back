@@ -153,14 +153,11 @@ export class UsersController {
     }
 
     let user: any;
-    let filters: { id: number; password?: string } = { id: body.id };
-    if (body.password) {
-      filters.password = body.password;
-    } 
-
+    let filters: { id: number } = { id: body.id };
+    
     // Si viene password, se valida junto con la condición
     user = await this.usersService.searchUserByCondition(
-      filters
+      filters, body.password ? body.password : undefined, ['id', 'password']
     );
 
     if (user) {
