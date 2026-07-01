@@ -1510,11 +1510,11 @@ export class TokkoHelperService {
       dispositions: this.mapTokkoDisposition(item.disposition),
       number_of_guests: item.guests_amount || undefined,
 
-      surface: this.parseNumericString(item.surface) ?? this.parseNumericString(item.land),
+      surface: (this.parseNumericString(item.surface) || undefined) ?? this.parseNumericString(item.land),
       roofed_surface: this.parseNumericString(item.roofed_surface),
       unroofed_surface: this.parseNumericString(item.unroofed_surface),
       semiroofed_surface: this.parseNumericString(item.semiroofed_surface),
-      total_surface: this.parseNumericString(item.total_surface),
+      total_surface:  (this.parseNumericString(item.total_surface) || undefined) ?? this.parseNumericString(item.land),
       surface_measurement: this.mapTokkoSurfaceMeasurement(item.surface_measurement ?? item.land_measurement),
 
       orientation: this.mapTokkoOrientation(item.orientation),
