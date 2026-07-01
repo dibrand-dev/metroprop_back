@@ -25,8 +25,6 @@ export class AdsBannersController {
   constructor(private readonly adsBannersService: AdsBannersService) {}
 
   @Get()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
   findAll() {
     return this.adsBannersService.findAll();
   }
