@@ -33,6 +33,33 @@ export class UserPlan {
   @Column({ type: 'jsonb', nullable: true })
   mercadopago_response?: Record<string, unknown>;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  mercadopago_payment_id?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  mercadopago_preapproval_id?: string;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  mercadopago_external_reference?: string;
+
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  mercadopago_status?: string;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  mercadopago_status_detail?: string;
+
+  @Column({ type: 'timestamp', nullable: true })
+  mercadopago_last_status_check_at?: Date;
+
+  @Column({ type: 'jsonb', nullable: true })
+  mercadopago_last_status_payload?: Record<string, unknown>;
+
+  @Column({ type: 'timestamp', nullable: true })
+  mercadopago_cancelled_at?: Date;
+
+  @Column({ type: 'varchar', length: 255, nullable: true })
+  status_payment?: string;
+
   @Column({ type: 'timestamp' })
   start_date!: Date;
 

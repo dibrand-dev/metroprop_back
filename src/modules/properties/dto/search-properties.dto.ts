@@ -7,6 +7,7 @@ import {
   IsBoolean,
   Min,
   Max,
+  ValidateIf,
 } from 'class-validator';
 import { Transform, Type } from 'class-transformer';
 
@@ -141,9 +142,16 @@ export class SearchPropertiesDto {
   status?: number;
 
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => {
+    if (value === null || value === undefined || value === 'null') {
+      return null;
+    }
+
+    return Number(value);
+  })
+  @ValidateIf((_, value) => value !== null && value !== undefined)
   @IsInt()
-  hired_plan_id?: number;
+  hired_plan_id?: number | null;
 
   // ========== Precio ==========
 

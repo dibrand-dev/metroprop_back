@@ -8,9 +8,13 @@ import { User } from '../users/entities/user.entity';
 import { Property } from '../properties/entities/property.entity';
 import { PlansService } from './plans.service';
 import { PlansController } from './plans.controller';
+import { MercadoPagoModule } from '../../common/mercadopago/mercadopago.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Plan, BranchPlan, UserPlan, Branch, User, Property])],
+  imports: [
+    TypeOrmModule.forFeature([Plan, BranchPlan, UserPlan, Branch, User, Property]),
+    MercadoPagoModule,
+  ],
   providers: [PlansService],
   controllers: [PlansController],
   exports: [PlansService],

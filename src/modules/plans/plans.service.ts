@@ -3,10 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
-  BadRequestException,
-  InternalServerErrorException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Plan } from './entities/plan.entity';
@@ -19,35 +16,12 @@ import { UpdatePlanDto } from './dto/update-plan.dto';
 import { PlanPaymentDto } from './dto/mercadopago-purchase.dto';
 import { UserRole, PropertyStatus } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
-
-interface MercadoPagoErrorCause {
-  code: number | string;
-  description?: string;
-}
-
-interface MercadoPagoErrorResponse {
-  message?: string;
-  error?: string;
-  status?: number;
-  cause?: MercadoPagoErrorCause[];
-}
-
-interface MercadoPagoPaymentResponse {
-  id: number;
-  status: string;
-  status_detail?: string;
-  external_reference?: string;
-  transaction_amount?: number;
-  payer?: {
-    email?: string;
-  };
-  [key: string]: unknown;
-}
+import { MercadoPagoService } from '../../common/mercadopago/mercadopago.service';
 
 @Injectable()
 export class PlansService {
   constructor(
-    private readonly configService: ConfigService,
+    private readonly mercadopagoService: MercadoPagoService,
     @InjectRepository(Plan)
     private readonly repo: Repository<Plan>,
     @InjectRepository(BranchPlan)
@@ -145,7 +119,8 @@ export class PlansService {
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    const mpPayment = await this.validateMercadoPagoPayment(dto);
+    const mpPayment = await this.mercadopagoService.createApprovedPayment(dto);
+    const tracking = this.mercadopagoService.extractTrackingFields(mpPayment);
 
     const now = new Date();
     const endDate = new Date(now);
@@ -158,6 +133,13 @@ export class PlansService {
       plan_price_paid: plan.price,
       plan_name_hired: plan.plan_name,
       mercadopago_response: mpPayment,
+      mercadopago_payment_id: tracking.paymentId,
+      mercadopago_preapproval_id: tracking.preapprovalId,
+      mercadopago_external_reference: tracking.externalReference,
+      mercadopago_status: tracking.status,
+      mercadopago_status_detail: tracking.statusDetail,
+      mercadopago_last_status_check_at: now,
+      mercadopago_last_status_payload: mpPayment,
       start_date: now,
       end_date: endDate,
       active: true,
@@ -325,7 +307,8 @@ export class PlansService {
     });
     if (!plan) throw new NotFoundException('Plan not found');
 
-    const mpPayment = await this.validateMercadoPagoPayment(dto);
+    const mpPayment = await this.mercadopagoService.createApprovedPayment(dto);
+    const tracking = this.mercadopagoService.extractTrackingFields(mpPayment);
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);
@@ -337,6 +320,13 @@ export class PlansService {
       plan_price_paid: plan.price,
       plan_name_hired: plan.plan_name,
       mercadopago_response: mpPayment,
+      mercadopago_payment_id: tracking.paymentId,
+      mercadopago_preapproval_id: tracking.preapprovalId,
+      mercadopago_external_reference: tracking.externalReference,
+      mercadopago_status: tracking.status,
+      mercadopago_status_detail: tracking.statusDetail,
+      mercadopago_last_status_check_at: now,
+      mercadopago_last_status_payload: mpPayment,
       start_date: now,
       end_date: endDate,
       active: true,
@@ -444,98 +434,4 @@ export class PlansService {
     });
   }
 
-  private async validateMercadoPagoPayment(
-    dto: PlanPaymentDto,
-  ): Promise<MercadoPagoPaymentResponse> {
-    const payment = await this.mercadopagoPayment(dto);
-
-    console.log("MercadoPago payment status:", payment);
-    if (payment.status !== 'approved') {
-      throw new BadRequestException(
-        `Pago MercadoPago no aprobado. status=${payment.status}, detail=${payment.status_detail ?? 'n/a'}`,
-      );
-    }
-
-    return payment;
-  }
-
-  private async mercadopagoPayment(
-    params: PlanPaymentDto, 
-  ): Promise<MercadoPagoPaymentResponse> {
-    const accessToken = this.configService.get<string>('MERCADOPAGO_ACCESS_TOKEN');
-    if (!accessToken) {
-      throw new InternalServerErrorException(
-        'Falta configurar MERCADOPAGO_ACCESS_TOKEN',
-      );
-    }
-
-    const idempotencyKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    const paymentUrl = `https://api.mercadopago.com/v1/payments`;
-    const paymentResponse = await fetch(paymentUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-        'X-Idempotency-Key': idempotencyKey,
-      },
-      body: JSON.stringify({
-        transaction_amount: params.transaction_amount,
-        token: params.token,
-        description: params.description,
-        installments: params.installments,
-        payment_method_id: params.payment_method_id,
-        payer: params.payer,
-      }),
-    });
-
-    console.log("RAW ENDPOINT:", {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-        'X-Idempotency-Key': idempotencyKey,
-      },
-      body: JSON.stringify({
-        transaction_amount: params.transaction_amount,
-        token: params.token,
-        description: params.description,
-        installments: params.installments,
-        payment_method_id: params.payment_method_id,
-        payer: params.payer,
-      }),
-    });
-
-    console.log("MercadoPago payment response status:", paymentResponse);
-
-    if (!paymentResponse.ok) {
-      const body = await paymentResponse.text();
-      let errorMessage = `No se pudo consultar MercadoPago (${paymentResponse.status})`;
-      try {
-        const errorBody = JSON.parse(body) as MercadoPagoErrorResponse;
-        console.log("MercadoPago error response body:", errorBody);
-        const causeCode = errorBody.cause?.[0]?.code?.toString() ?? '';
-        if (causeCode === '205' || causeCode.includes('cardNumber')) {
-          errorMessage = 'El número de tarjeta no es válido';
-        } else if (causeCode === '208' || causeCode.includes('cardExpirationMonth')) {
-          errorMessage = 'Mes de vencimiento inválido';
-        } else if (causeCode === '209' || causeCode.includes('cardExpirationYear')) {
-          errorMessage = 'Año de vencimiento inválido';
-        } else if (causeCode === '214' || causeCode.includes('identificationNumber')) {
-          errorMessage = 'Número de documento inválido';
-        } else if (causeCode === '316' || causeCode.includes('cardholderName')) {
-          errorMessage = 'Nombre del titular inválido';
-        } else if (causeCode === 'E301' || causeCode.includes('securityCode')) {
-          errorMessage = 'Código de seguridad inválido';
-        } else if (errorBody.message) {
-          console.log("MercadoPago error message:", errorBody.message);
-          errorMessage = `Error al procesar el pago. Verifique los datos e intente nuevamente.`;
-        }
-      } catch {
-        // body is not JSON, keep generic message
-      }
-      throw new BadRequestException(errorMessage);
-    }
-
-    return (await paymentResponse.json()) as MercadoPagoPaymentResponse;
-  }
 }

@@ -27,11 +27,12 @@ import { FavouritesModule } from './modules/favourites/favourites.module';
 import { SearchAlertsModule } from './modules/search-alerts/search-alerts.module';
 import { SearchAlertsCronModule } from './modules/cron-tasks/search-alerts/search-alerts-cron.module';
 import { PaymentsCronModule } from './modules/cron-tasks/payments/payments-cron.module';
-
+import { LoggerModule } from './common/logger/logger.module';
 
 @Module({
   imports: [
     S3Module,
+    LoggerModule,
     ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,

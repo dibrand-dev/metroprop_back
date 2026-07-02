@@ -2138,52 +2138,75 @@ export class PropertiesService {
       });
     }
 
-    if (Array.isArray(filters.bathroom_amount) && filters.bathroom_amount.length > 0) {
-      qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
-        bathroom_amount: filters.bathroom_amount,
-      });
-
-      if(filters.bathroom_amount.includes(4)) {
-        qb.andWhere('p.bathroom_amount > (:...bathroom_amount)', {
-        bathroom_amount: 4,
-      });
-
+    if( filters.hired_plan_id !== undefined) {
+      if (filters.hired_plan_id != null) {
+        qb.andWhere('p.hired_plan_id = :hired_plan_id', { hired_plan_id: filters.hired_plan_id });
+      } else {
+        qb.andWhere('p.hired_plan_id IS NULL');
       }
     }
 
-    if (Array.isArray(filters.room_amount) && filters.room_amount.length > 0) {
-      qb.andWhere('p.room_amount IN (:...room_amount)', {
-        room_amount: filters.room_amount,
-      });
-
-      if(filters.room_amount.includes(4)) {
-        qb.andWhere('p.room_amount > (:...room_amount)', {
-          room_amount: 4,
+    if (filters.bathroom_amount !== undefined) {
+      if (Array.isArray(filters.bathroom_amount) && filters.bathroom_amount.length > 0) {
+        qb.andWhere('p.bathroom_amount IN (:...bathroom_amount)', {
+          bathroom_amount: filters.bathroom_amount,
         });
+
+        if(filters.bathroom_amount.includes(4)) {
+          qb.andWhere('p.bathroom_amount > (:...bathroom_amount)', {
+            bathroom_amount: 4,
+          });
+        }
+      } else {
+          qb.andWhere('p.bathroom_amount IS NULL');
+      }
+    }
+ 
+    if (filters.room_amount !== undefined) {
+      if (Array.isArray(filters.room_amount) && filters.room_amount.length > 0) {
+        qb.andWhere('p.room_amount IN (:...room_amount)', {
+          room_amount: filters.room_amount,
+        });
+
+        if(filters.room_amount.includes(4)) {
+          qb.andWhere('p.room_amount > (:...room_amount)', {
+            room_amount: 4,
+          });
+        }
+      } else {
+          qb.andWhere('p.room_amount IS NULL');
       }
     }
 
-    if (Array.isArray(filters.suite_amount) && filters.suite_amount.length > 0) {
-      qb.andWhere('p.suite_amount IN (:...suite_amount)', {
-        suite_amount: filters.suite_amount,
-      });
-
-      if(filters.suite_amount.includes(4)) {
-        qb.andWhere('p.suite_amount > (:...suite_amount)', {
-          suite_amount: 4,
+    if (filters.suite_amount !== undefined) {
+      if (Array.isArray(filters.suite_amount) && filters.suite_amount.length > 0) {
+        qb.andWhere('p.suite_amount IN (:...suite_amount)', {
+          suite_amount: filters.suite_amount,
         });
+
+        if(filters.suite_amount.includes(4)) {
+          qb.andWhere('p.suite_amount > (:...suite_amount)', {
+            suite_amount: 4,
+          });
+        }
+      } else {
+          qb.andWhere('p.suite_amount IS NULL');
       }
     }
 
-    if (Array.isArray(filters.parking_lot_amount) && filters.parking_lot_amount.length > 0) {
-      qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
-        parking_lot_amount: filters.parking_lot_amount,
-      });
-
-      if(filters.parking_lot_amount.includes(4)) {
-        qb.andWhere('p.parking_lot_amount > (:...parking_lot_amount)', {
-          parking_lot_amount: 4,
+    if (filters.parking_lot_amount !== undefined) {
+      if (Array.isArray(filters.parking_lot_amount) && filters.parking_lot_amount.length > 0) {
+        qb.andWhere('p.parking_lot_amount IN (:...parking_lot_amount)', {
+          parking_lot_amount: filters.parking_lot_amount,
         });
+
+        if(filters.parking_lot_amount.includes(4)) {
+          qb.andWhere('p.parking_lot_amount > (:...parking_lot_amount)', {
+            parking_lot_amount: 4,
+          });
+        }
+      } else {
+          qb.andWhere('p.parking_lot_amount IS NULL');
       }
     }
 

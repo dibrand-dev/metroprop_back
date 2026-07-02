@@ -1,7 +1,13 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import sgMail from '@sendgrid/mail';
-import { API_BASE_URL, OPERATION_TYPE_LABELS, PASSWORD_DEFAULT, PROPERTY_TYPE_LABELS } from '../constants';
+import {
+  API_BASE_URL,
+  OPERATION_TYPE_LABELS,
+  PASSWORD_DEFAULT,
+  PAYMENT_ERROR_NOTIFICATION_RECIPIENTS,
+  PROPERTY_TYPE_LABELS,
+} from '../constants';
 import { OperationType, PropertyType } from '../enums';
 
 export interface EmailOptions {
@@ -9,7 +15,7 @@ export interface EmailOptions {
   subject: string;
   html: string;
 }
-
+ 
 @Injectable()
 export class EmailService {
   private readonly logger = new Logger(EmailService.name);
@@ -87,6 +93,59 @@ export class EmailService {
         this.logger.error(errorMessage, errorStack);
         throw new Error(`Email delivery failed: ${error instanceof Error ? error.message : String(error)}`);
       }
+    }
+  }
+
+  async sendPaymentErrorNotification(
+    payload: {
+      occurredAt: Date;
+      sourceSystem: string;
+      message: string;
+      recordData: Record<string, unknown>;
+      principalInfo: Record<string, unknown>;
+      mercadopagoContractedData: unknown;
+      mercadopagoLastStatusPayload: unknown;
+    },
+  ): Promise<void> {
+    const html = `
+      <h2>Metroprop - Error en modulo de pagos</h2>
+      <p><strong>Fecha:</strong> ${payload.occurredAt.toISOString()}</p>
+      <p><strong>Sistema origen:</strong> ${payload.sourceSystem}</p>
+      <p><strong>Mensaje:</strong> ${payload.message}</p>
+      <h3>Registro afectado</h3>
+      <pre>${this.safeJson(payload.recordData)}</pre>
+      <h3>Entidad relacionada</h3>
+      <pre>${this.safeJson(payload.principalInfo)}</pre>
+      <h3>Datos MercadoPago contratados</h3>
+      <pre>${this.safeJson(payload.mercadopagoContractedData)}</pre>
+      <h3>Ultimo payload de estado MercadoPago</h3>
+      <pre>${this.safeJson(payload.mercadopagoLastStatusPayload)}</pre>
+    `;
+
+    const sendResults = await Promise.allSettled(
+      PAYMENT_ERROR_NOTIFICATION_RECIPIENTS.map((to) =>
+        this.sendEmail({
+          to,
+          subject: 'Metroprop: se produjo un error en el modulo de pagos',
+          html,
+        }),
+      ),
+    );
+
+    sendResults.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `[EmailService] Error enviando alerta de pago a ${PAYMENT_ERROR_NOTIFICATION_RECIPIENTS[index]}: ${String(result.reason)}`,
+        );
+      }
+    });
+  }
+
+  private safeJson(value: unknown): string {
+    try {
+      return JSON.stringify(value, null, 2);
+    } catch {
+      return String(value);
     }
   }
 
