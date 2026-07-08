@@ -231,6 +231,7 @@ export class UsersService {
       const userRepository = manager.getRepository(User);
       const propertyRepository = manager.getRepository(Property);
       const branchRepository = manager.getRepository(Branch);
+      const organizationRepository = manager.getRepository(Organization);
 
       const user = await userRepository.findOne({
         where: { id, deleted: false },
@@ -249,6 +250,7 @@ export class UsersService {
           // dar de baja todos los usuarios y branches que compartan la misma organization id
           await userRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
           await branchRepository.update({ organization_id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });
+          await organizationRepository.update({ id: user.organization_id, deleted: false }, { deleted: true, deleted_at: now });  
         }
 
         await propertyRepository.update({ user_id: id, deleted: false }, { deleted: true, deleted_at: now });
