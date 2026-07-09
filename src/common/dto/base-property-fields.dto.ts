@@ -183,12 +183,24 @@ export class BasePropertyFieldsDto {
   @IsPositive()
   surface?: number;
 
-  @ValidateIf(o => o.property_type !== PropertyType.GALPON_BODEGA && o.property_type !== PropertyType.BOVEDA_NICHO_PARCELA && o.property_type !== PropertyType.TERRENO)
+  @ValidateIf(
+    o =>
+      o.property_type !== PropertyType.GALPON_BODEGA &&
+      o.property_type !== PropertyType.BOVEDA_NICHO_PARCELA &&
+      o.property_type !== PropertyType.TERRENO &&
+      o.property_type !== PropertyType.CAMA_NAUTICA,
+  )
   @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsPositive()
   roofed_surface?: number;
 
+  @ValidateIf(
+    o =>
+      o.property_type !== PropertyType.TERRENO &&
+      o.property_type !== PropertyType.BOVEDA_NICHO_PARCELA &&
+      o.property_type !== PropertyType.CAMA_NAUTICA,
+  )
   @IsOptional()
   @IsNumber({ allowNaN: false, allowInfinity: false })
   @IsPositive()
