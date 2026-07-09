@@ -178,7 +178,7 @@ export class MercadoPagoService {
         errorMessage = 'Codigo de seguridad invalido';
       } else if (errorBody.message) {
         errorMessage =
-          'Error al procesar el pago. Verifique los datos e intente nuevamente.';
+          'Error al procesar el pago. Verifique los datos e intente nuevamente.' + errorBody.message;
       }
     } catch {
       // Keep generic message when body is not JSON.
