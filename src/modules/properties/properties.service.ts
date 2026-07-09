@@ -1607,13 +1607,17 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org', 'p_org.deleted = false AND p_org.status = true')
-        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
-      //  .leftJoinAndSelect('units.images', 'unitImages')
-     //   .leftJoinAndSelect('p.user', 'usr')
-        .orderBy('p.visibility', 'DESC')
-        .addOrderBy(orderBy, orderDirection)
-        .skip(offset)
-        .take(limit);
+        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false');
+      cardQb.orderBy('p.visibility', 'DESC');
+      if (orderBy === 'p.price_square_meter') {
+        cardQb
+          .addSelect(
+            `CASE WHEN p.currency = '${Currency.USD}' THEN 0 ELSE 1 END`,
+            'usd_priority',
+          )
+          .addOrderBy('usd_priority', 'ASC');
+      }
+      cardQb.addOrderBy(orderBy, orderDirection).skip(offset).take(limit);
 
       const [partialProps, cardTotal] = await cardQb.getManyAndCount();
       total = cardTotal;
@@ -1904,18 +1908,38 @@ export class PropertiesService {
     let orderBy = 'p.created_at';
     let orderDirection: 'ASC' | 'DESC' = 'ASC';
     if (filters.order_by) {
-      let by: string | undefined, dir: string | undefined;
-      if (filters.order_by.includes(':')) {
-        [by, dir] = filters.order_by.split(':');
-      } else if (filters.order_by.includes(' ')) {
-        [by, dir] = filters.order_by.split(' ');
-      } else {
-        by = filters.order_by;
+      let normalized = filters.order_by.trim();
+      try {
+        normalized = decodeURIComponent(normalized);
+      } catch {
+        // Mantener el valor original si no es un URI válido.
       }
-      if (by) orderBy = by.startsWith('p.') ? by : `p.${by}`;
-      if (dir) {
-        const dirUpper = dir.toUpperCase();
-        orderDirection = (dirUpper === 'ASC' || dirUpper === 'DESC') ? dirUpper : 'ASC';
+
+      let by: string | undefined, dir: string | undefined;
+      if (normalized.includes(':')) {
+        [by, dir] = normalized.split(':');
+      } else if (normalized.includes(' ')) {
+        [by, dir] = normalized.split(' ');
+      } else {
+        by = normalized;
+      }
+      if (by) {
+        const field = by.startsWith('p.') ? by.slice(2) : by;
+        if (field === 'price_square_meter') {
+          orderBy = 'p.price_square_meter';
+          if (dir) {
+            const dirUpper = dir.trim().toUpperCase();
+            orderDirection =
+              dirUpper === 'ASC' || dirUpper === 'DESC' ? dirUpper : 'ASC';
+          }
+        } else {
+          orderBy = by.startsWith('p.') ? by : `p.${by}`;
+          if (dir) {
+            const dirUpper = dir.trim().toUpperCase();
+            orderDirection =
+              dirUpper === 'ASC' || dirUpper === 'DESC' ? dirUpper : 'ASC';
+          }
+        }
       }
     }
 
@@ -1975,7 +1999,7 @@ export class PropertiesService {
 
       return { qb, orderBy, orderDirection };
     }
-
+    
     if(filters.is_development != null && filters.is_development === true) {
       qb.andWhere('p.is_development = :is_development', {
         is_development: true,
@@ -2066,14 +2090,41 @@ export class PropertiesService {
     }
 
     if (Array.isArray(filters.property_type) && filters.property_type.length > 0) {
-      qb.andWhere('p.property_type IN (:...property_type)', {
-        property_type: filters.property_type,
-      });
+      const hasEmprendimiento = filters.property_type.includes(
+        PropertyType.EMPRENDIMIENTO,
+      );
+      const otherTypes = filters.property_type.filter(
+        (t) => t !== PropertyType.EMPRENDIMIENTO,
+      );
+
+      if (hasEmprendimiento && otherTypes.length === 0) {
+        // Solo emprendimiento → únicamente desarrollos padre
+        qb.andWhere('p.is_development = :is_development', {
+          is_development: true,
+        });
+      } else if (hasEmprendimiento && otherTypes.length > 0) {
+        // Emprendimiento + otros tipos → solo unidades de esos tipos dentro de un emprendimiento
+        qb.andWhere(
+          'p.property_type IN (:...other_property_types) AND p.is_development = :not_development AND p.development_id IS NOT NULL',
+          {
+            other_property_types: otherTypes,
+            not_development: false,
+          },
+        );
+      } else {
+        // Sin emprendimiento en el filtro → excluir desarrollos padre
+        qb.andWhere('p.property_type IN (:...property_type)', {
+          property_type: filters.property_type,
+        });
+        qb.andWhere('p.is_development = :is_development', {
+          is_development: false,
+        });
+      }
     } else {
-      // No property_type filter → exclude developments
-      //qb.andWhere('p.property_type != :excluded_property_type', {
-      //  excluded_property_type: PropertyType.EMPRENDIMIENTO,
-      //});
+      // Sin filtro property_type → excluir emprendimientos
+      qb.andWhere('p.is_development = :is_development', {
+        is_development: false,
+      });
     }
 
     if(filters.created_from != null) {
