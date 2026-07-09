@@ -1915,7 +1915,7 @@ export class PropertiesService {
     qb.addOrderBy(orderBy, orderDirection);
   }
 
-  private async buildAdvancedSearchQuery(
+  private async buildAdvancedSearchQuery( 
     filters: SearchPropertiesDto,
     options?: {
       includeStatusFilter?: boolean;
