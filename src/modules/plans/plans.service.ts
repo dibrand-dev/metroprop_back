@@ -716,7 +716,7 @@ export class PlansService {
     if (trimmed.startsWith('Metroprop |')) {
       return trimmed;
     }
-    return `Metroprop | ${trimmed}`;
+    return `MetroProp | ${trimmed}`;
   }
 
   private maskToken(token?: string): string {
