@@ -1629,6 +1629,7 @@ export class PropertiesService {
         period: p.period,
         hired_plan_id: p.hired_plan_id,
         purchased_plan_id: p.purchased_plan_id,
+        visibility: p.visibility,
         is_development: p.is_development,
         location_id: p.location_id,
         sub_location_id: p.sub_location_id,
