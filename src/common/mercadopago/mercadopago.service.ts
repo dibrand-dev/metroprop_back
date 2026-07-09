@@ -8,7 +8,9 @@ import { ConfigService } from '@nestjs/config';
 import {
   MercadoPagoErrorResponse,
   MercadoPagoCreatePaymentRequest,
+  MercadoPagoCreatePreapprovalRequest,
   MercadoPagoPaymentResponse,
+  MercadoPagoPreapprovalResponse,
   MercadoPagoStatusSnapshot,
   MercadoPagoTrackingFields,
 } from './mercadopago.types';
@@ -18,6 +20,80 @@ export class MercadoPagoService {
   private readonly logger = new Logger(MercadoPagoService.name);
 
   constructor(private readonly configService: ConfigService) {}
+
+  async createAuthorizedPreapproval(
+    params: MercadoPagoCreatePreapprovalRequest,
+  ): Promise<MercadoPagoPreapprovalResponse> {
+    const preapproval = await this.createPreapproval(params);
+    const normalizedStatus = preapproval.status?.toLowerCase();
+
+    if (normalizedStatus !== 'authorized') {
+      throw new BadRequestException(
+        `Suscripción MercadoPago no autorizada. status=${preapproval.status ?? 'n/a'}, detail=${preapproval.status_detail ?? 'n/a'}`,
+      );
+    }
+
+    return preapproval;
+  }
+
+  async createPreapproval(
+    params: MercadoPagoCreatePreapprovalRequest,
+  ): Promise<MercadoPagoPreapprovalResponse> {
+    const token = params.card_token_id?.trim();
+    if (!token) {
+      throw new BadRequestException(
+        'El token de la tarjeta es obligatorio. Generá uno nuevo desde el formulario de pago.',
+      );
+    }
+
+    const accessToken = this.getAccessToken();
+    const backUrl =
+      this.configService.get<string>('MERCADOPAGO_BACK_URL') ??
+      'https://www.mercadopago.com.ar';
+
+    this.logger.log(
+      `MercadoPago createPreapproval: cred=${accessToken.slice(0, 12)}..., tokenLen=${token.length}, amount=${params.transaction_amount}, currency=${params.currency_id}`,
+    );
+
+    const preapprovalBody: Record<string, unknown> = {
+      reason: params.reason,
+      payer_email: params.payer_email,
+      card_token_id: token,
+      status: 'authorized',
+      back_url: backUrl,
+      auto_recurring: {
+        frequency: 1,
+        frequency_type: 'months',
+        transaction_amount: params.transaction_amount,
+        currency_id: params.currency_id,
+      },
+    };
+
+    if (params.external_reference) {
+      preapprovalBody.external_reference = params.external_reference;
+    }
+
+    const preapprovalResponse = await fetch('https://api.mercadopago.com/preapproval', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify(preapprovalBody),
+    });
+
+    if (!preapprovalResponse.ok) {
+      const body = await preapprovalResponse.text();
+      this.logger.warn(
+        `MercadoPago createPreapproval failed (${preapprovalResponse.status}): ${body}`,
+      );
+      throw new BadRequestException(
+        this.mapCreatePreapprovalError(body, preapprovalResponse.status),
+      );
+    }
+
+    return (await preapprovalResponse.json()) as MercadoPagoPreapprovalResponse;
+  }
 
   async createApprovedPayment(
     params: MercadoPagoCreatePaymentRequest,
@@ -160,6 +236,17 @@ export class MercadoPagoService {
     };
   }
 
+  extractPreapprovalTrackingFields(
+    preapproval: MercadoPagoPreapprovalResponse,
+  ): MercadoPagoTrackingFields {
+    return {
+      preapprovalId: this.toOptionalString(preapproval.id),
+      externalReference: this.toOptionalString(preapproval.external_reference),
+      status: this.toOptionalString(preapproval.status),
+      statusDetail: this.toOptionalString(preapproval.status_detail),
+    };
+  }
+
   extractTrackingFields(payment: MercadoPagoPaymentResponse): MercadoPagoTrackingFields {
     return {
       paymentId: this.toOptionalString(payment.id),
@@ -179,6 +266,34 @@ export class MercadoPagoService {
     }
 
     return accessToken;
+  }
+
+  private mapCreatePreapprovalError(body: string, statusCode: number): string {
+    let errorMessage = `No se pudo crear la suscripción en MercadoPago (${statusCode})`;
+    try {
+      const errorBody = JSON.parse(body) as MercadoPagoErrorResponse;
+      const causeCode = errorBody.cause?.[0]?.code?.toString() ?? '';
+      const mpMessage = errorBody.message?.trim() ?? '';
+
+      if (
+        causeCode === '2006' ||
+        causeCode === '3008' ||
+        mpMessage.toLowerCase().includes('card token not found')
+      ) {
+        errorMessage =
+          'El token de la tarjeta no es válido, ya fue usado o expiró. Generá uno nuevo confirmando el pago otra vez (el token es de un solo uso). ' +
+          'Verificá que Public Key y Access Token sean de la misma app y entorno en MercadoPago.';
+      } else if (causeCode === '3' || mpMessage.toLowerCase().includes('token must be for test')) {
+        errorMessage =
+          'Las credenciales de MercadoPago no coinciden: el token fue generado en un entorno distinto al configurado en el servidor (test vs producción).';
+      } else if (mpMessage) {
+        errorMessage = `Error al crear la suscripción. Verifique los datos e intente nuevamente. ${mpMessage}`;
+      }
+    } catch {
+      // Keep generic message when body is not JSON.
+    }
+
+    return errorMessage;
   }
 
   private mapCreatePaymentError(body: string, statusCode: number): string {

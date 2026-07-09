@@ -63,8 +63,7 @@ export class PlansController {
   }
 
   @Post('branch/:branchId')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  @UseGuards(JwtAuthGuard)
   async createBranchPlan(
     @Param('branchId', ParseIntPipe) branchId: number,
     @Body() dto: PlanPaymentDto,

@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -114,13 +115,17 @@ export class PlansService {
       );
     }
 
-    const plan = await this.repo.findOne({
-      where: { id: dto.planId, deleted: false },
-    });
-    if (!plan) throw new NotFoundException('Plan not found');
+    const plan = await this.resolvePlanForPayment(dto.planId, dto.transaction_amount);
 
-    const mpPayment = await this.mercadopagoService.createApprovedPayment(dto);
-    const tracking = this.mercadopagoService.extractTrackingFields(mpPayment);
+    const mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
+      reason: plan.plan_name,
+      payer_email: dto.payer.email,
+      card_token_id: dto.token,
+      transaction_amount: plan.price,
+      currency_id: plan.currency,
+      external_reference: `metroprop-branch-${branchId}-plan-${dto.planId}-${Date.now()}`,
+    });
+    const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpPreapproval);
 
     const now = new Date();
     const endDate = new Date(now);
@@ -132,21 +137,19 @@ export class PlansService {
       amount_hired: 1,
       plan_price_paid: plan.price,
       plan_name_hired: plan.plan_name,
-      mercadopago_response: mpPayment,
+      mercadopago_response: mpPreapproval,
       mercadopago_payment_id: tracking.paymentId,
       mercadopago_preapproval_id: tracking.preapprovalId,
       mercadopago_external_reference: tracking.externalReference,
       mercadopago_status: tracking.status,
       mercadopago_status_detail: tracking.statusDetail,
       mercadopago_last_status_check_at: now,
-      mercadopago_last_status_payload: mpPayment,
+      mercadopago_last_status_payload: mpPreapproval,
       start_date: now,
       end_date: endDate,
       active: true,
       organization_id: branchOrgId,
     });
-
-    console.log("Creating BranchPlan with data:", branchPlan);
 
     return this.branchPlanRepo.save(branchPlan);
   }
@@ -302,13 +305,17 @@ export class PlansService {
       );
     }
 
-    const plan = await this.repo.findOne({
-      where: { id: dto.planId, deleted: false },
-    });
-    if (!plan) throw new NotFoundException('Plan not found');
+    const plan = await this.resolvePlanForPayment(dto.planId, dto.transaction_amount);
 
-    const mpPayment = await this.mercadopagoService.createApprovedPayment(dto);
-    const tracking = this.mercadopagoService.extractTrackingFields(mpPayment);
+    const mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
+      reason: plan.plan_name,
+      payer_email: dto.payer.email,
+      card_token_id: dto.token,
+      transaction_amount: plan.price,
+      currency_id: plan.currency,
+      external_reference: `metroprop-user-${userId}-plan-${dto.planId}-${Date.now()}`,
+    });
+    const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpPreapproval);
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);
@@ -319,21 +326,20 @@ export class PlansService {
       amount_hired: 1,
       plan_price_paid: plan.price,
       plan_name_hired: plan.plan_name,
-      mercadopago_response: mpPayment,
+      mercadopago_response: mpPreapproval,
       mercadopago_payment_id: tracking.paymentId,
       mercadopago_preapproval_id: tracking.preapprovalId,
       mercadopago_external_reference: tracking.externalReference,
       mercadopago_status: tracking.status,
       mercadopago_status_detail: tracking.statusDetail,
       mercadopago_last_status_check_at: now,
-      mercadopago_last_status_payload: mpPayment,
+      mercadopago_last_status_payload: mpPreapproval,
       start_date: now,
       end_date: endDate,
       active: true,
       organization_id: orgId,
     });
 
-    console.log("Creating UserPlan with data:", userPlan);
     return this.userPlanRepo.save(userPlan);
   }
 
@@ -432,6 +438,32 @@ export class PlansService {
       relations: ['plan'],
       order: { created_at: 'DESC' },
     });
+  }
+
+  private async resolvePlanForPayment(
+    planId: number,
+    transactionAmount: number,
+  ): Promise<Plan> {
+    const plan = await this.repo.findOne({
+      where: { id: planId, deleted: false },
+    });
+    if (!plan) {
+      throw new NotFoundException('Plan not found');
+    }
+
+    if (!plan.is_active) {
+      throw new BadRequestException(
+        `El plan "${plan.plan_name}" no está disponible para contratar en este momento.`,
+      );
+    }
+
+    if (plan.price !== transactionAmount) {
+      throw new BadRequestException(
+        `El monto enviado (${transactionAmount} ${plan.currency}) no coincide con el precio actual del plan "${plan.plan_name}" (${plan.price} ${plan.currency}). Actualizá la página e intentá nuevamente.`,
+      );
+    }
+
+    return plan;
   }
 
 }
