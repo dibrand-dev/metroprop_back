@@ -1893,7 +1893,8 @@ export class PropertiesService {
     orderBy: string,
     orderDirection: 'ASC' | 'DESC',
   ): void {
-    qb.orderBy('p.visibility', 'DESC');
+    // NULL se trata como 0 (sin plan); evita que NULL quede primero en DESC (comportamiento de PostgreSQL).
+    qb.orderBy('COALESCE(p.visibility, 0)', 'DESC');
 
     if (orderBy === 'p.price' || orderBy === 'p.price_square_meter') {
       qb
