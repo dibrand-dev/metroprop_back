@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsInt, IsNumber, IsString, ValidateNested } from 'class-validator';
+import { IsInt, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 export class PayerIdentificationDto {
   @IsString()
@@ -45,6 +45,10 @@ export class PlanPaymentDto {
 
   @IsString()
   payment_method_id!: string;
+
+  @IsOptional()
+  @IsInt()
+  issuer_id?: number;
 
   @ValidateNested()
   @Type(() => PayerDto)

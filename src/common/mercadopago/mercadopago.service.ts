@@ -45,6 +45,22 @@ export class MercadoPagoService {
 
     const accessToken = this.getAccessToken();
 
+    this.logger.log(
+      `MercadoPago createPayment: cred=${accessToken.slice(0, 12)}..., tokenLen=${token.length}, issuer_id=${params.issuer_id ?? 'missing'}, payment_method_id=${params.payment_method_id}`,
+    );
+
+    const paymentBody: Record<string, unknown> = {
+      transaction_amount: params.transaction_amount,
+      token,
+      description: params.description,
+      installments: params.installments,
+      payment_method_id: params.payment_method_id,
+      payer: params.payer,
+    };
+    if (params.issuer_id != null) {
+      paymentBody.issuer_id = params.issuer_id;
+    }
+
     const idempotencyKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const paymentResponse = await fetch('https://api.mercadopago.com/v1/payments', {
       method: 'POST',
@@ -53,14 +69,7 @@ export class MercadoPagoService {
         Authorization: `Bearer ${accessToken}`,
         'X-Idempotency-Key': idempotencyKey,
       },
-      body: JSON.stringify({
-        transaction_amount: params.transaction_amount,
-        token,
-        description: params.description,
-        installments: params.installments,
-        payment_method_id: params.payment_method_id,
-        payer: params.payer,
-      }),
+      body: JSON.stringify(paymentBody),
     });
 
     if (!paymentResponse.ok) {
@@ -185,8 +194,9 @@ export class MercadoPagoService {
         mpMessage.toLowerCase().includes('card token not found')
       ) {
         errorMessage =
-          'El token de la tarjeta no es válido o ya expiró. Generá uno nuevo desde el formulario de pago e intentá de nuevo. ' +
-          'Verificá también que el frontend use la Public Key de la misma aplicación y entorno (test/producción) que el Access Token del backend.';
+          'El token de la tarjeta no es válido, ya fue usado o expiró. Generá uno nuevo confirmando el pago otra vez (el token es de un solo uso). ' +
+          'Verificá que el frontend envíe token, payment_method_id e issuer_id juntos desde cardForm.getCardFormData(), ' +
+          'y que Public Key y Access Token sean de la misma app y entorno en MercadoPago.';
       } else if (causeCode === '3' || mpMessage.toLowerCase().includes('token must be for test')) {
         errorMessage =
           'Las credenciales de MercadoPago no coinciden: el token fue generado en un entorno distinto al configurado en el servidor (test vs producción).';

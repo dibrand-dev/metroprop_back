@@ -29,6 +29,7 @@ export interface MercadoPagoCreatePaymentRequest {
   description: string;
   installments: number;
   payment_method_id: string;
+  issuer_id?: number;
   payer: unknown;
 }
 
