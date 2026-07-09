@@ -249,6 +249,66 @@ export class MercadoPagoService {
     return null;
   }
 
+  async cancelPreapproval(
+    preapprovalId: string,
+  ): Promise<MercadoPagoPreapprovalResponse> {
+    const accessToken = this.getAccessToken();
+    const url = `https://api.mercadopago.com/preapproval/${preapprovalId}`;
+
+    this.logger.log(
+      `[MP-PREAPPROVAL] cancelPreapproval START | preapprovalId=${preapprovalId}`,
+    );
+
+    try {
+      const snapshot = await this.getPreapprovalStatus(preapprovalId, accessToken);
+      const currentStatus = snapshot.status?.toLowerCase();
+      if (currentStatus === 'cancelled' || currentStatus === 'canceled') {
+        this.logger.warn(
+          `[MP-PREAPPROVAL] cancelPreapproval skipped | already ${snapshot.status} | preapprovalId=${preapprovalId}`,
+        );
+        return snapshot.payload as MercadoPagoPreapprovalResponse;
+      }
+    } catch (statusError) {
+      const message =
+        statusError instanceof Error ? statusError.message : String(statusError);
+      this.logger.warn(
+        `[MP-PREAPPROVAL] cancelPreapproval status check failed | preapprovalId=${preapprovalId} | error=${message}`,
+      );
+    }
+
+    const response = await fetch(url, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${accessToken}`,
+      },
+      body: JSON.stringify({ status: 'cancelled' }),
+    });
+
+    const body = await response.text();
+    this.logResponseHeaders('cancelPreapproval', response);
+    this.logger.log(
+      `[MP-PREAPPROVAL] cancelPreapproval RESPONSE | status=${response.status} | body=${body || '(empty)'}`,
+    );
+
+    if (response.ok) {
+      return JSON.parse(body) as MercadoPagoPreapprovalResponse;
+    }
+
+    const alreadyCancelled = this.isPreapprovalAlreadyCancelled(body);
+    if (alreadyCancelled) {
+      this.logger.warn(
+        `[MP-PREAPPROVAL] cancelPreapproval already cancelled | preapprovalId=${preapprovalId}`,
+      );
+      const snapshot = await this.getPreapprovalStatus(preapprovalId, accessToken);
+      return snapshot.payload as MercadoPagoPreapprovalResponse;
+    }
+
+    throw new BadRequestException(
+      this.mapCancelPreapprovalError(body, response.status),
+    );
+  }
+
   async getPreapprovalStatus(
     preapprovalId: string,
     accessToken?: string,
@@ -382,6 +442,29 @@ export class MercadoPagoService {
     } catch {
       return `(not valid JSON) raw=${body}`;
     }
+  }
+
+  private isPreapprovalAlreadyCancelled(body: string): boolean {
+    const normalized = body.toLowerCase();
+    return (
+      normalized.includes('already cancelled') ||
+      normalized.includes('already canceled') ||
+      normalized.includes('ya fue cancelad')
+    );
+  }
+
+  private mapCancelPreapprovalError(body: string, statusCode: number): string {
+    let errorMessage = `No se pudo cancelar la suscripción en MercadoPago (${statusCode})`;
+    try {
+      const errorBody = JSON.parse(body) as MercadoPagoErrorResponse;
+      const mpMessage = errorBody.message?.trim() ?? '';
+      if (mpMessage) {
+        errorMessage = `No se pudo cancelar la suscripción en MercadoPago. ${mpMessage}`;
+      }
+    } catch {
+      // Keep generic message when body is not JSON.
+    }
+    return errorMessage;
   }
 
   private mapCreatePreapprovalError(body: string, statusCode: number): string {

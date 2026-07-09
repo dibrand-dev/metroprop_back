@@ -136,6 +136,27 @@ export class PlansController {
     return this.plansService.createUserPlan(dto, req.user, userId);
   }
 
+  @Patch('user-plan/:purchasedPlanId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  cancelUserPlan(
+    @Param('purchasedPlanId', ParseIntPipe) purchasedPlanId: number,
+    @Request() req: any,
+  ) {
+    return this.plansService.cancelUserPlan(purchasedPlanId, req.user);
+  }
+
+  @Patch('branch-plan/:purchasedPlanId/cancel')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN, UserRole.USER_ROL_ADMIN)
+  cancelBranchPlan(
+    @Param('purchasedPlanId', ParseIntPipe) purchasedPlanId: number,
+    @Request() req: any,
+  ) {
+    return this.plansService.cancelBranchPlan(purchasedPlanId, req.user);
+  }
+
   // ─── Dynamic :id routes ───────────────────────────────────────────────────
 
   @Get(':id')

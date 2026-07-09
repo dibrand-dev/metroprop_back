@@ -19,6 +19,16 @@ import { PlanPaymentDto } from './dto/mercadopago-purchase.dto';
 import { UserRole, PropertyStatus } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
 import { MercadoPagoService } from '../../common/mercadopago/mercadopago.service';
+import { MercadoPagoPreapprovalResponse } from '../../common/mercadopago/mercadopago.types';
+
+export interface CancelPurchasedPlanResult {
+  message: string;
+  purchased_plan_id: number;
+  plan_type: 'user' | 'branch';
+  properties_reset: number;
+  mercadopago_status?: string;
+  already_inactive: boolean;
+}
 
 @Injectable()
 export class PlansService {
@@ -394,6 +404,161 @@ export class PlansService {
     return this.userPlanRepo.save(userPlan);
   }
 
+  async cancelUserPlan(
+    purchasedPlanId: number,
+    requester: User,
+  ): Promise<CancelPurchasedPlanResult> {
+    const userPlan = await this.userPlanRepo.findOne({
+      where: { id: purchasedPlanId },
+    });
+    if (!userPlan) {
+      throw new NotFoundException('User plan not found');
+    }
+
+    if (requester.id !== userPlan.user_id) {
+      throw new ForbiddenException(
+        'No tenés permiso para dar de baja este plan',
+      );
+    }
+
+    if (!userPlan.active) {
+      return {
+        message: 'El plan ya estaba dado de baja',
+        purchased_plan_id: userPlan.id,
+        plan_type: 'user',
+        properties_reset: 0,
+        mercadopago_status: userPlan.mercadopago_status,
+        already_inactive: true,
+      };
+    }
+
+    const mpResponse = await this.cancelMercadoPagoSubscription(
+      userPlan.mercadopago_preapproval_id,
+    );
+
+    const now = new Date();
+    return this.userPlanRepo.manager.transaction(async (manager) => {
+      const userPlanRepo = manager.getRepository(UserPlan);
+      const propertyRepo = manager.getRepository(Property);
+
+      userPlan.active = false;
+      userPlan.mercadopago_cancelled_at = now;
+      userPlan.mercadopago_last_status_check_at = now;
+      if (mpResponse) {
+        const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpResponse);
+        userPlan.mercadopago_status = tracking.status ?? 'cancelled';
+        userPlan.mercadopago_status_detail = tracking.statusDetail;
+        userPlan.mercadopago_last_status_payload = mpResponse;
+      } else {
+        userPlan.mercadopago_status = 'cancelled';
+      }
+
+      await userPlanRepo.save(userPlan);
+
+      const propertyUpdateResult = await propertyRepo.update(
+        { purchased_plan_id: userPlan.id, user_id: userPlan.user_id },
+        {
+          hired_plan_id: null as unknown as number,
+          purchased_plan_id: null as unknown as number,
+          visibility: 0,
+        },
+      );
+
+      this.logger.log(
+        `[PLANS-CANCEL] cancelUserPlan OK | purchasedPlanId=${purchasedPlanId} | userId=${userPlan.user_id} | propertiesReset=${propertyUpdateResult.affected ?? 0}`,
+      );
+
+      return {
+        message: 'Plan dado de baja correctamente',
+        purchased_plan_id: userPlan.id,
+        plan_type: 'user',
+        properties_reset: propertyUpdateResult.affected ?? 0,
+        mercadopago_status: userPlan.mercadopago_status,
+        already_inactive: false,
+      };
+    });
+  }
+
+  async cancelBranchPlan(
+    purchasedPlanId: number,
+    requester: User,
+  ): Promise<CancelPurchasedPlanResult> {
+    const branchPlan = await this.branchPlanRepo.findOne({
+      where: { id: purchasedPlanId },
+    });
+    if (!branchPlan) {
+      throw new NotFoundException('Branch plan not found');
+    }
+
+    const isSuperAdmin = requester.role_id === UserRole.USER_ROL_SUPER_ADMIN;
+    const isOrgAdmin = requester.role_id === UserRole.USER_ROL_ADMIN;
+    if (
+      !isSuperAdmin &&
+      (!isOrgAdmin || requester.organization_id !== branchPlan.organization_id)
+    ) {
+      throw new ForbiddenException(
+        'No tenés permiso para dar de baja este plan',
+      );
+    }
+
+    if (!branchPlan.active) {
+      return {
+        message: 'El plan ya estaba dado de baja',
+        purchased_plan_id: branchPlan.id,
+        plan_type: 'branch',
+        properties_reset: 0,
+        mercadopago_status: branchPlan.mercadopago_status,
+        already_inactive: true,
+      };
+    }
+
+    const mpResponse = await this.cancelMercadoPagoSubscription(
+      branchPlan.mercadopago_preapproval_id,
+    );
+
+    const now = new Date();
+    return this.branchPlanRepo.manager.transaction(async (manager) => {
+      const branchPlanRepo = manager.getRepository(BranchPlan);
+      const propertyRepo = manager.getRepository(Property);
+
+      branchPlan.active = false;
+      branchPlan.mercadopago_cancelled_at = now;
+      branchPlan.mercadopago_last_status_check_at = now;
+      if (mpResponse) {
+        const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpResponse);
+        branchPlan.mercadopago_status = tracking.status ?? 'cancelled';
+        branchPlan.mercadopago_status_detail = tracking.statusDetail;
+        branchPlan.mercadopago_last_status_payload = mpResponse;
+      } else {
+        branchPlan.mercadopago_status = 'cancelled';
+      }
+
+      await branchPlanRepo.save(branchPlan);
+
+      const propertyUpdateResult = await propertyRepo.update(
+        { purchased_plan_id: branchPlan.id, branch_id: branchPlan.branch_id },
+        {
+          hired_plan_id: null as unknown as number,
+          purchased_plan_id: null as unknown as number,
+          visibility: 0,
+        },
+      );
+
+      this.logger.log(
+        `[PLANS-CANCEL] cancelBranchPlan OK | purchasedPlanId=${purchasedPlanId} | branchId=${branchPlan.branch_id} | propertiesReset=${propertyUpdateResult.affected ?? 0}`,
+      );
+
+      return {
+        message: 'Plan dado de baja correctamente',
+        purchased_plan_id: branchPlan.id,
+        plan_type: 'branch',
+        properties_reset: propertyUpdateResult.affected ?? 0,
+        mercadopago_status: branchPlan.mercadopago_status,
+        already_inactive: false,
+      };
+    });
+  }
+
   async getUserPlanAvailability(userId: number, requester: any) {
     const targetUser = await this.userRepo.findOne({
       where: { id: userId },
@@ -489,6 +654,19 @@ export class PlansService {
       relations: ['plan'],
       order: { created_at: 'DESC' },
     });
+  }
+
+  private async cancelMercadoPagoSubscription(
+    preapprovalId?: string,
+  ): Promise<MercadoPagoPreapprovalResponse | null> {
+    if (!preapprovalId) {
+      this.logger.warn(
+        '[PLANS-CANCEL] cancelMercadoPagoSubscription skipped | missing preapprovalId',
+      );
+      return null;
+    }
+
+    return this.mercadopagoService.cancelPreapproval(preapprovalId);
   }
 
   private async resolvePlanForPayment(
