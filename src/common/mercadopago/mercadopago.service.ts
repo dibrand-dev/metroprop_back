@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import {
@@ -14,6 +15,8 @@ import {
 
 @Injectable()
 export class MercadoPagoService {
+  private readonly logger = new Logger(MercadoPagoService.name);
+
   constructor(private readonly configService: ConfigService) {}
 
   async createApprovedPayment(
@@ -33,6 +36,13 @@ export class MercadoPagoService {
   async createPayment(
     params: MercadoPagoCreatePaymentRequest,
   ): Promise<MercadoPagoPaymentResponse> {
+    const token = params.token?.trim();
+    if (!token) {
+      throw new BadRequestException(
+        'El token de la tarjeta es obligatorio. Generá uno nuevo desde el formulario de pago.',
+      );
+    }
+
     const accessToken = this.getAccessToken();
 
     const idempotencyKey = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -45,7 +55,7 @@ export class MercadoPagoService {
       },
       body: JSON.stringify({
         transaction_amount: params.transaction_amount,
-        token: params.token,
+        token,
         description: params.description,
         installments: params.installments,
         payment_method_id: params.payment_method_id,
@@ -55,6 +65,9 @@ export class MercadoPagoService {
 
     if (!paymentResponse.ok) {
       const body = await paymentResponse.text();
+      this.logger.warn(
+        `MercadoPago createPayment failed (${paymentResponse.status}): ${body}`,
+      );
       throw new BadRequestException(this.mapCreatePaymentError(body, paymentResponse.status));
     }
 
@@ -160,11 +173,24 @@ export class MercadoPagoService {
   }
 
   private mapCreatePaymentError(body: string, statusCode: number): string {
-    let errorMessage = `No se pudo consultar MercadoPago (${statusCode})`;
+    let errorMessage = `No se pudo procesar el pago en MercadoPago (${statusCode})`;
     try {
       const errorBody = JSON.parse(body) as MercadoPagoErrorResponse;
       const causeCode = errorBody.cause?.[0]?.code?.toString() ?? '';
-      if (causeCode === '205' || causeCode.includes('cardNumber')) {
+      const mpMessage = errorBody.message?.trim() ?? '';
+
+      if (
+        causeCode === '2006' ||
+        causeCode === '3008' ||
+        mpMessage.toLowerCase().includes('card token not found')
+      ) {
+        errorMessage =
+          'El token de la tarjeta no es válido o ya expiró. Generá uno nuevo desde el formulario de pago e intentá de nuevo. ' +
+          'Verificá también que el frontend use la Public Key de la misma aplicación y entorno (test/producción) que el Access Token del backend.';
+      } else if (causeCode === '3' || mpMessage.toLowerCase().includes('token must be for test')) {
+        errorMessage =
+          'Las credenciales de MercadoPago no coinciden: el token fue generado en un entorno distinto al configurado en el servidor (test vs producción).';
+      } else if (causeCode === '205' || causeCode.includes('cardNumber')) {
         errorMessage = 'El numero de tarjeta no es valido';
       } else if (causeCode === '208' || causeCode.includes('cardExpirationMonth')) {
         errorMessage = 'Mes de vencimiento invalido';
@@ -176,9 +202,8 @@ export class MercadoPagoService {
         errorMessage = 'Nombre del titular invalido';
       } else if (causeCode === 'E301' || causeCode.includes('securityCode')) {
         errorMessage = 'Codigo de seguridad invalido';
-      } else if (errorBody.message) {
-        errorMessage =
-          'Error al procesar el pago. Verifique los datos e intente nuevamente.' + errorBody.message;
+      } else if (mpMessage) {
+        errorMessage = `Error al procesar el pago. Verifique los datos e intente nuevamente. ${mpMessage}`;
       }
     } catch {
       // Keep generic message when body is not JSON.
