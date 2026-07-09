@@ -1537,10 +1537,9 @@ export class PropertiesService {
       //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
           .skip(offset)
-        .take(limit)
-        .orderBy('p.visibility', 'DESC')
-        .addOrderBy(orderBy, orderDirection)
-        .addOrderBy('img.order_position', 'ASC');
+        .take(limit);
+      this.appendPropertyOrder(qb, orderBy, orderDirection);
+      qb.addOrderBy('img.order_position', 'ASC');
       [data, total] = await qb.getManyAndCount();
     } else {
       // Modo card: SELECT solo las columnas necesarias + join de imágenes y organización
@@ -1608,16 +1607,8 @@ export class PropertiesService {
         )
         .leftJoinAndSelect('p.organization', 'p_org', 'p_org.deleted = false AND p_org.status = true')
         .leftJoinAndSelect('p.units', 'units', 'units.deleted = false');
-      cardQb.orderBy('p.visibility', 'DESC');
-      if (orderBy === 'p.price_square_meter') {
-        cardQb
-          .addSelect(
-            `CASE WHEN p.currency = '${Currency.USD}' THEN 0 ELSE 1 END`,
-            'usd_priority',
-          )
-          .addOrderBy('usd_priority', 'ASC');
-      }
-      cardQb.addOrderBy(orderBy, orderDirection).skip(offset).take(limit);
+      this.appendPropertyOrder(cardQb, orderBy, orderDirection);
+      cardQb.skip(offset).take(limit);
 
       const [partialProps, cardTotal] = await cardQb.getManyAndCount();
       total = cardTotal;
@@ -1824,12 +1815,10 @@ export class PropertiesService {
           LIMIT 1
         )`,
       )
-       .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
+       .leftJoinAndSelect('p.units', 'units', 'units.deleted = false');
    //   .leftJoinAndSelect('units.images', 'unitImages')
-      .orderBy('p.visibility', 'DESC')
-      .addOrderBy(orderBy, orderDirection)
-      .skip(offset)
-      .take(filters.limit);
+    this.appendPropertyOrder(baseQb, orderBy, orderDirection);
+    baseQb.skip(offset).take(filters.limit);
 
     let [data, total] = await baseQb.getManyAndCount();
 
@@ -1896,6 +1885,30 @@ export class PropertiesService {
         location_id: toFacet(locationRaw),
       },
     };
+  }
+
+  private appendPropertyOrder(
+    qb: ReturnType<Repository<Property>['createQueryBuilder']>,
+    orderBy: string,
+    orderDirection: 'ASC' | 'DESC',
+  ): void {
+    qb.orderBy('p.visibility', 'DESC');
+
+    if (orderBy === 'p.price' || orderBy === 'p.price_square_meter') {
+      qb
+        .addSelect(
+          `CASE WHEN p.currency = '${Currency.USD}' THEN 0 ELSE 1 END`,
+          'usd_priority',
+        )
+        .addOrderBy('usd_priority', 'ASC')
+        .addSelect(
+          `CASE WHEN COALESCE(${orderBy}, 0) = 0 THEN 1 ELSE 0 END`,
+          'price_empty_last',
+        )
+        .addOrderBy('price_empty_last', 'ASC');
+    }
+
+    qb.addOrderBy(orderBy, orderDirection);
   }
 
   private async buildAdvancedSearchQuery(
@@ -2287,10 +2300,17 @@ export class PropertiesService {
       });
     }
 
-    // ESTO ATENDER , TIENE Q TRAER EXACTAMENTE LAS QUE MARCAS..AHORA ESTA COMO UN "SI TIENE ALGUNO DE LOS MARCADOS TRAE"
     if (Array.isArray(filters.tags) && filters.tags.length > 0) {
-      qb.leftJoin('property_tags', 'pt', 'pt.propertyId = p.id')
-        .andWhere('pt.tag_id IN (:...tags)', { tags: filters.tags });
+      qb.andWhere(
+        `p.id IN (
+          SELECT pt."propertyId"
+          FROM property_tags pt
+          WHERE pt.tag_id IN (:...tags)
+          GROUP BY pt."propertyId"
+          HAVING COUNT(DISTINCT pt.tag_id) = :tags_count
+        )`,
+        { tags: filters.tags, tags_count: filters.tags.length },
+      );
     }
 
     if (filters.direct_owner !== undefined || filters.inmobiliaria !== undefined) {
