@@ -138,7 +138,7 @@ export class PlansService {
     let mpPreapproval;
     try {
       mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
-        reason: plan.plan_name,
+        reason: this.formatMercadoPagoPlanReason(plan.plan_name),
         payer_email: dto.payer.email,
         card_token_id: dto.token,
         transaction_amount: plan.price,
@@ -351,7 +351,7 @@ export class PlansService {
     try {
       this.logger.log('[PLANS-PAYMENT] createUserPlan calling MercadoPago createAuthorizedPreapproval...');
       mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
-        reason: plan.plan_name,
+        reason: this.formatMercadoPagoPlanReason(plan.plan_name),
         payer_email: dto.payer.email,
         card_token_id: dto.token,
         transaction_amount: plan.price,
@@ -709,6 +709,14 @@ export class PlansService {
 
     this.logger.log('[PLANS-PAYMENT] resolvePlanForPayment OK');
     return plan;
+  }
+
+  private formatMercadoPagoPlanReason(planName: string): string {
+    const trimmed = planName.trim();
+    if (trimmed.startsWith('Metroprop |')) {
+      return trimmed;
+    }
+    return `Metroprop | ${trimmed}`;
   }
 
   private maskToken(token?: string): string {
