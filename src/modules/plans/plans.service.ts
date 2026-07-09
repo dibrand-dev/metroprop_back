@@ -4,6 +4,7 @@ import {
   ConflictException,
   ForbiddenException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,6 +22,8 @@ import { MercadoPagoService } from '../../common/mercadopago/mercadopago.service
 
 @Injectable()
 export class PlansService {
+  private readonly logger = new Logger(PlansService.name);
+
   constructor(
     private readonly mercadopagoService: MercadoPagoService,
     @InjectRepository(Plan)
@@ -117,14 +120,33 @@ export class PlansService {
 
     const plan = await this.resolvePlanForPayment(dto.planId, dto.transaction_amount);
 
-    const mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
-      reason: plan.plan_name,
-      payer_email: dto.payer.email,
-      card_token_id: dto.token,
-      transaction_amount: plan.price,
-      currency_id: plan.currency,
-      external_reference: `metroprop-branch-${branchId}-plan-${dto.planId}-${Date.now()}`,
-    });
+    const externalReference = `metroprop-branch-${branchId}-plan-${dto.planId}-${Date.now()}`;
+    this.logger.log(
+      `[PLANS-PAYMENT] createBranchPlan MP CALL START | branchId=${branchId} | userId=${user.id} | planId=${dto.planId} | planName=${plan.plan_name} | planPrice=${plan.price} | planCurrency=${plan.currency} | dtoAmount=${dto.transaction_amount} | payerEmail=${dto.payer.email} | token=${this.maskToken(dto.token)} | payment_method_id=${dto.payment_method_id} | issuer_id=${dto.issuer_id ?? 'n/a'} | externalReference=${externalReference}`,
+    );
+
+    let mpPreapproval;
+    try {
+      mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
+        reason: plan.plan_name,
+        payer_email: dto.payer.email,
+        card_token_id: dto.token,
+        transaction_amount: plan.price,
+        currency_id: plan.currency,
+        external_reference: externalReference,
+      });
+      this.logger.log(
+        `[PLANS-PAYMENT] createBranchPlan MP CALL SUCCESS | preapprovalId=${mpPreapproval.id ?? 'n/a'} | status=${mpPreapproval.status ?? 'n/a'}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[PLANS-PAYMENT] createBranchPlan MP CALL FAILED | branchId=${branchId} | planId=${dto.planId} | payerEmail=${dto.payer.email} | error=${message}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
+
     const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpPreapproval);
 
     const now = new Date();
@@ -307,15 +329,44 @@ export class PlansService {
 
     const plan = await this.resolvePlanForPayment(dto.planId, dto.transaction_amount);
 
-    const mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
-      reason: plan.plan_name,
-      payer_email: dto.payer.email,
-      card_token_id: dto.token,
-      transaction_amount: plan.price,
-      currency_id: plan.currency,
-      external_reference: `metroprop-user-${userId}-plan-${dto.planId}-${Date.now()}`,
-    });
+    const externalReference = `metroprop-user-${userId}-plan-${dto.planId}-${Date.now()}`;
+    this.logger.log(
+      `[PLANS-PAYMENT] createUserPlan START | targetUserId=${userId} | requesterId=${requester.id} | planId=${dto.planId} | planName=${plan.plan_name} | planPrice=${plan.price} | planCurrency=${plan.currency} | dtoAmount=${dto.transaction_amount} | payerEmail=${dto.payer.email} | token=${this.maskToken(dto.token)} | payment_method_id=${dto.payment_method_id} | issuer_id=${dto.issuer_id ?? 'n/a'} | externalReference=${externalReference}`,
+    );
+    this.logger.log(
+      `[PLANS-PAYMENT] createUserPlan DTO payer: ${JSON.stringify({ email: dto.payer.email, identification: dto.payer.identification, phone: dto.payer.phone })}`,
+    );
+
+    let mpPreapproval;
+    try {
+      this.logger.log('[PLANS-PAYMENT] createUserPlan calling MercadoPago createAuthorizedPreapproval...');
+      mpPreapproval = await this.mercadopagoService.createAuthorizedPreapproval({
+        reason: plan.plan_name,
+        payer_email: dto.payer.email,
+        card_token_id: dto.token,
+        transaction_amount: plan.price,
+        currency_id: plan.currency,
+        external_reference: externalReference,
+      });
+      this.logger.log(
+        `[PLANS-PAYMENT] createUserPlan MP SUCCESS | preapprovalId=${mpPreapproval.id ?? 'n/a'} | status=${mpPreapproval.status ?? 'n/a'} | status_detail=${mpPreapproval.status_detail ?? 'n/a'}`,
+      );
+      this.logger.debug(
+        `[PLANS-PAYMENT] createUserPlan MP full response: ${JSON.stringify(mpPreapproval)}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.logger.error(
+        `[PLANS-PAYMENT] createUserPlan MP FAILED | userId=${userId} | planId=${dto.planId} | payerEmail=${dto.payer.email} | error=${message}`,
+        error instanceof Error ? error.stack : undefined,
+      );
+      throw error;
+    }
+
     const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpPreapproval);
+    this.logger.log(
+      `[PLANS-PAYMENT] createUserPlan tracking extracted: ${JSON.stringify(tracking)}`,
+    );
     const now = new Date();
     const endDate = new Date(now);
     endDate.setMonth(endDate.getMonth() + 1);
@@ -444,26 +495,49 @@ export class PlansService {
     planId: number,
     transactionAmount: number,
   ): Promise<Plan> {
+    this.logger.log(
+      `[PLANS-PAYMENT] resolvePlanForPayment START | planId=${planId} | transactionAmount=${transactionAmount}`,
+    );
+
     const plan = await this.repo.findOne({
       where: { id: planId, deleted: false },
     });
     if (!plan) {
+      this.logger.warn(`[PLANS-PAYMENT] resolvePlanForPayment NOT FOUND | planId=${planId}`);
       throw new NotFoundException('Plan not found');
     }
 
+    this.logger.log(
+      `[PLANS-PAYMENT] resolvePlanForPayment plan loaded | id=${plan.id} | name=${plan.plan_name} | price=${plan.price} | currency=${plan.currency} | is_active=${plan.is_active}`,
+    );
+
     if (!plan.is_active) {
+      this.logger.warn(
+        `[PLANS-PAYMENT] resolvePlanForPayment INACTIVE | planId=${planId} | name=${plan.plan_name}`,
+      );
       throw new BadRequestException(
         `El plan "${plan.plan_name}" no está disponible para contratar en este momento.`,
       );
     }
 
     if (plan.price !== transactionAmount) {
+      this.logger.warn(
+        `[PLANS-PAYMENT] resolvePlanForPayment PRICE MISMATCH | planId=${planId} | expected=${plan.price} ${plan.currency} | received=${transactionAmount}`,
+      );
       throw new BadRequestException(
         `El monto enviado (${transactionAmount} ${plan.currency}) no coincide con el precio actual del plan "${plan.plan_name}" (${plan.price} ${plan.currency}). Actualizá la página e intentá nuevamente.`,
       );
     }
 
+    this.logger.log('[PLANS-PAYMENT] resolvePlanForPayment OK');
     return plan;
+  }
+
+  private maskToken(token?: string): string {
+    if (!token) return '(empty)';
+    const trimmed = token.trim();
+    if (trimmed.length <= 8) return '****';
+    return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)} (len=${trimmed.length})`;
   }
 
 }

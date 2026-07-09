@@ -12,6 +12,7 @@ import {
   HttpStatus,
   Request,
   ForbiddenException,
+  Logger,
 } from '@nestjs/common';
 import { PlansService } from './plans.service';
 import { CreatePlanDto } from './dto/create-plan.dto';
@@ -24,6 +25,8 @@ import { PlanUserType, UserRole } from '../../common/enums';
 
 @Controller('plans')
 export class PlansController {
+  private readonly logger = new Logger(PlansController.name);
+
   constructor(
     private readonly plansService: PlansService,
   ) {}
@@ -118,6 +121,10 @@ export class PlansController {
     @Request() req: any,
   ) {
     const requester = req.user;
+    this.logger.log(
+      `[PLANS-CTRL] POST /plans/user/${userId} | requesterId=${requester?.id} | requesterRole=${requester?.role_id} | planId=${dto.planId} | amount=${dto.transaction_amount} | payerEmail=${dto.payer?.email} | token=${dto.token ? `${dto.token.slice(0, 4)}...${dto.token.slice(-4)} (len=${dto.token.length})` : 'empty'} | payment_method_id=${dto.payment_method_id} | issuer_id=${dto.issuer_id ?? 'n/a'}`,
+    );
+
     const isAdmin =
       requester.role_id === UserRole.USER_ROL_SUPER_ADMIN ||
       requester.role_id === UserRole.USER_ROL_ADMIN;

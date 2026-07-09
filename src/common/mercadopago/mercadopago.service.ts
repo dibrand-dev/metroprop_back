@@ -24,23 +24,40 @@ export class MercadoPagoService {
   async createAuthorizedPreapproval(
     params: MercadoPagoCreatePreapprovalRequest,
   ): Promise<MercadoPagoPreapprovalResponse> {
+    this.logger.log(
+      `[MP-PREAPPROVAL] createAuthorizedPreapproval START | payer_email=${params.payer_email} | amount=${params.transaction_amount} ${params.currency_id} | reason=${params.reason} | external_reference=${params.external_reference ?? 'n/a'} | card_token_id=${this.maskSecret(params.card_token_id)}`,
+    );
+
     const preapproval = await this.createPreapproval(params);
     const normalizedStatus = preapproval.status?.toLowerCase();
 
+    this.logger.log(
+      `[MP-PREAPPROVAL] createAuthorizedPreapproval RESPONSE | id=${preapproval.id ?? 'n/a'} | status=${preapproval.status ?? 'n/a'} | status_detail=${preapproval.status_detail ?? 'n/a'} | normalizedStatus=${normalizedStatus ?? 'n/a'}`,
+    );
+    this.logger.debug(
+      `[MP-PREAPPROVAL] createAuthorizedPreapproval FULL RESPONSE: ${JSON.stringify(preapproval)}`,
+    );
+
     if (normalizedStatus !== 'authorized') {
+      this.logger.error(
+        `[MP-PREAPPROVAL] createAuthorizedPreapproval REJECTED | expected=authorized | got=${preapproval.status ?? 'n/a'} | detail=${preapproval.status_detail ?? 'n/a'} | full=${JSON.stringify(preapproval)}`,
+      );
       throw new BadRequestException(
         `Suscripción MercadoPago no autorizada. status=${preapproval.status ?? 'n/a'}, detail=${preapproval.status_detail ?? 'n/a'}`,
       );
     }
 
+    this.logger.log('[MP-PREAPPROVAL] createAuthorizedPreapproval SUCCESS');
     return preapproval;
   }
 
   async createPreapproval(
     params: MercadoPagoCreatePreapprovalRequest,
   ): Promise<MercadoPagoPreapprovalResponse> {
+    const startedAt = Date.now();
     const token = params.card_token_id?.trim();
     if (!token) {
+      this.logger.error('[MP-PREAPPROVAL] createPreapproval ABORT | card_token_id vacío o ausente');
       throw new BadRequestException(
         'El token de la tarjeta es obligatorio. Generá uno nuevo desde el formulario de pago.',
       );
@@ -50,9 +67,13 @@ export class MercadoPagoService {
     const backUrl =
       this.configService.get<string>('MERCADOPAGO_BACK_URL') ??
       'https://www.mercadopago.com.ar';
+    const mpUrl = 'https://api.mercadopago.com/preapproval';
 
     this.logger.log(
-      `MercadoPago createPreapproval: cred=${accessToken.slice(0, 12)}..., tokenLen=${token.length}, amount=${params.transaction_amount}, currency=${params.currency_id}`,
+      `[MP-PREAPPROVAL] createPreapproval CONFIG | url=${mpUrl} | accessTokenPrefix=${accessToken.slice(0, 16)}... | accessTokenSuffix=...${accessToken.slice(-8)} | accessTokenLen=${accessToken.length} | isTestCred=${accessToken.startsWith('TEST-')} | backUrl=${backUrl}`,
+    );
+    this.logger.log(
+      `[MP-PREAPPROVAL] createPreapproval INPUT | payer_email=${params.payer_email} | payerEmailIsTestUser=${params.payer_email.includes('@testuser.com')} | card_token_id=${this.maskSecret(token)} | tokenLen=${token.length} | amount=${params.transaction_amount} | currency=${params.currency_id} | reason=${params.reason} | external_reference=${params.external_reference ?? 'n/a'}`,
     );
 
     const preapprovalBody: Record<string, unknown> = {
@@ -73,26 +94,78 @@ export class MercadoPagoService {
       preapprovalBody.external_reference = params.external_reference;
     }
 
-    const preapprovalResponse = await fetch('https://api.mercadopago.com/preapproval', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${accessToken}`,
-      },
-      body: JSON.stringify(preapprovalBody),
-    });
+    const requestBody = JSON.stringify(preapprovalBody);
+    this.logger.log(
+      `[MP-PREAPPROVAL] createPreapproval REQUEST BODY (sanitized): ${JSON.stringify(this.sanitizeForLog(preapprovalBody))}`,
+    );
+    this.logger.log(
+      `[MP-PREAPPROVAL] createPreapproval REQUEST BODY size=${requestBody.length} bytes`,
+    );
+
+    let preapprovalResponse: Response;
+    try {
+      this.logger.log('[MP-PREAPPROVAL] createPreapproval FETCH START');
+      preapprovalResponse = await fetch(mpUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: requestBody,
+      });
+      this.logger.log(
+        `[MP-PREAPPROVAL] createPreapproval FETCH END | elapsedMs=${Date.now() - startedAt} | status=${preapprovalResponse.status} | statusText=${preapprovalResponse.statusText} | ok=${preapprovalResponse.ok}`,
+      );
+    } catch (networkError) {
+      const message =
+        networkError instanceof Error ? networkError.message : String(networkError);
+      this.logger.error(
+        `[MP-PREAPPROVAL] createPreapproval NETWORK ERROR | elapsedMs=${Date.now() - startedAt} | error=${message}`,
+        networkError instanceof Error ? networkError.stack : undefined,
+      );
+      throw new BadRequestException(
+        `Error de red al contactar MercadoPago: ${message}`,
+      );
+    }
+
+    this.logResponseHeaders('createPreapproval', preapprovalResponse);
+
+    const body = await preapprovalResponse.text();
+    this.logger.log(
+      `[MP-PREAPPROVAL] createPreapproval RAW RESPONSE BODY | status=${preapprovalResponse.status} | bodyLength=${body.length} | body=${body || '(empty)'}`,
+    );
 
     if (!preapprovalResponse.ok) {
-      const body = await preapprovalResponse.text();
-      this.logger.warn(
-        `MercadoPago createPreapproval failed (${preapprovalResponse.status}): ${body}`,
+      this.logger.error(
+        `[MP-PREAPPROVAL] createPreapproval FAILED | status=${preapprovalResponse.status} | statusText=${preapprovalResponse.statusText} | elapsedMs=${Date.now() - startedAt} | mappedError=${this.mapCreatePreapprovalError(body, preapprovalResponse.status)}`,
+      );
+      this.logger.error(
+        `[MP-PREAPPROVAL] createPreapproval FAILED parsed JSON attempt: ${this.tryParseJsonForLog(body)}`,
       );
       throw new BadRequestException(
         this.mapCreatePreapprovalError(body, preapprovalResponse.status),
       );
     }
 
-    return (await preapprovalResponse.json()) as MercadoPagoPreapprovalResponse;
+    let parsed: MercadoPagoPreapprovalResponse;
+    try {
+      parsed = JSON.parse(body) as MercadoPagoPreapprovalResponse;
+    } catch (parseError) {
+      const message = parseError instanceof Error ? parseError.message : String(parseError);
+      this.logger.error(
+        `[MP-PREAPPROVAL] createPreapproval JSON PARSE ERROR | error=${message} | rawBody=${body}`,
+      );
+      throw new BadRequestException('MercadoPago devolvió una respuesta inválida (no JSON).');
+    }
+
+    this.logger.log(
+      `[MP-PREAPPROVAL] createPreapproval SUCCESS | elapsedMs=${Date.now() - startedAt} | id=${parsed.id ?? 'n/a'} | status=${parsed.status ?? 'n/a'} | status_detail=${parsed.status_detail ?? 'n/a'}`,
+    );
+    this.logger.debug(
+      `[MP-PREAPPROVAL] createPreapproval SUCCESS full payload: ${JSON.stringify(parsed)}`,
+    );
+
+    return parsed;
   }
 
   async createApprovedPayment(
@@ -260,12 +333,55 @@ export class MercadoPagoService {
   private getAccessToken(): string {
     const accessToken = this.configService.get<string>('MERCADOPAGO_ACCESS_TOKEN');
     if (!accessToken) {
+      this.logger.error('[MP] getAccessToken FAILED | MERCADOPAGO_ACCESS_TOKEN no configurado');
       throw new InternalServerErrorException(
         'Falta configurar MERCADOPAGO_ACCESS_TOKEN',
       );
     }
 
+    this.logger.debug(
+      `[MP] getAccessToken OK | prefix=${accessToken.slice(0, 16)}... | len=${accessToken.length} | isTest=${accessToken.startsWith('TEST-')}`,
+    );
     return accessToken;
+  }
+
+  private maskSecret(value?: string): string {
+    if (!value) return '(empty)';
+    const trimmed = value.trim();
+    if (trimmed.length <= 8) return '****';
+    return `${trimmed.slice(0, 4)}...${trimmed.slice(-4)} (len=${trimmed.length})`;
+  }
+
+  private sanitizeForLog(payload: Record<string, unknown>): Record<string, unknown> {
+    const clone = { ...payload };
+    if (typeof clone.card_token_id === 'string') {
+      clone.card_token_id = this.maskSecret(clone.card_token_id);
+    }
+    if (typeof clone.token === 'string') {
+      clone.token = this.maskSecret(clone.token);
+    }
+    return clone;
+  }
+
+  private logResponseHeaders(operation: string, response: Response): void {
+    const headers: Record<string, string> = {};
+    response.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    this.logger.log(
+      `[MP-PREAPPROVAL] ${operation} RESPONSE HEADERS: ${JSON.stringify(headers)}`,
+    );
+    this.logger.log(
+      `[MP-PREAPPROVAL] ${operation} x-request-id=${response.headers.get('x-request-id') ?? 'n/a'} | x-correlation-id=${response.headers.get('x-correlation-id') ?? 'n/a'} | content-type=${response.headers.get('content-type') ?? 'n/a'}`,
+    );
+  }
+
+  private tryParseJsonForLog(body: string): string {
+    try {
+      return JSON.stringify(JSON.parse(body), null, 2);
+    } catch {
+      return `(not valid JSON) raw=${body}`;
+    }
   }
 
   private mapCreatePreapprovalError(body: string, statusCode: number): string {
