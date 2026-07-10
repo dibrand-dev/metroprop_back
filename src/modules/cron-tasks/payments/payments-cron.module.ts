@@ -8,12 +8,14 @@ import { MercadoPagoModule } from '../../../common/mercadopago/mercadopago.modul
 import { EmailModule } from '../../../common/email/email.module';
 import { Branch } from '../../branches/entities/branch.entity';
 import { User } from '../../users/entities/user.entity';
+import { PlansModule } from '../../plans/plans.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([BranchPlan, UserPlan, Property, Branch, User]),
     MercadoPagoModule,
     EmailModule,
+    PlansModule,
   ],
   providers: [PaymentsCronService],
 })

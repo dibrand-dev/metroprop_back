@@ -11,6 +11,10 @@ import { MercadoPagoStatusSnapshot } from '../../../common/mercadopago/mercadopa
 import { TOKKO_PARTNER_NAME } from '../../../common/constants';
 import { EmailService } from '../../../common/email/email.service';
 import { Branch } from '../../branches/entities/branch.entity';
+import {
+  isSubscriptionEndDateReached,
+} from '../../plans/helpers/plan-subscription.helper';
+import { PlansService } from '../../plans/plans.service';
 import { User } from '../../users/entities/user.entity';
 
 @Injectable()
@@ -19,6 +23,7 @@ export class PaymentsCronService {
 
   constructor(
     private readonly mercadopagoService: MercadoPagoService,
+    private readonly plansService: PlansService,
     private readonly emailService: EmailService,
     @InjectRepository(BranchPlan)
     private readonly branchPlanRepo: Repository<BranchPlan>,
@@ -37,6 +42,17 @@ export class PaymentsCronService {
   async handlePaymentsExpirationDaily(): Promise<void> {
     const now = new Date();
 
+    const expirationSummary = await this.plansService.finalizeExpiredPurchasedPlans(now);
+    if (
+      expirationSummary.branchPlansDeactivated > 0 ||
+      expirationSummary.userPlansDeactivated > 0
+    ) {
+      this.mylogger.log(
+        `payments_cron_${now.toISOString()} `,
+        `[PaymentsCron] Planes vencidos desactivados: branch=${expirationSummary.branchPlansDeactivated}, user=${expirationSummary.userPlansDeactivated}. Properties reseteadas: branch=${expirationSummary.branchPropertiesReset}, user=${expirationSummary.userPropertiesReset}.`,
+      );
+    }
+
     const activeBranchPlans = await this.branchPlanRepo.find({
       where: [{ active: true }, { mercadopago_status: 'paused' }],
       select: [
@@ -46,12 +62,15 @@ export class PaymentsCronService {
         'plan_id',
         'organization_id',
         'plan_name_hired',
+        'start_date',
+        'end_date',
         'mercadopago_payment_id',
         'mercadopago_preapproval_id',
         'mercadopago_status',
         'mercadopago_status_detail',
         'mercadopago_external_reference',
         'mercadopago_response',
+        'mercadopago_cancelled_at',
         'status_payment',
       ],
     });
@@ -76,12 +95,15 @@ export class PaymentsCronService {
         'plan_id',
         'organization_id',
         'plan_name_hired',
+        'start_date',
+        'end_date',
         'mercadopago_payment_id',
         'mercadopago_preapproval_id',
         'mercadopago_status',
         'mercadopago_status_detail',
         'mercadopago_external_reference',
         'mercadopago_response',
+        'mercadopago_cancelled_at',
         'status_payment',
       ],
     });
@@ -197,28 +219,36 @@ export class PaymentsCronService {
 
       const nextState = this.applyMercadoPagoSnapshot(branchPlan, snapshot, now);
       nextState.status_payment = undefined;
+
+      if (
+        this.shouldScheduleCancellationBySource(snapshot.source, snapshot.status) &&
+        nextState.active
+      ) {
+        await this.plansService.schedulePurchasedPlanCancellationFromMercadoPago(
+          nextState,
+          now,
+        );
+        this.mylogger.log(
+          `payments_cron_${now.toISOString()} `,
+          `[PaymentsCron] BranchPlan ${branchPlan.id} baja programada para ${nextState.end_date?.toISOString() ?? 'n/a'} por estado MP=${snapshot.status ?? 'n/a'} (${snapshot.source}).`,
+        );
+      }
+
       await this.branchPlanRepo.save(nextState);
 
       if (
-        this.shouldDeactivateBySource(snapshot.source, snapshot.status) &&
-        nextState.active
+        nextState.active &&
+        nextState.end_date &&
+        isSubscriptionEndDateReached(nextState.end_date, now)
       ) {
-        nextState.active = false;
-        nextState.mercadopago_cancelled_at = now;
-        await this.branchPlanRepo.save(nextState);
-
-        const propertyUpdateResult = await this.propertyRepo.update(
-          { purchased_plan_id: branchPlan.id, branch_id: branchPlan.branch_id },
-          {
-            hired_plan_id: null as unknown as number,
-            purchased_plan_id: null as unknown as number,
-            visibility: 0,
-          },
+        const propertiesReset = await this.plansService.finalizeBranchPlanDeactivation(
+          branchPlan.id,
+          branchPlan.branch_id,
         );
 
         this.mylogger.log(
           `payments_cron_${now.toISOString()} `,
-          `[PaymentsCron] BranchPlan ${branchPlan.id} desactivado por estado MP=${snapshot.status ?? 'n/a'} (${snapshot.source}). Properties reseteadas: ${propertyUpdateResult.affected ?? 0}.`,
+          `[PaymentsCron] BranchPlan ${branchPlan.id} desactivado por end_date=${nextState.end_date.toISOString()}. Properties reseteadas: ${propertiesReset}.`,
         );
       }
     } catch (error) {
@@ -267,28 +297,36 @@ export class PaymentsCronService {
 
       const nextState = this.applyMercadoPagoSnapshot(userPlan, snapshot, now);
       nextState.status_payment = undefined;
+
+      if (
+        this.shouldScheduleCancellationBySource(snapshot.source, snapshot.status) &&
+        nextState.active
+      ) {
+        await this.plansService.schedulePurchasedPlanCancellationFromMercadoPago(
+          nextState,
+          now,
+        );
+        this.mylogger.log(
+          `payments_cron_${now.toISOString()} `,
+          `[PaymentsCron] UserPlan ${userPlan.id} baja programada para ${nextState.end_date?.toISOString() ?? 'n/a'} por estado MP=${snapshot.status ?? 'n/a'} (${snapshot.source}).`,
+        );
+      }
+
       await this.userPlanRepo.save(nextState);
 
       if (
-        this.shouldDeactivateBySource(snapshot.source, snapshot.status) &&
-        nextState.active
+        nextState.active &&
+        nextState.end_date &&
+        isSubscriptionEndDateReached(nextState.end_date, now)
       ) {
-        nextState.active = false;
-        nextState.mercadopago_cancelled_at = now;
-        await this.userPlanRepo.save(nextState);
-
-        const propertyUpdateResult = await this.propertyRepo.update(
-          { purchased_plan_id: userPlan.id, user_id: userPlan.user_id },
-          {
-            hired_plan_id: null as unknown as number,
-            purchased_plan_id: null as unknown as number,
-            visibility: 0,
-          },
+        const propertiesReset = await this.plansService.finalizeUserPlanDeactivation(
+          userPlan.id,
+          userPlan.user_id,
         );
 
         this.mylogger.log(
           `payments_cron_${now.toISOString()} `,
-          `[PaymentsCron] UserPlan ${userPlan.id} desactivado por estado MP=${snapshot.status ?? 'n/a'} (${snapshot.source}). Properties reseteadas: ${propertyUpdateResult.affected ?? 0}.`,
+          `[PaymentsCron] UserPlan ${userPlan.id} desactivado por end_date=${nextState.end_date.toISOString()}. Properties reseteadas: ${propertiesReset}.`,
         );
       }
     } catch (error) {
@@ -444,6 +482,13 @@ export class PaymentsCronService {
     plan.mercadopago_last_status_check_at = now;
     plan.mercadopago_last_status_payload = snapshot.payload;
     return plan;
+  }
+
+  private shouldScheduleCancellationBySource(
+    source: MercadoPagoStatusSnapshot['source'],
+    status?: string,
+  ): boolean {
+    return this.shouldDeactivateBySource(source, status);
   }
 
   private shouldDeactivateBySource(

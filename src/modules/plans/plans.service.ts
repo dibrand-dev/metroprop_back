@@ -20,6 +20,11 @@ import { UserRole, PropertyStatus } from '../../common/enums';
 import { User } from '../users/entities/user.entity';
 import { MercadoPagoService } from '../../common/mercadopago/mercadopago.service';
 import { MercadoPagoPreapprovalResponse } from '../../common/mercadopago/mercadopago.types';
+import {
+  computeScheduledEndDate,
+  isPurchasedPlanCurrentlyActive,
+  startOfDay,
+} from './helpers/plan-subscription.helper';
 
 export interface CancelPurchasedPlanResult {
   message: string;
@@ -28,6 +33,8 @@ export interface CancelPurchasedPlanResult {
   properties_reset: number;
   mercadopago_status?: string;
   already_inactive: boolean;
+  scheduled_end_date?: Date;
+  pending_deactivation?: boolean;
 }
 
 @Injectable()
@@ -160,8 +167,6 @@ export class PlansService {
     const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpPreapproval);
 
     const now = new Date();
-    const endDate = new Date(now);
-    endDate.setMonth(endDate.getMonth() + 1);
 
     const branchPlan = this.branchPlanRepo.create({
       branch_id: branchId,
@@ -178,7 +183,7 @@ export class PlansService {
       mercadopago_last_status_check_at: now,
       mercadopago_last_status_payload: mpPreapproval,
       start_date: now,
-      end_date: endDate,
+      end_date: null,
       active: true,
       organization_id: branchOrgId,
     });
@@ -251,7 +256,7 @@ export class PlansService {
       .addSelect('COALESCE(MAX(prop_counts.cnt), 0)', 'used')
       .where('bp.branch_id = :branchId', { branchId })
       .andWhere('bp.active = true')
-      .andWhere('bp.end_date >= :now', { now: new Date() })
+      .andWhere('(bp.end_date IS NULL OR bp.end_date >= :todayStart)')
       .andWhere('p.deleted = false')
       .andWhere('p.is_active = true')
       .groupBy('p.id')
@@ -261,6 +266,7 @@ export class PlansService {
       .addGroupBy('bp.end_date')
       .addGroupBy('bp.id')
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
+      .setParameter('todayStart', startOfDay(new Date()))
       .getRawMany<{
         plan_id: number;
         purchased_plan_id: number;
@@ -378,8 +384,6 @@ export class PlansService {
       `[PLANS-PAYMENT] createUserPlan tracking extracted: ${JSON.stringify(tracking)}`,
     );
     const now = new Date();
-    const endDate = new Date(now);
-    endDate.setMonth(endDate.getMonth() + 1);
 
     const userPlan = this.userPlanRepo.create({
       user_id: userId,
@@ -396,7 +400,7 @@ export class PlansService {
       mercadopago_last_status_check_at: now,
       mercadopago_last_status_payload: mpPreapproval,
       start_date: now,
-      end_date: endDate,
+      end_date: null,
       active: true,
       organization_id: orgId,
     });
@@ -432,51 +436,58 @@ export class PlansService {
       };
     }
 
+    if (userPlan.end_date && userPlan.mercadopago_cancelled_at) {
+      return {
+        message: 'La baja del plan ya estaba programada',
+        purchased_plan_id: userPlan.id,
+        plan_type: 'user',
+        properties_reset: 0,
+        mercadopago_status: userPlan.mercadopago_status,
+        already_inactive: false,
+        scheduled_end_date: userPlan.end_date,
+        pending_deactivation: isPurchasedPlanCurrentlyActive(
+          userPlan.active,
+          userPlan.end_date,
+        ),
+      };
+    }
+
     const mpResponse = await this.cancelMercadoPagoSubscription(
       userPlan.mercadopago_preapproval_id,
     );
 
     const now = new Date();
-    return this.userPlanRepo.manager.transaction(async (manager) => {
-      const userPlanRepo = manager.getRepository(UserPlan);
-      const propertyRepo = manager.getRepository(Property);
+    const scheduledEndDate = computeScheduledEndDate(userPlan.start_date, now);
 
-      userPlan.active = false;
-      userPlan.mercadopago_cancelled_at = now;
-      userPlan.mercadopago_last_status_check_at = now;
-      if (mpResponse) {
-        const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpResponse);
-        userPlan.mercadopago_status = tracking.status ?? 'cancelled';
-        userPlan.mercadopago_status_detail = tracking.statusDetail;
-        userPlan.mercadopago_last_status_payload = mpResponse;
-      } else {
-        userPlan.mercadopago_status = 'cancelled';
-      }
+    userPlan.mercadopago_cancelled_at = now;
+    userPlan.mercadopago_last_status_check_at = now;
+    userPlan.end_date = scheduledEndDate;
 
-      await userPlanRepo.save(userPlan);
+    if (mpResponse) {
+      const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpResponse);
+      userPlan.mercadopago_status = tracking.status ?? 'cancelled';
+      userPlan.mercadopago_status_detail = tracking.statusDetail;
+      userPlan.mercadopago_last_status_payload = mpResponse;
+    } else {
+      userPlan.mercadopago_status = 'cancelled';
+    }
 
-      const propertyUpdateResult = await propertyRepo.update(
-        { purchased_plan_id: userPlan.id, user_id: userPlan.user_id },
-        {
-          hired_plan_id: null as unknown as number,
-          purchased_plan_id: null as unknown as number,
-          visibility: 0,
-        },
-      );
+    await this.userPlanRepo.save(userPlan);
 
-      this.logger.log(
-        `[PLANS-CANCEL] cancelUserPlan OK | purchasedPlanId=${purchasedPlanId} | userId=${userPlan.user_id} | propertiesReset=${propertyUpdateResult.affected ?? 0}`,
-      );
+    this.logger.log(
+      `[PLANS-CANCEL] cancelUserPlan scheduled | purchasedPlanId=${purchasedPlanId} | userId=${userPlan.user_id} | scheduledEndDate=${scheduledEndDate.toISOString()}`,
+    );
 
-      return {
-        message: 'Plan dado de baja correctamente',
-        purchased_plan_id: userPlan.id,
-        plan_type: 'user',
-        properties_reset: propertyUpdateResult.affected ?? 0,
-        mercadopago_status: userPlan.mercadopago_status,
-        already_inactive: false,
-      };
-    });
+    return {
+      message: `Baja programada. El plan seguirá activo hasta el ${scheduledEndDate.toLocaleDateString('es-AR')}`,
+      purchased_plan_id: userPlan.id,
+      plan_type: 'user',
+      properties_reset: 0,
+      mercadopago_status: userPlan.mercadopago_status,
+      already_inactive: false,
+      scheduled_end_date: scheduledEndDate,
+      pending_deactivation: true,
+    };
   }
 
   async cancelBranchPlan(
@@ -512,51 +523,58 @@ export class PlansService {
       };
     }
 
+    if (branchPlan.end_date && branchPlan.mercadopago_cancelled_at) {
+      return {
+        message: 'La baja del plan ya estaba programada',
+        purchased_plan_id: branchPlan.id,
+        plan_type: 'branch',
+        properties_reset: 0,
+        mercadopago_status: branchPlan.mercadopago_status,
+        already_inactive: false,
+        scheduled_end_date: branchPlan.end_date,
+        pending_deactivation: isPurchasedPlanCurrentlyActive(
+          branchPlan.active,
+          branchPlan.end_date,
+        ),
+      };
+    }
+
     const mpResponse = await this.cancelMercadoPagoSubscription(
       branchPlan.mercadopago_preapproval_id,
     );
 
     const now = new Date();
-    return this.branchPlanRepo.manager.transaction(async (manager) => {
-      const branchPlanRepo = manager.getRepository(BranchPlan);
-      const propertyRepo = manager.getRepository(Property);
+    const scheduledEndDate = computeScheduledEndDate(branchPlan.start_date, now);
 
-      branchPlan.active = false;
-      branchPlan.mercadopago_cancelled_at = now;
-      branchPlan.mercadopago_last_status_check_at = now;
-      if (mpResponse) {
-        const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpResponse);
-        branchPlan.mercadopago_status = tracking.status ?? 'cancelled';
-        branchPlan.mercadopago_status_detail = tracking.statusDetail;
-        branchPlan.mercadopago_last_status_payload = mpResponse;
-      } else {
-        branchPlan.mercadopago_status = 'cancelled';
-      }
+    branchPlan.mercadopago_cancelled_at = now;
+    branchPlan.mercadopago_last_status_check_at = now;
+    branchPlan.end_date = scheduledEndDate;
 
-      await branchPlanRepo.save(branchPlan);
+    if (mpResponse) {
+      const tracking = this.mercadopagoService.extractPreapprovalTrackingFields(mpResponse);
+      branchPlan.mercadopago_status = tracking.status ?? 'cancelled';
+      branchPlan.mercadopago_status_detail = tracking.statusDetail;
+      branchPlan.mercadopago_last_status_payload = mpResponse;
+    } else {
+      branchPlan.mercadopago_status = 'cancelled';
+    }
 
-      const propertyUpdateResult = await propertyRepo.update(
-        { purchased_plan_id: branchPlan.id, branch_id: branchPlan.branch_id },
-        {
-          hired_plan_id: null as unknown as number,
-          purchased_plan_id: null as unknown as number,
-          visibility: 0,
-        },
-      );
+    await this.branchPlanRepo.save(branchPlan);
 
-      this.logger.log(
-        `[PLANS-CANCEL] cancelBranchPlan OK | purchasedPlanId=${purchasedPlanId} | branchId=${branchPlan.branch_id} | propertiesReset=${propertyUpdateResult.affected ?? 0}`,
-      );
+    this.logger.log(
+      `[PLANS-CANCEL] cancelBranchPlan scheduled | purchasedPlanId=${purchasedPlanId} | branchId=${branchPlan.branch_id} | scheduledEndDate=${scheduledEndDate.toISOString()}`,
+    );
 
-      return {
-        message: 'Plan dado de baja correctamente',
-        purchased_plan_id: branchPlan.id,
-        plan_type: 'branch',
-        properties_reset: propertyUpdateResult.affected ?? 0,
-        mercadopago_status: branchPlan.mercadopago_status,
-        already_inactive: false,
-      };
-    });
+    return {
+      message: `Baja programada. El plan seguirá activo hasta el ${scheduledEndDate.toLocaleDateString('es-AR')}`,
+      purchased_plan_id: branchPlan.id,
+      plan_type: 'branch',
+      properties_reset: 0,
+      mercadopago_status: branchPlan.mercadopago_status,
+      already_inactive: false,
+      scheduled_end_date: scheduledEndDate,
+      pending_deactivation: true,
+    };
   }
 
   async getUserPlanAvailability(userId: number, requester: any) {
@@ -594,7 +612,7 @@ export class PlansService {
       .addSelect('up.end_date', 'end_date') 
       .where('up.user_id = :userId', { userId })
       .andWhere('up.active = true')
-      .andWhere('up.end_date >= :now', { now: new Date() })
+      .andWhere('(up.end_date IS NULL OR up.end_date >= :todayStart)')
       .andWhere('p.deleted = false')
       .andWhere('p.is_active = true')
       .groupBy('p.id')
@@ -604,6 +622,7 @@ export class PlansService {
       .addGroupBy('up.start_date')
       .addGroupBy('up.end_date')
       .setParameter('excludedStatuses', [PropertyStatus.DRAFT, PropertyStatus.ARCHIVADA])
+      .setParameter('todayStart', startOfDay(new Date()))
       .getRawMany<{
         plan_id: number;
         plan_name: string;
@@ -654,6 +673,137 @@ export class PlansService {
       relations: ['plan'],
       order: { created_at: 'DESC' },
     });
+  }
+
+  async schedulePurchasedPlanCancellationFromMercadoPago<
+    T extends UserPlan | BranchPlan,
+  >(plan: T, now: Date): Promise<T> {
+    if (plan.end_date) {
+      return plan;
+    }
+
+    plan.mercadopago_cancelled_at = plan.mercadopago_cancelled_at ?? now;
+    plan.end_date = computeScheduledEndDate(plan.start_date, now);
+    return plan;
+  }
+
+  async finalizeExpiredPurchasedPlans(now: Date = new Date()): Promise<{
+    branchPlansDeactivated: number;
+    userPlansDeactivated: number;
+    branchPropertiesReset: number;
+    userPropertiesReset: number;
+  }> {
+    const todayStart = startOfDay(now);
+
+    await this.branchPlanRepo
+      .createQueryBuilder()
+      .update(BranchPlan)
+      .set({ end_date: null })
+      .where('active = true')
+      .andWhere('mercadopago_cancelled_at IS NULL')
+      .andWhere('end_date IS NOT NULL')
+      .execute();
+
+    await this.userPlanRepo
+      .createQueryBuilder()
+      .update(UserPlan)
+      .set({ end_date: null })
+      .where('active = true')
+      .andWhere('mercadopago_cancelled_at IS NULL')
+      .andWhere('end_date IS NOT NULL')
+      .execute();
+
+    const expiredBranchPlans = await this.branchPlanRepo
+      .createQueryBuilder('bp')
+      .select(['bp.id', 'bp.branch_id'])
+      .where('bp.active = true')
+      .andWhere('bp.end_date IS NOT NULL')
+      .andWhere('bp.end_date < :todayStart', { todayStart })
+      .getMany();
+
+    const expiredUserPlans = await this.userPlanRepo
+      .createQueryBuilder('up')
+      .select(['up.id', 'up.user_id'])
+      .where('up.active = true')
+      .andWhere('up.end_date IS NOT NULL')
+      .andWhere('up.end_date < :todayStart', { todayStart })
+      .getMany();
+
+    let branchPropertiesReset = 0;
+    let userPropertiesReset = 0;
+
+    for (const branchPlan of expiredBranchPlans) {
+      branchPropertiesReset += await this.finalizeBranchPlanDeactivation(
+        branchPlan.id,
+        branchPlan.branch_id,
+      );
+    }
+
+    for (const userPlan of expiredUserPlans) {
+      userPropertiesReset += await this.finalizeUserPlanDeactivation(
+        userPlan.id,
+        userPlan.user_id,
+      );
+    }
+
+    return {
+      branchPlansDeactivated: expiredBranchPlans.length,
+      userPlansDeactivated: expiredUserPlans.length,
+      branchPropertiesReset,
+      userPropertiesReset,
+    };
+  }
+
+  async finalizeBranchPlanDeactivation(
+    purchasedPlanId: number,
+    branchId: number,
+  ): Promise<number> {
+    const branchPlan = await this.branchPlanRepo.findOne({
+      where: { id: purchasedPlanId },
+    });
+    if (!branchPlan?.active) {
+      return 0;
+    }
+
+    branchPlan.active = false;
+    await this.branchPlanRepo.save(branchPlan);
+
+    const propertyUpdateResult = await this.propertyRepo.update(
+      { purchased_plan_id: purchasedPlanId, branch_id: branchId },
+      {
+        hired_plan_id: null as unknown as number,
+        purchased_plan_id: null as unknown as number,
+        visibility: 0,
+      },
+    );
+
+    return propertyUpdateResult.affected ?? 0;
+  }
+
+  async finalizeUserPlanDeactivation(
+    purchasedPlanId: number,
+    userId: number,
+  ): Promise<number> {
+    const userPlan = await this.userPlanRepo.findOne({
+      where: { id: purchasedPlanId },
+    });
+    if (!userPlan?.active) {
+      return 0;
+    }
+
+    userPlan.active = false;
+    await this.userPlanRepo.save(userPlan);
+
+    const propertyUpdateResult = await this.propertyRepo.update(
+      { purchased_plan_id: purchasedPlanId, user_id: userId },
+      {
+        hired_plan_id: null as unknown as number,
+        purchased_plan_id: null as unknown as number,
+        visibility: 0,
+      },
+    );
+
+    return propertyUpdateResult.affected ?? 0;
   }
 
   private async cancelMercadoPagoSubscription(

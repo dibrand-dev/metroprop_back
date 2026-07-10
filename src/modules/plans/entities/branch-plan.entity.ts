@@ -63,8 +63,8 @@ export class BranchPlan {
   @Column({ type: 'timestamp' })
   start_date!: Date;
 
-  @Column({ type: 'timestamp' })
-  end_date!: Date;
+  @Column({ type: 'timestamp', nullable: true })
+  end_date?: Date | null;
 
   @Column({ type: 'boolean', default: true })
   active!: boolean;
