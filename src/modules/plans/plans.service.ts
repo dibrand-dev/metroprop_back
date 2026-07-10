@@ -243,7 +243,7 @@ export class PlansService {
             .andWhere('prop.status NOT IN (:...excludedStatuses)')
             .groupBy('prop.purchased_plan_id'),
         'prop_counts',
-        'prop_counts.ppid = p.id',
+        'prop_counts.ppid = bp.id',
       )
       .select('p.id', 'plan_id')
       .addSelect('p.plan_name', 'plan_name')
@@ -599,7 +599,7 @@ export class PlansService {
             .andWhere('prop.status NOT IN (:...excludedStatuses)')
             .groupBy('prop.purchased_plan_id'),
         'prop_counts',
-        'prop_counts.ppid = p.id',
+        'prop_counts.ppid = up.id',
       )
       .select('p.id', 'plan_id')
       .addSelect('p.plan_name', 'plan_name')
