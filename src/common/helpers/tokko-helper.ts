@@ -1690,9 +1690,11 @@ export class TokkoHelperService {
       operation_type: item.operation_type != null ? this.mapFreePortalOperationType(item.operation_type)
         : this.mapTokkoOperationTypeToEnum(item.operations),
       price: item.operation_amount === undefined || item.operation_amount == null ? this.extractPriceFromOperations(item.operations) : item.operation_amount,
-      currency: item.operations == null
-        ? ((item.operation_currency ?? Currency.USD) as Currency)
-        : (this.extractCurrencyFromOperations(item.operations) as Currency),
+      currency: item.operation_currency != null
+        ? (item.operation_currency as Currency)
+        : item.operations == null
+          ? (Currency.USD as Currency)
+          : (this.extractCurrencyFromOperations(item.operations) as Currency),
 
       description: this.combineDescription(
         item.description || item.rich_description,
