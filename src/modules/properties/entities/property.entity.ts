@@ -41,6 +41,10 @@ import { User } from '@/modules/users/entities/user.entity';
 @Index('idx_properties_neighborhood_id', ['neighborhood_id'])
 @Index('idx_properties_sub_neighborhood_id', ['sub_neighborhood_id'])
 @Index('idx_properties_reference_code', ['reference_code'])
+@Index('uk_properties_publication_id', ['publication_id'], {
+  unique: true,
+  where: 'publication_id IS NOT NULL AND deleted = false',
+})
 // @Index('idx_properties_branch', ['branch'])
 export class Property {
 

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, Not } from 'typeorm';
 import { Property } from './entities/property.entity';
@@ -63,6 +63,10 @@ export class PropertyWriteService {
     */
     let savedProperty: Property | undefined;
     try {
+      if (scalars.deleted !== true) {
+        await this.assertUniquePublicationId(scalars.publication_id);
+      }
+
       // Calcular y asignar price_square_meter usando la función unificada
       scalars.price_square_meter = await calculateSquareMetterPrice(scalars, this.propertyRepo);
       const newProperty: Property = this.propertyRepo.create({
@@ -247,6 +251,12 @@ export class PropertyWriteService {
     if (context?.branchId) updateData.branch_id = context.branchId;
     if (context?.userId) updateData.user_id = context.userId;
 
+    const nextDeleted = updateData.deleted ?? property.deleted;
+    const nextPublicationId = updateData.publication_id ?? property.publication_id;
+    if (nextDeleted !== true) {
+      await this.assertUniquePublicationId(nextPublicationId, property.id);
+    }
+
     Object.assign(property, updateData);
 
     // Si viene un nuevo userId, pisar la relación cargada en memoria para que TypeORM
@@ -367,5 +377,28 @@ export class PropertyWriteService {
     }
   }
 
+  private async assertUniquePublicationId(
+    publicationId: string | undefined | null,
+    excludePropertyId?: number,
+  ): Promise<void> {
+    const normalized = publicationId?.trim();
+    if (!normalized) return;
+
+    const qb = this.propertyRepo
+      .createQueryBuilder('p')
+      .where('p.publication_id = :publicationId', { publicationId: normalized })
+      .andWhere('p.deleted = :deleted', { deleted: false });
+
+    if (excludePropertyId != null) {
+      qb.andWhere('p.id != :excludePropertyId', { excludePropertyId });
+    }
+
+    const existing = await qb.getOne();
+    if (existing) {
+      throw new BadRequestException(
+        'Una propiedad activa con este publication_id ya existe',
+      );
+    }
+  }
 
 }
