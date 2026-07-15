@@ -756,6 +756,64 @@ export class TokkoHelperService {
    * Maps freeportal operation_category / operation_category_id to PropertyType enum.
    */
   private mapFreePortalPropertyType(category: string | undefined, categoryId: string | undefined): PropertyType {
+    
+ /*
+ SIN MAPEO DIRECTO:
+6	Mooring
+12	Industrial Ship
+31	Studio or Kitchenette
+*/
+    
+    if (categoryId) {
+      switch (categoryId.toUpperCase()) {
+        case 'PRT-2':  // Apartment
+        case 'PRT-4':  // weekned house
+        case 'PRT-23': // Terrace
+        case 'PRT-31': // Studio or Kitchenette
+          return PropertyType.DEPARTAMENTO;
+        case 'PRT-3':  // House
+          return PropertyType.CASA;
+        case 'PRT-5':  // Office
+          return PropertyType.OFICINA_COMERCIAL;
+        case 'PRT-7':  // Business Premises
+          return PropertyType.LOCAL_COMERCIAL;
+        case 'PRT-10': // Garage
+          return PropertyType.GARAGE;
+        case 'PRT-12': // Industrial Ship
+        case 'PRT-24': // Galpón
+        case 'PRT-17': // Bodegas
+          return PropertyType.GALPON_BODEGA;
+        case 'PRT-15': // Business Permit
+          return PropertyType.FONDO_DE_COMERCIO;
+        case 'PRT-11': // Hotel
+          return PropertyType.HOTEL;
+        case 'PRT-20': // Cama Náutica
+          return PropertyType.CAMA_NAUTICA;
+        case 'PRT-9':  // Countryside
+        case 'PRT-18': // Fincas
+        case 'PRT-19': // Chacra
+        case 'PRT-28': // Estate
+        case 'PRT-29': // Stud Farm
+          return PropertyType.CAMPO;
+        case 'PRT-30': // Consulting room
+          return PropertyType.CONSULTORIO;
+        case 'PRT-14': // Storage
+        case 'PRT-16': // Storage Room
+          return PropertyType.DEPOSITO;
+        case 'PRT-8':  // Commercial Building
+        case 'PRT-13': // Condo
+        case 'PRT-25': // Villa
+          return PropertyType.EDIFICIO;
+        case 'PRT-26': // Terreno comercial
+        case 'PRT-27': // Terreno industrial
+        case 'PRT-1':  // Land
+        case 'PRT-32': // Land in Condominium
+          return PropertyType.TERRENO;
+        default:
+          break;
+      }
+    }
+    
     if (category) {
       const cat = category.toLowerCase();
       if (cat.includes('departamento') || cat.includes('apartment')) return PropertyType.DEPARTAMENTO;
@@ -764,6 +822,7 @@ export class TokkoHelperService {
       if (cat.includes('oficina')) return PropertyType.OFICINA_COMERCIAL;
       if (cat.includes('terreno') || cat.includes('lote')) return PropertyType.TERRENO;
       if (cat.includes('casa')) return PropertyType.CASA;
+      if(cat.includes('estacionamiento') || cat.includes('garage')) return PropertyType.GARAGE;
     }
     return PropertyType.CASA;
   }
@@ -1628,10 +1687,9 @@ export class TokkoHelperService {
         ? this.mapFreePortalPropertyType(item.operation_category, item.operation_category_id)
         : this.mapTokkoPropertyTypeToEnum(item.type),
       status: this.mapTokkoStatusToEnum(item.status),
-      operation_type: item.operation_type != null && item.operations == null
-        ? this.mapFreePortalOperationType(item.operation_type)
+      operation_type: item.operation_type != null ? this.mapFreePortalOperationType(item.operation_type)
         : this.mapTokkoOperationTypeToEnum(item.operations),
-      price: item.operations == null ? (item.operation_amount ?? 0) : this.extractPriceFromOperations(item.operations),
+      price: item.operation_amount === undefined || item.operation_amount == null ? this.extractPriceFromOperations(item.operations) : item.operation_amount,
       currency: item.operations == null
         ? ((item.operation_currency ?? Currency.USD) as Currency)
         : (this.extractCurrencyFromOperations(item.operations) as Currency),
