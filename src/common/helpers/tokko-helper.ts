@@ -822,7 +822,7 @@ export class TokkoHelperService {
       if (cat.includes('oficina')) return PropertyType.OFICINA_COMERCIAL;
       if (cat.includes('terreno') || cat.includes('lote')) return PropertyType.TERRENO;
       if (cat.includes('casa')) return PropertyType.CASA;
-      if(cat.includes('estacionamiento') || cat.includes('garage')) return PropertyType.GARAGE;
+      if(cat.includes('estacionamiento') || cat.includes('garage') || cat.includes('cochera')) return PropertyType.GARAGE;
     }
     return PropertyType.CASA;
   }
