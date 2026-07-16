@@ -1562,7 +1562,7 @@ export class TokkoHelperService {
     try {
       let url =
         `https://tokkobroker.com/portals/simple_portal/api/v1/freeportals/` +
-        `?api_key=${encodeURIComponent(apiKey)}&format=json&lang=es-MX` +
+        `?api_key=${encodeURIComponent(apiKey)}&format=json&lang=es-AR` +
         `&filter=${encodeURIComponent(filter)}` +
         (dateFrom ? `&date_from=${encodeURIComponent(dateFrom)}` : '') +
         `&limit=${limit}&offset=${offset}`;
@@ -1600,7 +1600,7 @@ export class TokkoHelperService {
     
     const url =
         `https://tokkobroker.com/portals/simple_portal/api/v1/freeportals/` +
-        `?api_key=${encodeURIComponent(apiKey)}&publication_id=${encodeURIComponent(publicationId)}&format=json&lang=es-MX`;
+        `?api_key=${encodeURIComponent(apiKey)}&publication_id=${encodeURIComponent(publicationId)}&format=json&lang=es-AR`;
 
     try { 
       console.log(`[TokkoHelper] fetchFreePortalPropertyById publication_id=${publicationId}`);
