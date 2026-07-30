@@ -721,6 +721,8 @@ export class TokkoSyncService implements OnModuleInit {
 						password: PASSWORD_DEFAULT,
 						role_id: UserRole.USER_ROL_COLLABORATOR,
 						organizationId: org.id,
+						phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+						alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 					} as any);
 					adminUserId = newUser.id;
 					this.fileLogger.info(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
@@ -762,7 +764,7 @@ export class TokkoSyncService implements OnModuleInit {
 			source_partner_id: partnerId,
 		} as any);
 
-		// Create admin user with hashed "demo" password
+		// Create admin user with hashed default password
 		try {
 			const adminUser = await this.usersService.create({
 				name: seller.company_name ?? 'Admin',
@@ -771,6 +773,8 @@ export class TokkoSyncService implements OnModuleInit {
 				role_id: UserRole.USER_ROL_ADMIN,
 				organizationId: savedOrg.id,
 				is_verified: true,
+				phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+				alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 			} as any);
 
 			await this.organizationRepo.update(savedOrg.id!, {
