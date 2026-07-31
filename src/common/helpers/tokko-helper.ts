@@ -1214,14 +1214,24 @@ export class TokkoHelperService {
         }
       };
 
-      // 6. Crear branches adicionales si existen
+      // 6. Crear branches adicionales si existen (find-or-create by Tokko branch id)
       if (branches.length > 1) {
         console.log(`Procesando ${branches.length - 1} branches adicionales...`);
         
         for (let i = 1; i < branches.length; i++) {
           try {
             const branch = branches[i];
-            console.log(`Creando branch adicional ${i}: ${branch.name || branch.display_name}`);
+            const externalRef = branch.id != null ? String(branch.id) : null;
+            if (!externalRef) {
+              results.additional_branches.push({
+                tokko_data: branch,
+                status: 'error',
+                error: 'Tokko branch missing id',
+              });
+              continue;
+            }
+
+            console.log(`Upsert branch adicional ${i}: ${branch.name || branch.display_name} ext_ref=${externalRef}`);
             
             const additionalBranchDto = {
               branch_name: branch.name || branch.display_name || `Branch ${i + 1}`,
@@ -1230,26 +1240,30 @@ export class TokkoHelperService {
               alternative_phone: branch.alternative_phone || '',
               contact_time: branch.contact_time || '',
               address: branch.address || '',
-              external_reference: branch.id?.toString(),
-              organization_id: orgResult.organization_id
+              organizationId: orgResult.organization_id,
             };
 
-            // Crear branch usando BranchesService
-            const createdBranch = await this.branchesService.create({
-              ...additionalBranchDto,
-              organizationId: orgResult.organization_id
-            });
+            const { branch: upsertedBranch, created } =
+              await this.branchesService.findOrCreateByExternalReference(
+                orgResult.organization_id,
+                externalRef,
+                additionalBranchDto,
+              );
             
-            console.log(`Branch adicional ${i} creado exitosamente con ID: ${createdBranch.id}`);
+            console.log(
+              `Branch adicional ${i} ${created ? 'creado' : 'reutilizado'} con ID: ${upsertedBranch.id}`,
+            );
             
             results.additional_branches.push({
               tokko_data: branch,
-              status: 'created',
-              created_branch_id: createdBranch.id,
-              dto: additionalBranchDto
+              status: created ? 'created' : 'existing',
+              created_branch_id: upsertedBranch.id,
+              dto: { ...additionalBranchDto, external_reference: externalRef },
             });
             
-            results.summary.created_additional_branches++;
+            if (created) {
+              results.summary.created_additional_branches++;
+            }
 
           } catch (error) {
             const errorMessage = (error as Error).message;

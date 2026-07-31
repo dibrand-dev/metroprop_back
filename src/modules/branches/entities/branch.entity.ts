@@ -20,6 +20,10 @@ import { User } from '../../users/entities/user.entity';
 @Index('idx_branches_sub_location_id', ['sub_location_id'])
 @Index('idx_branches_neighborhood_id', ['neighborhood_id'])
 @Index('idx_branches_sub_neighborhood_id', ['sub_neighborhood_id'])
+@Index('uk_branches_org_external_ref_active', ['organization_id', 'external_reference'], {
+  unique: true,
+  where: 'deleted = false AND external_reference IS NOT NULL',
+})
 export class Branch {
   @PrimaryGeneratedColumn()
   id!: number;

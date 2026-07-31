@@ -534,11 +534,19 @@ export class UsersService {
   }
 
   async addBranchToUser(userId: number, branchId: number): Promise<void> {
-    await this.usersRepository
-      .createQueryBuilder()
-      .relation(User, 'branches')
-      .of(userId)
-      .add(branchId);
+    try {
+      await this.usersRepository
+        .createQueryBuilder()
+        .relation(User, 'branches')
+        .of(userId)
+        .add(branchId);
+    } catch (err) {
+      // Already linked on re-sync; treat as success
+      const msg = err instanceof Error ? err.message : String(err);
+      if (!/duplicate|unique|already exists/i.test(msg)) {
+        throw err;
+      }
+    }
   }
 
   

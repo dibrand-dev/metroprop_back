@@ -1,7 +1,7 @@
 import { BRANCH_IMAGE_FOLDER } from '../../common/constants';
-import { Injectable, NotFoundException, Logger, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { QueryFailedError, Repository } from 'typeorm';
 import { MediaService } from '../../common/media/media.service';
 import { Branch } from './entities/branch.entity';
 import { Property } from '../properties/entities/property.entity';
@@ -39,24 +39,88 @@ export class BranchesService {
     });
   }
 
+  /**
+   * Finds an active branch by (organizationId, externalRef) or creates it.
+   * Race-safe: on unique / conflict, re-fetches the winner row.
+   */
+  async findOrCreateByExternalReference(
+    organizationId: number,
+    externalRef: string,
+    data: CreateBranchDto | (Partial<Branch> & { organizationId?: number }),
+  ): Promise<{ branch: Branch; created: boolean }> {
+    const existing = await this.findByExternalReference(organizationId, externalRef);
+    if (existing) {
+      return { branch: existing, created: false };
+    }
+
+    try {
+      const branch = await this.create({
+        ...data,
+        organizationId,
+        external_reference: externalRef,
+      } as any);
+      return { branch, created: true };
+    } catch (err) {
+      if (err instanceof ConflictException || this.isUniqueViolation(err)) {
+        const winner = await this.findByExternalReference(organizationId, externalRef);
+        if (winner) {
+          this.logger.warn(
+            `Branch race resolved: reusing existing org=${organizationId} ext_ref=${externalRef} id=${winner.id}`,
+          );
+          return { branch: winner, created: false };
+        }
+      }
+      throw err;
+    }
+  }
+
+  private isUniqueViolation(err: unknown): boolean {
+    if (err instanceof QueryFailedError) {
+      const driverError = (err as any).driverError;
+      // Postgres unique_violation
+      if (driverError?.code === '23505') return true;
+    }
+    const msg = err instanceof Error ? err.message : String(err);
+    return /duplicate key|unique constraint|uk_branches_org_external_ref_active/i.test(msg);
+  }
+
   async create(
     data: CreateBranchDto | (Partial<Branch> & { organizationId?: number }),
     file?: Express.Multer.File,
   ): Promise<Branch> {
     const { organizationId, ...rest } = data as any;
+
+    if (rest.external_reference && organizationId) {
+      const existing = await this.findByExternalReference(organizationId, String(rest.external_reference));
+      if (existing) {
+        throw new ConflictException(
+          `Ya existe una sucursal activa con external_reference "${rest.external_reference}" en la organización ${organizationId}`,
+        );
+      }
+    }
+
     const branch = this.repo.create(rest as Partial<Branch>);
     if (organizationId) {
       (branch as any).organization = { id: organizationId };
     }
 
-    const createdBranch = await this.repo.save(branch);
+    try {
+      const createdBranch = await this.repo.save(branch);
 
-    if (file) {
-      await this.uploadLogoToS3(file, createdBranch.id);
-      return this.findOne(createdBranch.id);
+      if (file) {
+        await this.uploadLogoToS3(file, createdBranch.id);
+        return this.findOne(createdBranch.id);
+      }
+
+      return createdBranch;
+    } catch (err) {
+      if (this.isUniqueViolation(err) && rest.external_reference && organizationId) {
+        throw new ConflictException(
+          `Ya existe una sucursal activa con external_reference "${rest.external_reference}" en la organización ${organizationId}`,
+        );
+      }
+      throw err;
     }
-
-    return createdBranch;
   }
 
   async update(
