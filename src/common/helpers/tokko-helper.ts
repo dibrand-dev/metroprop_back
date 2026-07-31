@@ -1200,72 +1200,24 @@ export class TokkoHelperService {
 
       console.log('Organización creada exitosamente:', orgResult);
 
+      // One-branch rule: only the branch created with the org (from Tokko's first branch).
+      // Extra Tokko branches are ignored; additional users attach to that single branch.
       const results = {
         organization_id: orgResult.organization_id,
         branch_id: orgResult.branch_id,
         admin_user_id: orgResult.admin_user_id,
-        additional_branches: [] as any[],
         additional_users: [] as any[],
         summary: {
-          total_branches: branches.length,
+          tokko_branches_seen: branches.length,
           total_users: users.length,
-          created_additional_branches: 0,
+          created_branches: 1,
           created_additional_users: 0
         }
       };
 
-      // 6. Crear branches adicionales si existen
-      if (branches.length > 1) {
-        console.log(`Procesando ${branches.length - 1} branches adicionales...`);
-        
-        for (let i = 1; i < branches.length; i++) {
-          try {
-            const branch = branches[i];
-            console.log(`Creando branch adicional ${i}: ${branch.name || branch.display_name}`);
-            
-            const additionalBranchDto = {
-              branch_name: branch.name || branch.display_name || `Branch ${i + 1}`,
-              email: branch.email || firstUser.email,
-              phone: branch.phone || '',
-              alternative_phone: branch.alternative_phone || '',
-              contact_time: branch.contact_time || '',
-              address: branch.address || '',
-              external_reference: branch.id?.toString(),
-              organization_id: orgResult.organization_id
-            };
-
-            // Crear branch usando BranchesService
-            const createdBranch = await this.branchesService.create({
-              ...additionalBranchDto,
-              organizationId: orgResult.organization_id
-            });
-            
-            console.log(`Branch adicional ${i} creado exitosamente con ID: ${createdBranch.id}`);
-            
-            results.additional_branches.push({
-              tokko_data: branch,
-              status: 'created',
-              created_branch_id: createdBranch.id,
-              dto: additionalBranchDto
-            });
-            
-            results.summary.created_additional_branches++;
-
-          } catch (error) {
-            const errorMessage = (error as Error).message;
-            console.error(`Error procesando branch adicional ${i} (${branches[i]?.name || 'N/A'}):`, errorMessage);
-            results.additional_branches.push({
-              tokko_data: branches[i],
-              status: 'error',
-              error: errorMessage
-            });
-          }
-        }
-      }
-
-      // 7. Crear usuarios adicionales si existen
+      // Create additional Tokko users on the single first branch
       if (users.length > 1) {
-        console.log(`Procesando ${users.length - 1} usuarios adicionales...`);
+        console.log(`Procesando ${users.length - 1} usuarios adicionales en branch_id=${orgResult.branch_id}...`);
         
         for (let i = 1; i < users.length; i++) {
           try {

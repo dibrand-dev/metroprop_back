@@ -39,6 +39,17 @@ export class BranchesService {
     });
   }
 
+  async findFirstByOrganizationId(organizationId: number): Promise<Branch | null> {
+    return this.repo.findOne({
+      where: {
+        organization: { id: organizationId },
+        deleted: false,
+      } as any,
+      relations: ['organization'],
+      order: { id: 'ASC' },
+    });
+  }
+
   async create(
     data: CreateBranchDto | (Partial<Branch> & { organizationId?: number }),
     file?: Express.Multer.File,
