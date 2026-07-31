@@ -611,12 +611,14 @@ export class TokkoSyncService implements OnModuleInit {
 		seller: any,
 	): Promise<{ orgId: number; branchId: number; userId?: number }> {
 		const companyId = seller.company_id != null ? String(seller.company_id) : null;
+		const branchExtRef = seller.branch_id != null ? String(seller.branch_id) : null;
 
 		if (!companyId) {
 			throw new Error('seller.company_id is required to resolve organization');
 		}
 
 		this.fileLogger.info(`STEP org_lookup ext_ref=${companyId}`);
+		// Find org by external_reference
 
 		// Validar si existe un usuario con el email antes de crear la organización
 		const existingUser = await this.usersService.findByEmail(seller.email);
@@ -656,45 +658,53 @@ export class TokkoSyncService implements OnModuleInit {
 			throw new Error('Organization is null after creation/fetch');
 		}
 
-		// Always use the organization's first branch; never create branches from Tokko branch_id
-		this.fileLogger.info(`STEP branch_lookup_first org_id=${org.id}`);
-		let branch = await this.branchesService.findFirstByOrganizationId(org.id!);
-
-		if (!branch) {
-			this.fileLogger.info(`STEP branch_create_first org_id=${org.id}`);
-			let createdBranch: any;
-			try {
-				createdBranch = await this.createBranchFromSeller(seller, org.id!, org.email);
-			} catch (err) {
-				const msg = err instanceof Error ? err.message : String(err);
-				this.fileLogger.error(`STEP branch_create_failed org_id=${org.id} reason="${msg}"`, err);
-				throw err;
-			}
-			branch = createdBranch;
-			this.logger.log(
-				`[TokkoSync] Created first branch id=${createdBranch.id} for org_id=${org.id}`,
-			);
-			this.fileLogger.logBranchCreated(null, createdBranch.id!, org.id!);
-
-			const orgAdminId: number | undefined = (org as any).admin_user?.id;
-			if (orgAdminId) {
-				await this.usersService.addBranchToUser(orgAdminId, createdBranch.id);
-			}
-		} else {
-			this.fileLogger.info(`STEP branch_found_first branch_id=${branch.id} org_id=${org.id}`);
+		// Find branch by external_reference within this org
+		let branch: any = null;
+		if (branchExtRef) {
+			this.fileLogger.info(`STEP branch_lookup ext_ref=${branchExtRef} org_id=${org.id}`);
+			branch = await this.branchesService.findByExternalReference(org.id!, branchExtRef);
 		}
 
 		if (!branch) {
-			throw new Error(`Failed to resolve first branch for organization ${org.id}`);
+			this.fileLogger.info(`STEP branch_create ext_ref=${branchExtRef ?? 'N/A'} org_id=${org.id}`);
+			try {
+				branch = await this.branchesService.create({
+					branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
+					email: seller.email ?? org.email,
+					phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+					alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
+					address: seller.address ?? '',
+					external_reference: branchExtRef ?? undefined,
+					organizationId: org.id!,
+					// Creation-only fallback: if branch logo is missing, reuse company logo.
+					branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
+				} as any);
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				this.fileLogger.error(`STEP branch_create_failed ext_ref=${branchExtRef ?? 'N/A'} org_id=${org.id} reason="${msg}"`, err);
+				throw err;
+			}
+			this.logger.log(
+				`[TokkoSync] Created new branch id=${branch.id} (ext_ref=${branchExtRef})`,
+			);
+			this.fileLogger.logBranchCreated(branchExtRef, branch.id!, org.id!);
+
+			// Asociar el usuario admin con el branch recién creado en users_branches
+			const adminUserId: number | undefined = (org as any).admin_user?.id;
+			if (adminUserId) {
+				await this.usersService.addBranchToUser(adminUserId, branch.id);
+			}
+		} else {
+			this.fileLogger.info(`STEP branch_found ext_ref=${branchExtRef} branch_id=${branch.id} org_id=${org.id}`);
 		}
 
 		let adminUserId: number | undefined = (org as any).admin_user?.id;
-
-		// Si el email del seller es diferente al del admin_user de la organización, y existe un usuario con ese email,
-		// asociar ese usuario a la organización y branch correspondientes. Si no existe un usuario con ese email,
-		// crear uno nuevo asociado a la organización y branch. Esto permite que cada vendedor tenga su propio usuario para acceder a Metroprop,
+		
+		// Si el email del seller es diferente al del admin_user de la organización, y existe un usuario con ese email, 
+		// asociar ese usuario a la organización y branch correspondientes. Si no existe un usuario con ese email, 
+		// crear uno nuevo asociado a la organización y branch. Esto permite que cada vendedor tenga su propio usuario para acceder a Metroprop, 
 		// en lugar de compartir el usuario admin de la organización.
-		if (seller.email !== org.admin_user?.email) {
+		if(seller.email !== org.admin_user?.email) {
 			console.log('EL EMAIL ASIGNADo AL USUARIO ADMIN DE LA ORG ES DIFERENTE AL EMAIL DEL VENDEDOR. SE INTENTARÁ ASOCIAR O CREAR UN USUARIO PARA EL VENDEDOR. seller_email=' + seller.email + ' admin_email=' + org.admin_user?.email);
 			this.fileLogger.info(`EL EMAIL ASIGNADo AL USUARIO ADMIN DE LA ORG ES DIFERENTE AL EMAIL DEL VENDEDOR. SE INTENTARÁ ASOCIAR O CREAR UN USUARIO PARA EL VENDEDOR. seller_email=${seller.email} admin_email=${org.admin_user?.email}`);
 			if (existingUser) {
@@ -703,57 +713,32 @@ export class TokkoSyncService implements OnModuleInit {
 				adminUserId = existingUser.id;
 			} else {
 				this.fileLogger.info(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
-				console.log(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
+				 console.log(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
 				try {
 					const newUser = await this.usersService.create({
-						name: seller.branch_name ?? seller.company_name ?? 'Admin',
+						name: seller.company_name ?? 'Admin',
 						email: seller.email ?? '',
 						password: PASSWORD_DEFAULT,
 						role_id: UserRole.USER_ROL_COLLABORATOR,
 						organizationId: org.id,
-						branchIds: [branch.id],
 						phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
 						alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 					} as any);
 					adminUserId = newUser.id;
 					this.fileLogger.info(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
-					console.log(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
+					 console.log(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : String(err);
 					this.fileLogger.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
-					console.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
+					 console.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
 					this.fileLogger.info(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
-					console.log(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
+					 console.log(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
 					adminUserId = org.admin_user?.id;
 				}
 			}
 		}
 
-		if (adminUserId) {
-			await this.usersService.addBranchToUser(adminUserId, branch.id);
-		}
-
 		return { orgId: org.id!, branchId: branch.id!, userId: adminUserId };
-	}
-
-	private async createBranchFromSeller(
-		seller: any,
-		organizationId: number,
-		fallbackEmail?: string,
-	): Promise<any> {
-		return this.branchesService.create({
-			branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
-			email: seller.email ?? fallbackEmail,
-			phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-			alternative_phone: this.buildTokkoPhone(
-				seller.alternative_phone_country_code ?? seller.alt_phone_country_code,
-				seller.alternative_phone_area_code ?? seller.alt_phone_area_code,
-				seller.alternative_phone ?? seller.alt_phone,
-			),
-			address: seller.address ?? '',
-			organizationId,
-			branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
-		} as any);
 	}
 
 	private async createOrgFromSeller(seller: any): Promise<any> {
@@ -767,11 +752,7 @@ export class TokkoSyncService implements OnModuleInit {
 			email: seller.email ?? '',
 			address: seller.address ?? '',
 			phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-			alternative_phone: this.buildTokkoPhone(
-				seller.alternative_phone_country_code ?? seller.alt_phone_country_code,
-				seller.alternative_phone_area_code ?? seller.alt_phone_area_code,
-				seller.alternative_phone ?? seller.alt_phone,
-			),
+			alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 			contact_time: seller.contact_time ?? '',
 			geo_lat: seller.geo_lat ?? undefined,
 			geo_long: seller.geo_long ?? undefined,
@@ -784,21 +765,16 @@ export class TokkoSyncService implements OnModuleInit {
 		} as any);
 
 		// Create admin user with hashed default password
-		let adminUser: any = null;
 		try {
-			adminUser = await this.usersService.create({
-				name: seller.branch_name ?? seller.company_name ?? 'Admin',
+			const adminUser = await this.usersService.create({
+				name: seller.company_name ?? 'Admin',
 				email: seller.email ?? '',
 				password: PASSWORD_DEFAULT,
 				role_id: UserRole.USER_ROL_ADMIN,
 				organizationId: savedOrg.id,
 				is_verified: true,
 				phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-				alternative_phone: this.buildTokkoPhone(
-					seller.alternative_phone_country_code ?? seller.alt_phone_country_code,
-					seller.alternative_phone_area_code ?? seller.alt_phone_area_code,
-					seller.alternative_phone ?? seller.alt_phone,
-				),
+				alternative_phone: this.buildTokkoPhone(seller.alt_phone_country_code, seller.alt_phone_area_code, seller.alt_phone),
 			} as any);
 
 			await this.organizationRepo.update(savedOrg.id!, {
@@ -819,17 +795,6 @@ export class TokkoSyncService implements OnModuleInit {
 			this.fileLogger.warn(
 				`ADMIN_USER_FAILED org_id=${savedOrg.id} email=${seller.email ?? 'N/A'} reason="${(err as Error).message}"`,
 			);
-		}
-
-		// Create the single branch for this organization and link the admin
-		const branch = await this.createBranchFromSeller(seller, savedOrg.id!, savedOrg.email);
-		this.logger.log(
-			`[TokkoSync] Created first branch id=${branch.id} for new org_id=${savedOrg.id}`,
-		);
-		this.fileLogger.logBranchCreated(null, branch.id!, savedOrg.id!);
-
-		if (adminUser?.id) {
-			await this.usersService.addBranchToUser(adminUser.id, branch.id);
 		}
 
 		return savedOrg;
