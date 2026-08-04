@@ -1,7 +1,7 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { IsNull, Not, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 
 import { TokkoSyncState } from './entities/tokko-sync-state.entity';
@@ -20,10 +20,88 @@ import { PropertyWriteService } from '@/modules/properties/property-write.servic
 import { EmailService } from '@/common/email/email.service';
 
 
+export interface TokkoFullCompareOptions {
+	/** Falls back to TOKKO_METROPROP_API_KEY when omitted */
+	apiKey?: string;
+	/** Restricts the run to a single organization (Tokko company_id) */
+	externalReference?: string;
+	/** When false (default) nothing is written: the feed is only compared against the DB */
+	force?: boolean;
+	/** Page size for the Tokko feed. Capped at TOKKO_FEED_MAX_PAGE_SIZE */
+	pageSize?: number;
+}
+
+export interface TokkoFullCompareOrgResult {
+	organization_id: number;
+	company_name: string;
+	external_reference: string;
+	/** total_count reported by the Tokko feed for this organization */
+	tokko_total: number;
+	/** items actually retrieved from the feed across all pages */
+	fetched: number;
+	pages: number;
+	/** feed items that carry no publication_id, so they cannot be matched */
+	feed_without_publication_id: number;
+	/** properties stored locally that came from Tokko (publication_id present) */
+	local_total: number;
+	/** subset of local_total that is currently published (DISPONIBLE) */
+	local_available: number;
+	/**
+	 * Feed publication_ids that we do not have stored — the ones still to obtain.
+	 * Measured after the run, so in force mode it only counts what failed to import.
+	 */
+	missing: number;
+	missing_publication_ids: string[];
+	missing_publication_ids_truncated: boolean;
+	/**
+	 * Stored published properties whose publication_id is no longer in the feed.
+	 * Measured after the run, so in force mode these were already depublished and
+	 * the count shows up under `depublished` instead.
+	 */
+	not_in_feed: number;
+	not_in_feed_publication_ids: string[];
+	not_in_feed_publication_ids_truncated: boolean;
+	/** Write stats. Always zero in dry-run mode */
+	created: number;
+	updated: number;
+	skipped: number;
+	failed: number;
+	depublished: number;
+	error?: string;
+}
+
+export interface TokkoFullCompareResult {
+	message: string;
+	dry_run: boolean;
+	page_size: number;
+	organizations_scanned: number;
+	totals: {
+		tokko_total: number;
+		fetched: number;
+		local_total: number;
+		local_available: number;
+		missing: number;
+		not_in_feed: number;
+		created: number;
+		updated: number;
+		skipped: number;
+		failed: number;
+		depublished: number;
+		organizations_with_errors: number;
+	};
+	results: TokkoFullCompareOrgResult[];
+}
+
 @Injectable()
 export class TokkoSyncService implements OnModuleInit {
 	private readonly logger = new Logger(TokkoSyncService.name);
 	private readonly BATCH_SIZE = 100;
+	/** Hard limit imposed by the Tokko freeportals endpoint */
+	private readonly TOKKO_FEED_MAX_PAGE_SIZE = 1000;
+	/** Guard against an endless paging loop if meta.total_count keeps growing */
+	private readonly TOKKO_FEED_MAX_PAGES = 100;
+	/** publication_id lists are for eyeballing, not for exhaustive reporting */
+	private readonly COMPARE_IDS_IN_RESPONSE = 100;
 	private tokkoPartnerId: number | null = null;
 
 	constructor(
@@ -222,32 +300,11 @@ export class TokkoSyncService implements OnModuleInit {
 		});
 
 		if (org) {
-			const feedIds = [...feedPublicationIds];
-
-			if (feedIds.length > 0) {
-				const updateResult = await this.propertyRepo
-					.createQueryBuilder()
-					.update()
-					.set({ status: PropertyStatus.NO_DISPONIBLE })
-					.where('organization_id = :orgId', { orgId: org.id })
-					.andWhere('status = :status', { status: PropertyStatus.DISPONIBLE })
-					.andWhere('deleted = false')
-					.andWhere('publication_id IS NOT NULL')
-					.andWhere('publication_id NOT IN (:...feedIds)', { feedIds })
-					.execute();
-
-				stats.depublished = updateResult.affected ?? 0;
-
-				if (stats.depublished > 0) {
-					this.logger.log(
-						`[TokkoSync] syncOrganization depublished ${stats.depublished} properties not in feed`,
-					);
-					this.fileLogger.orgInfo(
-						tokkoOrganizationId,
-						`ORG_SYNC_DEPUBLISHED count=${stats.depublished}`,
-					);
-				}
-			}
+			stats.depublished = await this.depublishPropertiesNotInFeed(
+				org.id!,
+				tokkoOrganizationId,
+				feedPublicationIds,
+			);
 		}
 
 		const message = pending > 0
@@ -260,6 +317,412 @@ export class TokkoSyncService implements OnModuleInit {
 			`ORG_SYNC_DONE ${message} created=${stats.created} updated=${stats.updated} skipped=${stats.skipped} failed=${stats.failed} depublished=${stats.depublished}`,
 		);
 		return { message, processed, total: totalCount, pending, ...stats };
+	}
+
+	/**
+	 * Walks every active organization that came from Tokko (external_reference set,
+	 * status = true, deleted = false), pulls its whole feed page by page and compares
+	 * it against what we have stored, so we can see how many properties are still
+	 * missing per organization.
+	 *
+	 * Dry-run by default: nothing is written unless `force` is true.
+	 */
+	async fullCompareOrganizations(
+		options: TokkoFullCompareOptions = {},
+	): Promise<TokkoFullCompareResult> {
+		const force = options.force === true;
+		const pageSize = Math.min(
+			Math.max(1, options.pageSize ?? this.TOKKO_FEED_MAX_PAGE_SIZE),
+			this.TOKKO_FEED_MAX_PAGE_SIZE,
+		);
+		const resolvedApiKey =
+			options.apiKey ?? this.configService.get<string>('TOKKO_METROPROP_API_KEY');
+
+		const emptyResult: TokkoFullCompareResult = {
+			message: '',
+			dry_run: !force,
+			page_size: pageSize,
+			organizations_scanned: 0,
+			totals: {
+				tokko_total: 0, fetched: 0,
+				local_total: 0, local_available: 0,
+				missing: 0, not_in_feed: 0,
+				created: 0, updated: 0, skipped: 0, failed: 0, depublished: 0,
+				organizations_with_errors: 0,
+			},
+			results: [],
+		};
+
+		if (!resolvedApiKey) {
+			return { ...emptyResult, message: 'TOKKO_METROPROP_API_KEY not configured' };
+		}
+
+		const partnerId = await this.resolveTokkoPartnerId();
+		if (!partnerId) {
+			return { ...emptyResult, message: 'Partner "tokko" not configured. Compare skipped.' };
+		}
+
+		const requestedRef = options.externalReference?.trim();
+		const organizations = await this.organizationRepo.find({
+			where: {
+				external_reference: requestedRef ? requestedRef : Not(IsNull()),
+				source_partner_id: partnerId,
+				status: true,
+				deleted: false,
+			} as any,
+			order: { id: 'ASC' } as any,
+		});
+
+		const targets = organizations.filter((org) => !!org.external_reference?.trim());
+
+		if (requestedRef && targets.length === 0) {
+			return {
+				...emptyResult,
+				message:
+					`No hay organización activa de Tokko con external_reference=${requestedRef} ` +
+					`(se requiere status = true y deleted = false)`,
+			};
+		}
+
+		const mode = force ? 'FORCE' : 'DRY-RUN';
+		this.logger.log(
+			`[TokkoSync-COMPARE] ${mode} over ${targets.length} organizations (page_size=${pageSize})`,
+		);
+		this.fileLogger.info(
+			`FULL_COMPARE_START mode=${mode} organizations=${targets.length} page_size=${pageSize}` +
+			(requestedRef ? ` ext_ref=${requestedRef}` : ''),
+		);
+
+		const results: TokkoFullCompareOrgResult[] = [];
+		const totals = { ...emptyResult.totals };
+
+		for (const org of targets) {
+			const externalReference = org.external_reference!.trim();
+
+			try {
+				const entry = await this.compareOrganization(
+					resolvedApiKey,
+					org,
+					externalReference,
+					pageSize,
+					force,
+				);
+
+				results.push(entry);
+				totals.tokko_total += entry.tokko_total;
+				totals.fetched += entry.fetched;
+				totals.local_total += entry.local_total;
+				totals.local_available += entry.local_available;
+				totals.missing += entry.missing;
+				totals.not_in_feed += entry.not_in_feed;
+				totals.created += entry.created;
+				totals.updated += entry.updated;
+				totals.skipped += entry.skipped;
+				totals.failed += entry.failed;
+				totals.depublished += entry.depublished;
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				totals.organizations_with_errors++;
+				results.push({
+					...this.emptyCompareOrgResult(org.id!, org.company_name, externalReference),
+					error: msg,
+				});
+				this.logger.error(
+					`[TokkoSync-COMPARE] org_id=${org.id} ext_ref=${externalReference} failed: ${msg}`,
+				);
+				this.fileLogger.orgError(
+					externalReference,
+					`FULL_COMPARE_ORG_FAILED org_id=${org.id} error="${msg}"`,
+					err,
+				);
+			}
+		}
+
+		const message =
+			`[${mode}] ${targets.length} organizaciones analizadas, ${totals.tokko_total} propiedades en Tokko, ` +
+			`${totals.local_total} guardadas, ${totals.missing} faltantes, ${totals.not_in_feed} fuera del feed` +
+			(totals.organizations_with_errors > 0
+				? `, ${totals.organizations_with_errors} organizaciones con errores`
+				: '');
+
+		this.logger.log(`[TokkoSync-COMPARE] done — ${message}`);
+		this.fileLogger.info(`FULL_COMPARE_DONE ${message}`);
+
+		return {
+			message,
+			dry_run: !force,
+			page_size: pageSize,
+			organizations_scanned: targets.length,
+			totals,
+			results,
+		};
+	}
+
+	/**
+	 * Pulls the whole feed for one organization and diffs it against the DB.
+	 * Only persists (upsert + depublish) when `force` is true.
+	 */
+	private async compareOrganization(
+		apiKey: string,
+		org: Organization,
+		externalReference: string,
+		pageSize: number,
+		force: boolean,
+	): Promise<TokkoFullCompareOrgResult> {
+		const entry = this.emptyCompareOrgResult(org.id!, org.company_name, externalReference);
+		const feedPublicationIds = new Set<string>();
+
+		let offset = 0;
+		let totalCount = 0;
+
+		for (let page = 0; page < this.TOKKO_FEED_MAX_PAGES; page++) {
+			const result = await this.tokkoHelperService.fetchFreePortalProperties(
+				apiKey,
+				pageSize,
+				offset,
+				null,
+				externalReference,
+			);
+
+			if ('error' in result) {
+				const msg = result.details ? `${result.error}: ${result.details}` : result.error;
+				this.fileLogger.orgError(externalReference, `FULL_COMPARE_API_ERROR offset=${offset} ${msg}`);
+				throw new Error(msg);
+			}
+
+			const { objects, meta } = result;
+			entry.pages++;
+			entry.fetched += objects.length;
+			totalCount = meta?.total_count ?? entry.fetched;
+
+			for (const item of objects) {
+				const pubId = item?.publication_id != null ? String(item.publication_id) : null;
+				if (pubId) {
+					feedPublicationIds.add(pubId);
+				} else {
+					entry.feed_without_publication_id++;
+				}
+
+				if (!force) continue;
+
+				try {
+					const outcome = await this.processProperty(item);
+					if (outcome === 'created') entry.created++;
+					else if (outcome === 'updated') entry.updated++;
+					else entry.skipped++;
+				} catch (err) {
+					entry.failed++;
+					const msg = err instanceof Error ? err.message : String(err);
+					this.fileLogger.orgError(
+						externalReference,
+						`FULL_COMPARE_ITEM_FAILED pub_id=${pubId ?? 'N/A'} error="${msg}"`,
+						err,
+					);
+				}
+			}
+
+			this.fileLogger.orgInfo(
+				externalReference,
+				`FULL_COMPARE_PAGE offset=${offset} received=${objects.length} total_count=${totalCount}`,
+			);
+
+			offset += objects.length;
+
+			// `next` is null on the last page; the offset check covers feeds that omit it.
+			const hasMore = objects.length > 0 && offset < totalCount;
+			if (!hasMore) break;
+
+			if (page === this.TOKKO_FEED_MAX_PAGES - 1) {
+				this.logger.warn(
+					`[TokkoSync-COMPARE] ext_ref=${externalReference} hit the ${this.TOKKO_FEED_MAX_PAGES} page cap ` +
+					`at offset=${offset}/${totalCount}`,
+				);
+				this.fileLogger.orgInfo(
+					externalReference,
+					`FULL_COMPARE_PAGE_CAP_WARN offset=${offset} total_count=${totalCount}`,
+				);
+			}
+		}
+
+		entry.tokko_total = totalCount;
+
+		// Depublishing needs the publication_ids of every page, so it runs once the
+		// whole feed has been walked — otherwise each page would depublish the rest.
+		if (force) {
+			entry.depublished = await this.depublishPropertiesNotInFeed(
+				org.id!,
+				externalReference,
+				feedPublicationIds,
+			);
+		}
+
+		const feedIds = [...feedPublicationIds];
+		const storedIds = await this.findStoredPublicationIds(feedIds);
+		const missingIds = feedIds.filter((id) => !storedIds.has(id));
+		const notInFeedIds = await this.findPublishedPublicationIdsNotInFeed(org.id!, feedPublicationIds);
+
+		const counts = await this.countLocalTokkoProperties(org.id!);
+		entry.local_total = counts.local_total;
+		entry.local_available = counts.local_available;
+
+		entry.missing = missingIds.length;
+		entry.missing_publication_ids = missingIds.slice(0, this.COMPARE_IDS_IN_RESPONSE);
+		entry.missing_publication_ids_truncated = missingIds.length > this.COMPARE_IDS_IN_RESPONSE;
+
+		entry.not_in_feed = notInFeedIds.length;
+		entry.not_in_feed_publication_ids = notInFeedIds.slice(0, this.COMPARE_IDS_IN_RESPONSE);
+		entry.not_in_feed_publication_ids_truncated = notInFeedIds.length > this.COMPARE_IDS_IN_RESPONSE;
+
+		this.fileLogger.orgInfo(
+			externalReference,
+			`FULL_COMPARE_ORG org_id=${org.id} ext_ref=${externalReference} pages=${entry.pages} ` +
+			`tokko_total=${entry.tokko_total} fetched=${entry.fetched} local_total=${entry.local_total} ` +
+			`local_available=${entry.local_available} missing=${entry.missing} not_in_feed=${entry.not_in_feed} ` +
+			`created=${entry.created} updated=${entry.updated} skipped=${entry.skipped} failed=${entry.failed} ` +
+			`depublished=${entry.depublished}`,
+		);
+
+		return entry;
+	}
+
+	private emptyCompareOrgResult(
+		organizationId: number,
+		companyName: string,
+		externalReference: string,
+	): TokkoFullCompareOrgResult {
+		return {
+			organization_id: organizationId,
+			company_name: companyName,
+			external_reference: externalReference,
+			tokko_total: 0,
+			fetched: 0,
+			pages: 0,
+			feed_without_publication_id: 0,
+			local_total: 0,
+			local_available: 0,
+			missing: 0,
+			missing_publication_ids: [],
+			missing_publication_ids_truncated: false,
+			not_in_feed: 0,
+			not_in_feed_publication_ids: [],
+			not_in_feed_publication_ids_truncated: false,
+			created: 0,
+			updated: 0,
+			skipped: 0,
+			failed: 0,
+			depublished: 0,
+		};
+	}
+
+	/**
+	 * Returns the subset of the given publication_ids that we already have stored.
+	 * Queried in chunks to stay well below the driver's bind parameter limit.
+	 */
+	private async findStoredPublicationIds(publicationIds: string[]): Promise<Set<string>> {
+		const found = new Set<string>();
+		const CHUNK_SIZE = 500;
+
+		for (let i = 0; i < publicationIds.length; i += CHUNK_SIZE) {
+			const chunk = publicationIds.slice(i, i + CHUNK_SIZE);
+			if (chunk.length === 0) continue;
+
+			const rows = await this.propertyRepo
+				.createQueryBuilder('p')
+				.select('p.publication_id', 'publication_id')
+				.where('p.publication_id IN (:...chunk)', { chunk })
+				.andWhere('p.deleted = false')
+				.getRawMany<{ publication_id: string }>();
+
+			rows.forEach((row) => {
+				if (row.publication_id != null) found.add(String(row.publication_id));
+			});
+		}
+
+		return found;
+	}
+
+	/**
+	 * publication_ids of the organization's published properties that no longer
+	 * appear in the feed — i.e. the ones a forced run would depublish.
+	 */
+	private async findPublishedPublicationIdsNotInFeed(
+		organizationId: number,
+		feedPublicationIds: Set<string>,
+	): Promise<string[]> {
+		const query = this.propertyRepo
+			.createQueryBuilder('p')
+			.select('p.publication_id', 'publication_id')
+			.where('p.organization_id = :organizationId', { organizationId })
+			.andWhere('p.status = :status', { status: PropertyStatus.DISPONIBLE })
+			.andWhere('p.deleted = false')
+			.andWhere('p.publication_id IS NOT NULL');
+
+		const rows = await query.getRawMany<{ publication_id: string }>();
+
+		return rows
+			.map((row) => String(row.publication_id))
+			.filter((id) => !feedPublicationIds.has(id));
+	}
+
+	/**
+	 * Marks the organization's published Tokko properties that are absent from the
+	 * feed as NO_DISPONIBLE. Expects the publication_ids of the *entire* feed.
+	 */
+	private async depublishPropertiesNotInFeed(
+		organizationId: number,
+		externalReference: string,
+		feedPublicationIds: Set<string>,
+	): Promise<number> {
+		const feedIds = [...feedPublicationIds];
+		if (feedIds.length === 0) return 0;
+
+		const updateResult = await this.propertyRepo
+			.createQueryBuilder()
+			.update()
+			.set({ status: PropertyStatus.NO_DISPONIBLE })
+			.where('organization_id = :orgId', { orgId: organizationId })
+			.andWhere('status = :status', { status: PropertyStatus.DISPONIBLE })
+			.andWhere('deleted = false')
+			.andWhere('publication_id IS NOT NULL')
+			.andWhere('publication_id NOT IN (:...feedIds)', { feedIds })
+			.execute();
+
+		const depublished = updateResult.affected ?? 0;
+
+		if (depublished > 0) {
+			this.logger.log(`[TokkoSync] Depublished ${depublished} properties not in feed (org_id=${organizationId})`);
+			this.fileLogger.orgInfo(externalReference, `ORG_SYNC_DEPUBLISHED count=${depublished}`);
+		}
+
+		return depublished;
+	}
+
+	/**
+	 * Counts the properties we have stored for an organization that originated in
+	 * Tokko (publication_id present), both in total and only the published ones.
+	 */
+	private async countLocalTokkoProperties(
+		organizationId: number,
+	): Promise<{ local_total: number; local_available: number }> {
+		const [local_total, local_available] = await Promise.all([
+			this.propertyRepo.count({
+				where: {
+					organization_id: organizationId,
+					deleted: false,
+					publication_id: Not(IsNull()),
+				} as any,
+			}),
+			this.propertyRepo.count({
+				where: {
+					organization_id: organizationId,
+					deleted: false,
+					status: PropertyStatus.DISPONIBLE,
+					publication_id: Not(IsNull()),
+				} as any,
+			}),
+		]);
+
+		return { local_total, local_available };
 	}
 
 	// ─── Sync Orchestration ──────────────────────────────────────────────────────

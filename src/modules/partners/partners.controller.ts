@@ -249,9 +249,40 @@ export class PartnersController {
     return this.tokkoSyncService.syncOrganization(
       body.api_key,
       String(body.organization_id),
-      body.limit ?? 500,
+      body.limit ?? 1000,
       body.offset ?? 0, 
     );
+  }
+
+  /**
+   * POST /partners/tokko-sync/tokko-full-compare
+   * Body (todo opcional): {
+   *   "api_key": "xxx",              // default: TOKKO_METROPROP_API_KEY
+   *   "external_reference": "12345", // limita la corrida a esa organización
+   *   "force": true,                 // default false => dry-run, no escribe nada
+   *   "limit": 1000                  // tamaño de página del feed (máx 1000)
+   * }
+   * Recorre las organizaciones activas con external_reference de Tokko, trae el feed
+   * completo paginando y compara contra lo guardado para saber cuántas propiedades
+   * faltan por organización. Por defecto es dry-run: solo informa.
+   */
+  @Post('tokko-sync/tokko-full-compare')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(UserRole.USER_ROL_SUPER_ADMIN)
+  tokkoFullCompare(
+    @Body() body?: { api_key?: string; external_reference?: string; force?: boolean; limit?: number },
+  ) {
+    const force = body?.force === true;
+    this.fileLogger.info(
+      `TokkoSync-COMPARE REQUESTED mode=${force ? 'FORCE' : 'DRY-RUN'} ` +
+      `limit=${body?.limit ?? 1000} ext_ref=${body?.external_reference ?? 'ALL'}`,
+    );
+    return this.tokkoSyncService.fullCompareOrganizations({
+      apiKey: body?.api_key,
+      externalReference: body?.external_reference,
+      force,
+      pageSize: body?.limit,
+    });
   }
 
 }
