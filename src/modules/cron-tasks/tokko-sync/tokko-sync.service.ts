@@ -1106,19 +1106,24 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		// Validar si existe un usuario con el email antes de crear la organización
-		const existingUser = await this.usersService.findByEmail(seller.email);
+		const sellerEmail = String(seller.email ?? '').trim();
+		const existingUser = sellerEmail
+			? await this.usersService.findByEmailWithOrganization(sellerEmail)
+			: null;
+		let adoptedExistingUserOrg = false;
+
+		if (!org && existingUser) {
+			const resolved = await this.resolveMissingTokkoOrganizationFromExistingUser(
+				existingUser,
+				seller,
+				companyId,
+				partnerId,
+			);
+			org = resolved.org;
+			adoptedExistingUserOrg = resolved.adoptedExistingUserOrg;
+		}
 
 		if (!org) {
-			// ya existe un usuario con ese mail pero no asociado a la companyId que nos llega de tokko
-			
-			// ################ SI EL USER EXISTE PERO NO TIENE ASOCIADO UN EXTERNAL_ID entonces enchufarle el external ID a la orgaization que tiene el user (SI ES QUE TIENE UNA ORGANIZAION ! ..SI NO TIENE HA Q CREARLE UNA) 
-			
-			if (existingUser) {
-				throw new Error(
-					`No se puede crear la organización con companyId ${companyId} porque ya existe un usuario registrado con el email ${seller.email} asociado a otra organización. Por favor, utilice un email diferente o contacte al soporte.`
-				);
-			}
-
 			this.fileLogger.info(`STEP org_create ext_ref=${companyId} company="${seller.company_name ?? 'N/A'}"`);
 			try {
 				org = await this.createOrgFromSeller(seller);
@@ -1166,89 +1171,12 @@ export class TokkoSyncService implements OnModuleInit {
 			throw new Error('Organization is null after creation/fetch');
 		}
 
-		// Find-or-create branch by external_reference within this org (race-safe)
-		let branch: any = null;
-		if (branchExtRef) {
-			this.fileLogger.info(`STEP branch_lookup_or_create ext_ref=${branchExtRef} org_id=${org.id}`);
-			try {
-				const result = await this.branchesService.findOrCreateByExternalReference(
-					org.id!,
-					branchExtRef,
-					{
-						branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
-						email: seller.email ?? org.email,
-						phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-						alternative_phone: this.buildTokkoPhone(
-							seller.alternative_phone_country_code,
-							seller.alternative_phone_area_code,
-							seller.alternative_phone,
-						),
-						address: seller.address ?? '',
-						organizationId: org.id!,
-						branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
-					} as any,
-				);
-				branch = result.branch;
-				if (result.created) {
-					this.logger.log(
-						`[TokkoSync] Created new branch id=${branch.id} (ext_ref=${branchExtRef})`,
-					);
-					this.fileLogger.logBranchCreated(branchExtRef, branch.id!, org.id!);
-
-					const orgAdminId: number | undefined = (org as any).admin_user?.id;
-					if (orgAdminId) {
-						await this.usersService.addBranchToUser(orgAdminId, branch.id);
-					}
-				} else {
-					this.fileLogger.info(
-						`STEP branch_found ext_ref=${branchExtRef} branch_id=${branch.id} org_id=${org.id}`,
-					);
-				}
-			} catch (err) {
-				const msg = err instanceof Error ? err.message : String(err);
-				this.fileLogger.error(
-					`STEP branch_create_failed ext_ref=${branchExtRef} org_id=${org.id} reason="${msg}"`,
-					err,
-				);
-				throw err;
-			}
-		} else {
-			// Without a Tokko branch_id there is nothing to dedupe on, so reuse the
-			// organization's first branch instead of creating one per property.
-			branch = await this.branchesService.findFirstByOrganizationId(org.id!);
-
-			if (branch) {
-				this.fileLogger.info(`STEP branch_reused_first branch_id=${branch.id} org_id=${org.id}`);
-			} else {
-				this.fileLogger.info(`STEP branch_create ext_ref=N/A org_id=${org.id}`);
-				try {
-					branch = await this.branchesService.create({
-						branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
-						email: seller.email ?? org.email,
-						phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-						alternative_phone: this.buildTokkoPhone(
-							seller.alternative_phone_country_code,
-							seller.alternative_phone_area_code,
-							seller.alternative_phone,
-						),
-						address: seller.address ?? '',
-						organizationId: org.id!,
-						branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
-					} as any);
-				} catch (err) {
-					const msg = err instanceof Error ? err.message : String(err);
-					this.fileLogger.error(`STEP branch_create_failed ext_ref=N/A org_id=${org.id} reason="${msg}"`, err);
-					throw err;
-				}
-				this.logger.log(`[TokkoSync] Created new branch id=${branch.id} (ext_ref=N/A)`);
-				this.fileLogger.logBranchCreated(null, branch.id!, org.id!);
-
-				const orgAdminId: number | undefined = (org as any).admin_user?.id;
-				if (orgAdminId) {
-					await this.usersService.addBranchToUser(orgAdminId, branch.id);
-				}
-			}
-		}
+		const branch = await this.resolveBranchForOrganization(
+			org,
+			seller,
+			branchExtRef,
+			adoptedExistingUserOrg,
+		);
 
 		let adminUserId: number | undefined = (org as any).admin_user?.id;
 		
@@ -1292,6 +1220,295 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		return { orgId: org.id!, branchId: branch.id!, userId: adminUserId };
+	}
+
+	private async resolveMissingTokkoOrganizationFromExistingUser(
+		existingUser: any,
+		seller: any,
+		companyId: string,
+		partnerId: number,
+	): Promise<{ org: Organization | null; adoptedExistingUserOrg: boolean }> {
+		const userOrgId = existingUser.organization_id ?? existingUser.organization?.id;
+
+		if (userOrgId) {
+			let userOrg = await this.organizationRepo.findOne({
+				where: { id: userOrgId } as any,
+				relations: ['admin_user'],
+			});
+
+			if (!userOrg) {
+				this.fileLogger.warn(
+					`STEP org_user_reference_not_found user_id=${existingUser.id} org_id=${userOrgId}`,
+				);
+			} else {
+				const userOrgExternalRef = userOrg.external_reference?.trim() ?? null;
+
+				if (userOrgExternalRef && userOrgExternalRef !== companyId) {
+					const msg =
+						`EXISTING_USER_ORG_EXTERNAL_REF_MISMATCH user_id=${existingUser.id} ` +
+						`org_id=${userOrg.id} org_external_ref=${userOrgExternalRef} tokko_company_id=${companyId}`;
+					this.fileLogger.error(msg);
+					throw new Error(msg);
+				}
+
+				if (userOrg.source_partner_id != null && userOrg.source_partner_id !== partnerId) {
+					const msg =
+						`EXISTING_USER_ORG_PARTNER_MISMATCH user_id=${existingUser.id} org_id=${userOrg.id} ` +
+						`org_partner_id=${userOrg.source_partner_id} tokko_partner_id=${partnerId}`;
+					this.fileLogger.error(msg);
+					throw new Error(msg);
+				}
+
+				const needsUpdate =
+					userOrgExternalRef == null ||
+					userOrg.source_partner_id == null ||
+					userOrg.deleted ||
+					userOrg.status === false;
+
+				if (needsUpdate) {
+					const nextExternalRef = userOrgExternalRef ?? companyId;
+					try {
+						await this.organizationRepo.update(userOrg.id!, {
+							external_reference: nextExternalRef,
+							source_partner_id: partnerId,
+							deleted: false,
+							status: true,
+						} as any);
+					} catch (err) {
+						if (this.isOrgPartnerExternalRefUniqueViolation(err)) {
+							const msg =
+								`EXISTING_USER_ORG_EXTERNAL_REF_TAKEN user_id=${existingUser.id} org_id=${userOrg.id} ` +
+								`tokko_company_id=${companyId}`;
+							this.fileLogger.error(msg, err);
+							throw new Error(msg);
+						}
+						throw err;
+					}
+
+					userOrg = await this.organizationRepo.findOne({
+						where: { id: userOrg.id } as any,
+						relations: ['admin_user'],
+					});
+				}
+
+				if (!userOrg) {
+					throw new Error('Failed to reload existing user organization after update');
+				}
+
+				this.fileLogger.info(
+					`STEP org_adopted_from_existing_user user_id=${existingUser.id} org_id=${userOrg.id} ` +
+					`ext_ref=${userOrg.external_reference ?? 'N/A'} partner_id=${userOrg.source_partner_id ?? 'N/A'}`,
+				);
+
+				return { org: userOrg, adoptedExistingUserOrg: true };
+			}
+		}
+
+		this.fileLogger.info(
+			`STEP org_create_for_existing_user user_id=${existingUser.id} ext_ref=${companyId} company="${seller.company_name ?? 'N/A'}"`,
+		);
+
+		let createdOrg: Organization | null = null;
+		try {
+			const created = await this.organizationsService.create({
+				company_name: seller.company_name ?? 'Unknown',
+				email: seller.email ?? '',
+				address: seller.address ?? '',
+				phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+				alternative_phone: this.buildTokkoPhone(
+					seller.alternative_phone_country_code,
+					seller.alternative_phone_area_code,
+					seller.alternative_phone,
+				),
+				contact_time: seller.contact_time ?? '',
+				geo_lat: seller.geo_lat ?? undefined,
+				geo_long: seller.geo_long ?? undefined,
+				full_location: seller.full_location ?? undefined,
+				external_reference: companyId,
+				company_logo: seller.company_logo ?? undefined,
+				status: true,
+				deleted: false,
+				source_partner_id: partnerId,
+				adminUserId: existingUser.id,
+			} as any);
+
+			await this.usersService.assignOrganizationAndRole(
+				existingUser.id,
+				created.id!,
+				UserRole.USER_ROL_ADMIN,
+			);
+
+			createdOrg = await this.organizationRepo.findOne({
+				where: { id: created.id } as any,
+				relations: ['admin_user'],
+			});
+
+			this.fileLogger.logOrgCreated(companyId, created.id!, seller.email ?? '');
+		} catch (err) {
+			if (this.isOrgPartnerExternalRefUniqueViolation(err)) {
+				const existingOrgByConstraint = await this.organizationRepo.findOne({
+					where: {
+						external_reference: companyId,
+						source_partner_id: partnerId,
+					} as any,
+					relations: ['admin_user'],
+				});
+
+				if (existingOrgByConstraint) {
+					await this.usersService.assignOrganizationAndRole(
+						existingUser.id,
+						existingOrgByConstraint.id!,
+						UserRole.USER_ROL_ADMIN,
+					);
+					createdOrg = existingOrgByConstraint;
+					this.fileLogger.warn(
+						`STEP org_create_for_existing_user_race_reused ext_ref=${companyId} ` +
+						`org_id=${existingOrgByConstraint.id} user_id=${existingUser.id}`,
+					);
+				} else {
+					const msg = err instanceof Error ? err.message : String(err);
+					this.fileLogger.error(`STEP org_create_for_existing_user_failed ext_ref=${companyId} reason="${msg}"`, err);
+					throw err;
+				}
+			} else {
+				const msg = err instanceof Error ? err.message : String(err);
+				this.fileLogger.error(`STEP org_create_for_existing_user_failed ext_ref=${companyId} reason="${msg}"`, err);
+				throw err;
+			}
+		}
+
+		if (!createdOrg) {
+			throw new Error(`Failed to create organization for existing user id=${existingUser.id}`);
+		}
+
+		return { org: createdOrg, adoptedExistingUserOrg: false };
+	}
+
+	private async resolveBranchForOrganization(
+		org: Organization,
+		seller: any,
+		branchExtRef: string | null,
+		preferFirstBranchExternalRefAssignment: boolean,
+	): Promise<any> {
+		if (branchExtRef) {
+			this.fileLogger.info(`STEP branch_lookup_or_create ext_ref=${branchExtRef} org_id=${org.id}`);
+
+			const existingBranch = await this.branchesService.findByExternalReference(org.id!, branchExtRef);
+			if (existingBranch) {
+				this.fileLogger.info(
+					`STEP branch_found ext_ref=${branchExtRef} branch_id=${existingBranch.id} org_id=${org.id}`,
+				);
+				return existingBranch;
+			}
+
+			if (preferFirstBranchExternalRefAssignment) {
+				const firstBranch = await this.branchesService.findFirstByOrganizationId(org.id!);
+				if (firstBranch && !firstBranch.external_reference) {
+					try {
+						const updatedBranch = await this.branchesService.update(firstBranch.id!, {
+							external_reference: branchExtRef,
+						} as any);
+						this.fileLogger.info(
+							`STEP branch_external_ref_assigned branch_id=${updatedBranch.id} ext_ref=${branchExtRef} org_id=${org.id}`,
+						);
+						return updatedBranch;
+					} catch (err) {
+						if (this.isBranchOrgExternalRefUniqueViolation(err)) {
+							const winner = await this.branchesService.findByExternalReference(org.id!, branchExtRef);
+							if (winner) {
+								this.fileLogger.warn(
+									`STEP branch_external_ref_assign_race_reused ext_ref=${branchExtRef} ` +
+									`branch_id=${winner.id} org_id=${org.id}`,
+								);
+								return winner;
+							}
+						}
+						const msg = err instanceof Error ? err.message : String(err);
+						this.fileLogger.error(
+							`STEP branch_external_ref_assign_failed ext_ref=${branchExtRef} org_id=${org.id} reason="${msg}"`,
+							err,
+						);
+						throw err;
+					}
+				}
+			}
+
+			try {
+				const result = await this.branchesService.findOrCreateByExternalReference(
+					org.id!,
+					branchExtRef,
+					this.buildBranchPayloadFromSeller(seller, org),
+				);
+				const branch = result.branch;
+				if (result.created) {
+					this.logger.log(
+						`[TokkoSync] Created new branch id=${branch.id} (ext_ref=${branchExtRef})`,
+					);
+					this.fileLogger.logBranchCreated(branchExtRef, branch.id!, org.id!);
+					await this.linkOrgAdminToBranchIfPresent(org, branch.id);
+				}
+				return branch;
+			} catch (err) {
+				const msg = err instanceof Error ? err.message : String(err);
+				this.fileLogger.error(
+					`STEP branch_create_failed ext_ref=${branchExtRef} org_id=${org.id} reason="${msg}"`,
+					err,
+				);
+				throw err;
+			}
+		}
+
+		const firstBranch = await this.branchesService.findFirstByOrganizationId(org.id!);
+		if (firstBranch) {
+			this.fileLogger.info(`STEP branch_reused_first branch_id=${firstBranch.id} org_id=${org.id}`);
+			return firstBranch;
+		}
+
+		this.fileLogger.info(`STEP branch_create ext_ref=N/A org_id=${org.id}`);
+		try {
+			const createdBranch = await this.branchesService.create(
+				this.buildBranchPayloadFromSeller(seller, org),
+			);
+			this.logger.log(`[TokkoSync] Created new branch id=${createdBranch.id} (ext_ref=N/A)`);
+			this.fileLogger.logBranchCreated(null, createdBranch.id!, org.id!);
+			await this.linkOrgAdminToBranchIfPresent(org, createdBranch.id);
+			return createdBranch;
+		} catch (err) {
+			const msg = err instanceof Error ? err.message : String(err);
+			this.fileLogger.error(`STEP branch_create_failed ext_ref=N/A org_id=${org.id} reason="${msg}"`, err);
+			throw err;
+		}
+	}
+
+	private buildBranchPayloadFromSeller(orgSeller: any, org: Organization): any {
+		return {
+			branch_name: orgSeller.branch_name ?? orgSeller.company_name ?? 'Branch',
+			email: orgSeller.email ?? org.email,
+			phone: this.buildTokkoPhone(orgSeller.phone_country_code, orgSeller.phone_area_code, orgSeller.phone),
+			alternative_phone: this.buildTokkoPhone(
+				orgSeller.alternative_phone_country_code,
+				orgSeller.alternative_phone_area_code,
+				orgSeller.alternative_phone,
+			),
+			address: orgSeller.address ?? '',
+			organizationId: org.id!,
+			branch_logo: orgSeller.branch_logo ?? orgSeller.company_logo ?? undefined,
+		} as any;
+	}
+
+	private async linkOrgAdminToBranchIfPresent(org: Organization, branchId: number): Promise<void> {
+		const orgAdminId: number | undefined = (org as any).admin_user?.id;
+		if (orgAdminId) {
+			await this.usersService.addBranchToUser(orgAdminId, branchId);
+		}
+	}
+
+	private isBranchOrgExternalRefUniqueViolation(err: unknown): boolean {
+		const driverError = (err as any)?.driverError ?? err;
+		return (
+			driverError?.code === '23505' &&
+			String(driverError?.constraint ?? '') === 'uk_branches_org_external_ref_active'
+		);
 	}
 
 	private async createOrgFromSeller(seller: any): Promise<any> {
@@ -1350,6 +1567,11 @@ export class TokkoSyncService implements OnModuleInit {
 				await this.organizationRepo.update(savedOrg.id!, {
 					admin_user: { id: fallbackAdmin.id } as any,
 				});
+				await this.usersService.assignOrganizationAndRole(
+					fallbackAdmin.id,
+					savedOrg.id!,
+					UserRole.USER_ROL_ADMIN,
+				);
 				savedOrg.admin_user = fallbackAdmin as any;
 				this.fileLogger.warn(
 					`ADMIN_USER_REUSED org_id=${savedOrg.id} user_id=${fallbackAdmin.id} email=${seller.email ?? 'N/A'}`,

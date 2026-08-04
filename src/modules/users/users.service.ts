@@ -534,6 +534,30 @@ export class UsersService {
   }
 
   /**
+   * Assigns organization membership and role for an existing user.
+   */
+  async assignOrganizationAndRole(
+    userId: number,
+    organizationId: number,
+    roleId: UserRole,
+  ): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId, deleted: false },
+      relations: ['organization'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found with id: ' + userId);
+    }
+
+    user.organization = { id: organizationId } as Organization;
+    user.organization_id = organizationId;
+    user.role_id = roleId;
+
+    return this.usersRepository.save(user);
+  }
+
+  /**
    * Links a user to a branch. Idempotent: re-syncing the same seller must not
    * fail on the users_branches primary key, so the insert ignores conflicts
    * instead of relying on catching (locale-dependent) driver messages.
