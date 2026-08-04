@@ -40,6 +40,21 @@ export class BranchesService {
   }
 
   /**
+   * Returns the oldest active branch of an organization, used as the default
+   * branch when the source system does not identify one.
+   */
+  async findFirstByOrganizationId(organizationId: number): Promise<Branch | null> {
+    return this.repo.findOne({
+      where: {
+        organization: { id: organizationId },
+        deleted: false,
+      } as any,
+      relations: ['organization'],
+      order: { id: 'ASC' },
+    });
+  }
+
+  /**
    * Finds an active branch by (organizationId, externalRef) or creates it.
    * Race-safe: on unique / conflict, re-fetches the winner row.
    */

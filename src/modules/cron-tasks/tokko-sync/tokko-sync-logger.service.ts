@@ -11,6 +11,8 @@ import * as path from 'path';
  */
 @Injectable()
 export class TokkoSyncLoggerService {
+	private static readonly MAX_PAYLOAD_CHARS = 2000;
+
 	private readonly logsDir = path.join(process.cwd(), 'logs');
 
 	private get dateStamp(): string {
@@ -151,19 +153,24 @@ export class TokkoSyncLoggerService {
 			`FAILED pub_id=${safeItem.publication_id ?? 'N/A'} tokko_id=${safeItem.id ?? 'N/A'} ` +
 			`ref=${safeItem.reference_code ?? 'N/A'} error=\"${msg}\"`;
 
-		// Serialize the full item so the raw payload is visible in the error log
-		let fullPayload: string;
+		// Keep enough of the raw payload to diagnose, without flooding the file:
+		// photos are the bulk of an item and are never the cause of a failure.
+		let payload: string;
 		try {
-			fullPayload = JSON.stringify(safeItem, null, 2);
+			const { photos, ...rest } = safeItem;
+			payload = JSON.stringify({ ...rest, photos_count: (photos ?? []).length });
+			if (payload.length > TokkoSyncLoggerService.MAX_PAYLOAD_CHARS) {
+				payload = `${payload.slice(0, TokkoSyncLoggerService.MAX_PAYLOAD_CHARS)}...[truncated]`;
+			}
 		} catch (_) {
-			fullPayload = String(safeItem);
+			payload = String(safeItem);
 		}
 
 		const stack = err instanceof Error && err.stack
-			? `\n--- Stack ---\n${err.stack}`
+			? ` | Stack: ${err.stack.split('\n').slice(0, 4).join(' | ')}`
 			: '';
 
-		const fullLine = `${header}\n--- Payload ---\n${fullPayload}${stack}\n--- End ---`;
+		const fullLine = `${header} payload=${payload}${stack}`;
 		this.write(this.mainLogPath, `ERROR ${fullLine}`);
 		this.write(this.errorLogPath, `ERROR ${fullLine}`);
 	}

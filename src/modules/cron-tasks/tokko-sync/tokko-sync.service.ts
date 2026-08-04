@@ -6,16 +6,14 @@ import { ConfigService } from '@nestjs/config';
 
 import { TokkoSyncState } from './entities/tokko-sync-state.entity';
 import { Property } from '../../properties/entities/property.entity';
-import { PropertyImage } from '../../properties/entities/property-image.entity';
 import { Organization } from '../../organizations/entities/organization.entity';
-import { Branch } from '../../branches/entities/branch.entity';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { PartnersService } from '../../partners/partners.service';
 
 import { TokkoHelperService } from '../../../common/helpers/tokko-helper';
 import { BranchesService } from '../../branches/branches.service';
 import { UsersService } from '../../users/users.service';
-import { MediaUploadStatus, PropertyStatus, UserRole } from '../../../common/enums';
+import { PropertyStatus, UserRole } from '../../../common/enums';
 import { TokkoSyncLoggerService } from './tokko-sync-logger.service';
 import { PASSWORD_DEFAULT, TOKKO_PARTNER_NAME } from '@/common/constants';
 import { PropertyWriteService } from '@/modules/properties/property-write.service';
@@ -33,12 +31,8 @@ export class TokkoSyncService implements OnModuleInit {
 		private readonly syncStateRepo: Repository<TokkoSyncState>,
 		@InjectRepository(Property)
 		private readonly propertyRepo: Repository<Property>,
-		@InjectRepository(PropertyImage)
-		private readonly propertyImageRepo: Repository<PropertyImage>,
 		@InjectRepository(Organization)
 		private readonly organizationRepo: Repository<Organization>,
-		@InjectRepository(Branch)
-		private readonly branchRepo: Repository<Branch>,
 		private readonly tokkoHelperService: TokkoHelperService,
 		private readonly branchesService: BranchesService,
 		private readonly organizationsService: OrganizationsService,
@@ -118,7 +112,10 @@ export class TokkoSyncService implements OnModuleInit {
 
 		if ('error' in result) {
 			if (result.notFound) {
-				this.fileLogger.warn(`TokkoSync-ONE_NOT_FOUND publication_id=${publicationId}`   + result.details ? ` details=${result.details}` : '');
+				this.fileLogger.warn(
+					`TokkoSync-ONE_NOT_FOUND publication_id=${publicationId}` +
+					(result.details ? ` details=${result.details}` : ''),
+				);
 				return { outcome: 'not_found', message: result.error };
 			}
 			const msg = result.details ? `${result.error}: ${result.details}` : result.error;
@@ -504,7 +501,7 @@ export class TokkoSyncService implements OnModuleInit {
 			throw err;
 		}
 
-		this.fileLogger.info(`STEP original_property pub_id=${publicationId} data=${JSON.stringify(item)}`);
+		this.logPayload('original_property', publicationId, item);
 		this.fileLogger.info(`STEP mapping pub_id=${publicationId}`);
 
 		let mapped: any;
@@ -516,7 +513,7 @@ export class TokkoSyncService implements OnModuleInit {
 				userId,
 			);
 			this.fileLogger.info(`STEP mapping_done pub_id=${publicationId} ref=${mapped.reference_code}`);
-			this.fileLogger.info(`STEP mapped_property pub_id=${publicationId} data=${JSON.stringify(mapped)}`);
+			this.logPayload('mapped_property', publicationId, mapped);
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
 			this.fileLogger.error(`STEP mapping_failed pub_id=${publicationId} reason="${msg}"`, err);
@@ -524,8 +521,14 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		// Separate scalar fields from relational payload
-		const { images: newImagesData, videos: _v, attached: _a, tags: _t, ...scalarFields } =
-			mapped as any;
+		const {
+			images: _images,
+			videos: _videos,
+			attached: _attached,
+			tags: _tags,
+			multimedia360: _multimedia360,
+			...scalarFields
+		} = mapped as any;
 
 		this.fileLogger.info(`STEP db_lookup pub_id=${publicationId}`);
 		let existing: any;
@@ -543,10 +546,8 @@ export class TokkoSyncService implements OnModuleInit {
 
 		if (existing) {
 			this.fileLogger.info(`STEP db_update pub_id=${publicationId} property_id=${existing.id}`);
-			// log existing publication complete
-			this.fileLogger.info(`STEP existing_property pub_id=${publicationId} data=${JSON.stringify(existing)}`);
-			Object.assign(existing, scalarFields);
-			let saved: any;
+			this.logPayload('existing_property', publicationId, existing);
+
 			try {
 				// Extraer datos base y relaciones
 				const { tags, images, videos, multimedia360, attached, ...propertyData } = mapped as any;
@@ -558,18 +559,17 @@ export class TokkoSyncService implements OnModuleInit {
 
 				if (warnings && warnings.length > 0) {
 					warnings.forEach((warning: string) => {
-						this.fileLogger.warn(`UPDATE_WARNING pub_id=${publicationId} property_id=${saved.id} warning="${warning}"`);
+						this.fileLogger.warn(`UPDATE_WARNING pub_id=${publicationId} property_id=${existing.id} warning="${warning}"`);
 					});
 				}
-
-				saved = await this.propertyRepo.findOne({ where: { id: existing.id } });
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
+				this.logDriverErrorContext('db_update_failed', err, publicationId);
 				this.fileLogger.error(`STEP db_update_failed pub_id=${publicationId} reason="${msg}"`, err);
 				throw err;
 			}
-			this.logger.debug(`[TokkoSync] Updated property id=${saved.id} pub=${publicationId}`);
-			this.fileLogger.logItemUpdated(publicationId, saved.id!);
+			this.logger.debug(`[TokkoSync] Updated property id=${existing.id} pub=${publicationId}`);
+			this.fileLogger.logItemUpdated(publicationId, existing.id!);
 
 			return 'updated';
 		} else {
@@ -597,6 +597,7 @@ export class TokkoSyncService implements OnModuleInit {
 
 			} catch (err) {
 				const msg = err instanceof Error ? err.message : String(err);
+				this.logDriverErrorContext('db_create_failed', err, publicationId);
 				this.fileLogger.error(`STEP db_create_failed pub_id=${publicationId} reason="${msg}"`, err);
 				throw err;
 			}
@@ -612,23 +613,43 @@ export class TokkoSyncService implements OnModuleInit {
 	): Promise<{ orgId: number; branchId: number; userId?: number }> {
 		const companyId = seller.company_id != null ? String(seller.company_id) : null;
 		const branchExtRef = seller.branch_id != null ? String(seller.branch_id) : null;
+		const partnerId = await this.resolveTokkoPartnerId();
 
 		if (!companyId) {
 			throw new Error('seller.company_id is required to resolve organization');
 		}
+		if (!partnerId) {
+			throw new Error('Tokko partner is not configured, cannot resolve organization');
+		}
 
 		this.fileLogger.info(`STEP org_lookup ext_ref=${companyId}`);
-		// Find org by external_reference
-
-		// Validar si existe un usuario con el email antes de crear la organización
-		const existingUser = await this.usersService.findByEmail(seller.email);
+		// Find org by external_reference + source_partner_id, including soft-deleted rows.
+		// The DB unique key is (source_partner_id, external_reference), so this must match it.
 		let org = await this.organizationRepo.findOne({
-			where: { external_reference: companyId, deleted: false } as any,
+			where: {
+				external_reference: companyId,
+				source_partner_id: partnerId,
+			} as any,
 			relations: ['admin_user'],
 		});
 
+		if (org?.deleted) {
+			this.fileLogger.warn(`STEP org_restore ext_ref=${companyId} org_id=${org.id} deleted=true -> false`);
+			await this.organizationRepo.update(org.id!, { deleted: false, status: true } as any);
+			org = await this.organizationRepo.findOne({
+				where: { id: org.id } as any,
+				relations: ['admin_user'],
+			});
+		}
+
+		// Validar si existe un usuario con el email antes de crear la organización
+		const existingUser = await this.usersService.findByEmail(seller.email);
+
 		if (!org) {
 			// ya existe un usuario con ese mail pero no asociado a la companyId que nos llega de tokko
+			
+			// ################ SI EL USER EXISTE PERO NO TIENE ASOCIADO UN EXTERNAL_ID entonces enchufarle el external ID a la orgaization que tiene el user (SI ES QUE TIENE UNA ORGANIZAION ! ..SI NO TIENE HA Q CREARLE UNA) 
+			
 			if (existingUser) {
 				throw new Error(
 					`No se puede crear la organización con companyId ${companyId} porque ya existe un usuario registrado con el email ${seller.email} asociado a otra organización. Por favor, utilice un email diferente o contacte al soporte.`
@@ -639,9 +660,33 @@ export class TokkoSyncService implements OnModuleInit {
 			try {
 				org = await this.createOrgFromSeller(seller);
 			} catch (err) {
-				const msg = err instanceof Error ? err.message : String(err);
-				this.fileLogger.error(`STEP org_create_failed ext_ref=${companyId} reason="${msg}"`, err);
-				throw err;
+				if (this.isOrgPartnerExternalRefUniqueViolation(err)) {
+					const existingOrgByConstraint = await this.organizationRepo.findOne({
+						where: {
+							external_reference: companyId,
+							source_partner_id: partnerId,
+						} as any,
+						relations: ['admin_user'],
+					});
+
+					if (existingOrgByConstraint) {
+						org = existingOrgByConstraint;
+						this.logger.warn(
+							`[TokkoSync] Organization race resolved. Reusing org id=${org.id} ext_ref=${companyId}`,
+						);
+						this.fileLogger.warn(
+							`STEP org_create_race_reused ext_ref=${companyId} org_id=${org.id}`,
+						);
+					} else {
+						const msg = err instanceof Error ? err.message : String(err);
+						this.fileLogger.error(`STEP org_create_failed ext_ref=${companyId} reason="${msg}"`, err);
+						throw err;
+					}
+				} else {
+					const msg = err instanceof Error ? err.message : String(err);
+					this.fileLogger.error(`STEP org_create_failed ext_ref=${companyId} reason="${msg}"`, err);
+					throw err;
+				}
 			}
 			if (!org) {
 				throw new Error('Failed to create organization');
@@ -705,33 +750,40 @@ export class TokkoSyncService implements OnModuleInit {
 				throw err;
 			}
 		} else {
-			// No Tokko branch_id: create a branch without external_reference (cannot dedupe)
-			this.fileLogger.info(`STEP branch_create ext_ref=N/A org_id=${org.id}`);
-			try {
-				branch = await this.branchesService.create({
-					branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
-					email: seller.email ?? org.email,
-					phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-					alternative_phone: this.buildTokkoPhone(
-						seller.alternative_phone_country_code,
-						seller.alternative_phone_area_code,
-						seller.alternative_phone,
-					),
-					address: seller.address ?? '',
-					organizationId: org.id!,
-					branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
-				} as any);
-			} catch (err) {
-				const msg = err instanceof Error ? err.message : String(err);
-				this.fileLogger.error(`STEP branch_create_failed ext_ref=N/A org_id=${org.id} reason="${msg}"`, err);
-				throw err;
-			}
-			this.logger.log(`[TokkoSync] Created new branch id=${branch.id} (ext_ref=N/A)`);
-			this.fileLogger.logBranchCreated(null, branch.id!, org.id!);
+			// Without a Tokko branch_id there is nothing to dedupe on, so reuse the
+			// organization's first branch instead of creating one per property.
+			branch = await this.branchesService.findFirstByOrganizationId(org.id!);
 
-			const orgAdminId: number | undefined = (org as any).admin_user?.id;
-			if (orgAdminId) {
-				await this.usersService.addBranchToUser(orgAdminId, branch.id);
+			if (branch) {
+				this.fileLogger.info(`STEP branch_reused_first branch_id=${branch.id} org_id=${org.id}`);
+			} else {
+				this.fileLogger.info(`STEP branch_create ext_ref=N/A org_id=${org.id}`);
+				try {
+					branch = await this.branchesService.create({
+						branch_name: seller.branch_name ?? seller.company_name ?? 'Branch',
+						email: seller.email ?? org.email,
+						phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
+						alternative_phone: this.buildTokkoPhone(
+							seller.alternative_phone_country_code,
+							seller.alternative_phone_area_code,
+							seller.alternative_phone,
+						),
+						address: seller.address ?? '',
+						organizationId: org.id!,
+						branch_logo: seller.branch_logo ?? seller.company_logo ?? undefined,
+					} as any);
+				} catch (err) {
+					const msg = err instanceof Error ? err.message : String(err);
+					this.fileLogger.error(`STEP branch_create_failed ext_ref=N/A org_id=${org.id} reason="${msg}"`, err);
+					throw err;
+				}
+				this.logger.log(`[TokkoSync] Created new branch id=${branch.id} (ext_ref=N/A)`);
+				this.fileLogger.logBranchCreated(null, branch.id!, org.id!);
+
+				const orgAdminId: number | undefined = (org as any).admin_user?.id;
+				if (orgAdminId) {
+					await this.usersService.addBranchToUser(orgAdminId, branch.id);
+				}
 			}
 		}
 
@@ -741,16 +793,13 @@ export class TokkoSyncService implements OnModuleInit {
 		// asociar ese usuario a la organización y branch correspondientes. Si no existe un usuario con ese email, 
 		// crear uno nuevo asociado a la organización y branch. Esto permite que cada vendedor tenga su propio usuario para acceder a Metroprop, 
 		// en lugar de compartir el usuario admin de la organización.
-		if(seller.email !== org.admin_user?.email) {
-			console.log('EL EMAIL ASIGNADo AL USUARIO ADMIN DE LA ORG ES DIFERENTE AL EMAIL DEL VENDEDOR. SE INTENTARÁ ASOCIAR O CREAR UN USUARIO PARA EL VENDEDOR. seller_email=' + seller.email + ' admin_email=' + org.admin_user?.email);
+		if (this.normalizeEmail(seller.email) !== this.normalizeEmail(org.admin_user?.email)) {
 			this.fileLogger.info(`EL EMAIL ASIGNADo AL USUARIO ADMIN DE LA ORG ES DIFERENTE AL EMAIL DEL VENDEDOR. SE INTENTARÁ ASOCIAR O CREAR UN USUARIO PARA EL VENDEDOR. seller_email=${seller.email} admin_email=${org.admin_user?.email}`);
 			if (existingUser) {
 				this.fileLogger.info(`SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE ASOCIARÁ A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. user_id=${existingUser.id} email=${existingUser.email}`);
-				console.log(`SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE ASOCIARÁ A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. user_id=${existingUser.id} email=${existingUser.email}`);
 				adminUserId = existingUser.id;
 			} else {
 				this.fileLogger.info(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
-				 console.log(`NO SE ENCONTRÓ UN USUARIO EXISTENTE CON EL EMAIL DEL VENDEDOR. SE CREARÁ UN NUEVO USUARIO ASOCIADO A LA ORGANIZACIÓN Y BRANCH CORRESPONDIENTES. seller_email=${seller.email}`);
 				try {
 					const newUser = await this.usersService.create({
 						name: seller.branch_name ?? seller.company_name ?? 'Seller',
@@ -765,13 +814,10 @@ export class TokkoSyncService implements OnModuleInit {
 					} as any);
 					adminUserId = newUser.id;
 					this.fileLogger.info(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
-					 console.log(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
 				} catch (err) {
 					const msg = err instanceof Error ? err.message : String(err);
 					this.fileLogger.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
-					 console.error(`ERROR AL CREAR USUARIO PARA EL VENDEDOR. seller_email=${seller.email} reason="${msg}"`, err);
 					this.fileLogger.info(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
-					 console.log(`SE USARÁ EL USUARIO ADMIN EXISTENTE PARA EL VENDEDOR. user_id=${org.admin_user?.id} email=${org.admin_user?.email}`);
 					adminUserId = org.admin_user?.id;
 				}
 			}
@@ -832,13 +878,27 @@ export class TokkoSyncService implements OnModuleInit {
 
 			savedOrg.admin_user = adminUser as any;
 		} catch (err) {
-			// If the email already exists, log and continue — org is still valid
-			this.logger.warn(
-				`[TokkoSync] Could not create admin user for org ${savedOrg.id}: ${(err as Error).message}`,
-			);
-			this.fileLogger.warn(
-				`ADMIN_USER_FAILED org_id=${savedOrg.id} email=${seller.email ?? 'N/A'} reason="${(err as Error).message}"`,
-			);
+			// The email is already taken. Adopting that user as admin avoids leaving the
+			// org without one, which would retry (and fail) this same create on every
+			// property of the organization.
+			const fallbackAdmin = await this.usersService.findByEmail(seller.email);
+
+			if (fallbackAdmin) {
+				await this.organizationRepo.update(savedOrg.id!, {
+					admin_user: { id: fallbackAdmin.id } as any,
+				});
+				savedOrg.admin_user = fallbackAdmin as any;
+				this.fileLogger.warn(
+					`ADMIN_USER_REUSED org_id=${savedOrg.id} user_id=${fallbackAdmin.id} email=${seller.email ?? 'N/A'}`,
+				);
+			} else {
+				this.logger.warn(
+					`[TokkoSync] Could not create admin user for org ${savedOrg.id}: ${(err as Error).message}`,
+				);
+				this.fileLogger.warn(
+					`ADMIN_USER_FAILED org_id=${savedOrg.id} email=${seller.email ?? 'N/A'} reason="${(err as Error).message}"`,
+				);
+			}
 		}
 
 		return savedOrg;
@@ -861,6 +921,56 @@ export class TokkoSyncService implements OnModuleInit {
 		return this.tokkoPartnerId;
 	}
 
+	private normalizeEmail(email?: string | null): string {
+		return (email ?? '').trim().toLowerCase();
+	}
+
+	private isOrgPartnerExternalRefUniqueViolation(err: unknown): boolean {
+		const driverError = (err as any)?.driverError;
+		return (
+			driverError?.code === '23505' &&
+			String(driverError?.constraint ?? '') === 'uk_organizations_partner_external_ref'
+		);
+	}
+
+	/**
+	 * Full payloads are only useful while debugging a specific item, and they are
+	 * by far the largest contributor to log volume, so they stay opt-in.
+	 */
+	private get payloadLoggingEnabled(): boolean {
+		return this.configService.get<string>('TOKKO_SYNC_LOG_PAYLOADS') === 'true';
+	}
+
+	private logPayload(step: string, publicationId: string, payload: unknown): void {
+		if (!this.payloadLoggingEnabled) return;
+
+		let serialized: string;
+		try {
+			serialized = JSON.stringify(payload);
+		} catch {
+			serialized = String(payload);
+		}
+		this.fileLogger.info(`STEP ${step} pub_id=${publicationId} data=${serialized}`);
+	}
+
+	private logDriverErrorContext(step: string, err: unknown, publicationId: string): void {
+		const driverError = (err as any)?.driverError;
+		if (!driverError) return;
+
+		const parts: string[] = [];
+		if (driverError.code) parts.push(`code=${driverError.code}`);
+		if (driverError.constraint) parts.push(`constraint=${driverError.constraint}`);
+		if (driverError.column) parts.push(`column=${driverError.column}`);
+		if (driverError.detail) parts.push(`detail="${String(driverError.detail).replace(/\s+/g, ' ').trim()}"`);
+		if (driverError.hint) parts.push(`hint="${String(driverError.hint).replace(/\s+/g, ' ').trim()}"`);
+
+		if (parts.length > 0) {
+			this.fileLogger.error(
+				`STEP ${step}_driver pub_id=${publicationId} ${parts.join(' ')}`,
+			);
+		}
+	}
+
 	// ─── Phone Helpers ─────────────────────────────────────────────────────────────
 
 	/**
@@ -876,69 +986,4 @@ export class TokkoSyncService implements OnModuleInit {
 			.trim();
 	}
 
-	// ─── Image Smart-Sync ────────────────────────────────────────────────────────
-
-	/**
-	 * Synchronises images for a property:
-	 *  - Deletes images whose original_image URL no longer appears in the feed
-	 *  - Creates new images for URLs not yet stored
-	 *  - Leaves unchanged images untouched (no re-upload)
-	 */
-	private async syncPropertyImages(
-		propertyId: number,
-		newPhotos: Array<{
-			url: string;
-			original_image: string;
-			description?: string;
-			is_blueprint?: boolean;
-			order_position?: number;
-		}>,
-	): Promise<void> {
-		const existingImages = await this.propertyImageRepo.find({
-			where: { property: { id: propertyId } } as any,
-		});
-
-		const existingOriginals = new Set<string>(
-			existingImages.map(img => img.original_image).filter(Boolean) as string[],
-		);
-		const newOriginals = new Set<string>(
-			newPhotos.map(p => p.original_image).filter(Boolean),
-		);
-
-		// Remove images no longer in feed
-		const toDelete = existingImages.filter(
-			img => img.original_image && !newOriginals.has(img.original_image),
-		);
-		if (toDelete.length) {
-			await this.propertyImageRepo.remove(toDelete);
-			this.logger.debug(
-				`[TokkoSync] Removed ${toDelete.length} stale images for property ${propertyId}`,
-			);
-		}
-
-		// Add new images
-		const toCreate = newPhotos.filter(p => !existingOriginals.has(p.original_image));
-		for (const photoData of toCreate) {
-			const img = this.propertyImageRepo.create({
-				url: photoData.url,
-				original_image: photoData.original_image,
-				description: photoData.description,
-				is_blueprint: photoData.is_blueprint ?? false,
-				order_position: photoData.order_position ?? 0,
-				upload_status: MediaUploadStatus.PENDING,
-				retry_count: 0,
-				property: { id: propertyId } as any,
-			});
-			await this.propertyImageRepo.save(img);
-		}
-
-		const unchanged = existingImages.length - toDelete.length;
-		this.fileLogger.logImagesSync(propertyId, toCreate.length, toDelete.length, unchanged);
-
-		if (toCreate.length > 0) {
-			this.logger.debug(
-				`[TokkoSync] Queued ${toCreate.length} new images for property ${propertyId}`,
-			);
-		}
-	}
 }

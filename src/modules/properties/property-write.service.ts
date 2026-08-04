@@ -1,6 +1,6 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, Not } from 'typeorm';
+import { Repository, DataSource, EntityManager, Not } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { calculateSquareMetterPrice } from './helpers/properties-helper';
 import { PropertyTag } from './entities/property-tag.entity';
@@ -30,6 +30,7 @@ export interface PropertyCoreContext {
 
 @Injectable()
 export class PropertyWriteService {
+  private readonly logger = new Logger(PropertyWriteService.name);
 
   constructor(
     @InjectRepository(Property)
@@ -51,113 +52,107 @@ export class PropertyWriteService {
     context: PropertyCoreContext & { images?: any[]; attached?: any[] } = {},
   ): Promise<{ property: Property; warnings: string[] }> {
     const { organizationId, branchId, userId, tags, videos, multimedia360, images, attached } = context;
-    const warnings: string[] = [];
 
-    /*
-    console.log('[createPropertyCore] INICIO', JSON.stringify({ scalars, organizationId, branchId, userId }, null, 2));
-    if (images) console.log('[createPropertyCore] images:', JSON.stringify(images, null, 2));
-    if (attached) console.log('[createPropertyCore] attached:', JSON.stringify(attached, null, 2));
-    if (tags) console.log('[createPropertyCore] tags:', JSON.stringify(tags, null, 2));
-    if (videos) console.log('[createPropertyCore] videos:', JSON.stringify(videos, null, 2));
-    if (multimedia360) console.log('[createPropertyCore] multimedia360:', JSON.stringify(multimedia360, null, 2));
-    */
-    let savedProperty: Property | undefined;
-    try {
+    // The property and its relations are written atomically: if any relation sync
+    // fails the base row is rolled back instead of leaving a half-built property.
+    return this.dataSource.transaction(async (manager) => {
+      const warnings: string[] = [];
+      const propertyRepo = manager.getRepository(Property);
+
       if (scalars.deleted !== true) {
-        await this.assertUniquePublicationId(scalars.publication_id);
+        await this.assertUniquePublicationId(scalars.publication_id, undefined, manager);
       }
 
       // Calcular y asignar price_square_meter usando la función unificada
-      scalars.price_square_meter = await calculateSquareMetterPrice(scalars, this.propertyRepo);
-      const newProperty: Property = this.propertyRepo.create({
+      scalars.price_square_meter = await calculateSquareMetterPrice(scalars, propertyRepo);
+
+      const newProperty: Property = propertyRepo.create({
         ...scalars,
         ...(organizationId !== undefined ? { organization_id: organizationId } : {}),
         ...(branchId !== undefined ? { branch_id: branchId } : {}),
         ...(userId !== undefined ? { user_id: userId } : {})
       });
-    //  console.log('[createPropertyCore] newProperty:', JSON.stringify(newProperty, null, 2));
-      const saved = (await this.propertyRepo.save(newProperty)) as unknown as Property;
-    //  console.log('[createPropertyCore] savedProperty:', JSON.stringify(saved, null, 2));
-      if (!saved?.id) {
-     //   console.error('[createPropertyCore] ERROR: savedProperty.id es undefined/null');
-        throw new Error('No se pudo guardar la propiedad, id indefinido');
+
+      let savedProperty: Property;
+      try {
+        savedProperty = (await propertyRepo.save(newProperty)) as unknown as Property;
+      } catch (err) {
+        throw this.translatePublicationIdConflict(err);
       }
-      // Buscar la entidad completa desde la base de datos (con relaciones si es necesario)
-      const found = await this.propertyRepo.findOne({ where: { id: saved.id } });
-      savedProperty = found === null ? undefined : found;
-     // console.log('[createPropertyCore] savedProperty (from DB):', JSON.stringify(savedProperty, null, 2));
-    } catch (err) {
-      console.error('[createPropertyCore] ERROR al guardar propiedad:', err);
-      throw err;
-    }
-    if (!savedProperty?.id) {
-      console.error('[createPropertyCore] ERROR: savedProperty.id es undefined/null (post-find)');
-      throw new Error('No se pudo guardar la propiedad, id indefinido (post-find)');
-    }
-    const propertyId = savedProperty.id;
 
-    if (tags && tags.length > 0) {
-      const tagWarnings = await this.syncTags(propertyId, tags);
-      warnings.push(...tagWarnings);
-    }
+      const propertyId = this.ensureValidPropertyId(
+        savedProperty?.id,
+        'createPropertyCore',
+        'No se pudo guardar la propiedad base; se omite sincronizacion de tags, videos, multimedia, imagenes y adjuntos',
+      );
 
-    if (videos && videos.length > 0) {
-      await this.syncVideos(propertyId, videos, false);
-    }
+      if (tags && tags.length > 0) {
+        const tagWarnings = await this.syncTags(propertyId, tags, manager);
+        warnings.push(...tagWarnings);
+      }
 
-    if (multimedia360 && multimedia360.length > 0) {
-      await this.syncMultimedia360(propertyId, multimedia360, false);
-    }
-    console.log('[createPropertyCore] Antes de syncImages/syncAttached. propertyId:', propertyId);
-    if (images && images.length > 0) {
-      await this.syncImages(propertyId, images);
-    }
+      if (videos && videos.length > 0) {
+        await this.syncVideos(propertyId, videos, false, manager);
+      }
 
-    if (attached && attached.length > 0) {
-      await this.syncAttached(propertyId, attached);
-    }
+      if (multimedia360 && multimedia360.length > 0) {
+        await this.syncMultimedia360(propertyId, multimedia360, false, manager);
+      }
 
-    return { property: savedProperty, warnings };
+      if (images && images.length > 0) {
+        await this.syncImages(propertyId, images, manager);
+      }
+
+      if (attached && attached.length > 0) {
+        await this.syncAttached(propertyId, attached, manager);
+      }
+
+      return { property: savedProperty, warnings };
+    });
   }
 
   /**
    * Sincroniza imágenes de una propiedad: crea nuevas y elimina las que ya no están.
    * Para creación, simplemente inserta todas. Para update, compara y elimina/crea según corresponda.
    */
-  async syncImages(propertyId: number, images: any[]): Promise<void> {
+  async syncImages(propertyId: number, images: any[], manager?: EntityManager): Promise<void> {
+    const validPropertyId = this.ensureValidPropertyId(
+      propertyId,
+      'syncImages',
+      'Property id invalido; no se sincronizaran imagenes',
+    );
+
+    const imageRepo = (manager ?? this.dataSource.manager).getRepository('PropertyImage');
+
     // Obtener imágenes existentes
-    const existing = await this.dataSource.getRepository('PropertyImage').find({ where: { upload_status: Not(MediaUploadStatus.DELETING), property: { id: propertyId } } });
-    console.log("[syncImages] existing images from DB:", JSON.stringify(existing, null, 2));
-    // Mapear por original_image
-    const existingMap = new Map(existing.map((img: any) => [img.original_image, img]));
+    const existing = await imageRepo.find({ where: { upload_status: Not(MediaUploadStatus.DELETING), property: { id: validPropertyId } } });
+
+    // Mapear por la clave con la que se identifica una imagen ya persistida:
+    // original_image para las externas, url para las subidas localmente.
+    const existingMap = new Map(existing.map((img: any) => [img.original_image ?? img.url, img]));
     const incomingMap = new Map(images.map((img: any) => [img.url, img]));
-    console.log("[syncImages] existingMap:", JSON.stringify(Array.from(existingMap.entries()), null, 2));
-    console.log("[syncImages] incomingMap:", JSON.stringify(Array.from(incomingMap.entries()), null, 2));
 
     // Crear nuevas
     const toAdd = images.filter((img: any) => !existingMap.has(img.url));
-    console.log("[syncImages] images to add:", JSON.stringify(toAdd, null, 2));
     for (const img of toAdd) {
       const isExternal = img.url?.startsWith('http');
-      const entity = this.dataSource.getRepository('PropertyImage').create({
+      const entity = imageRepo.create({
         ...img,
         url: img.url ?? '',
         original_image: isExternal ? (img.url ?? null) : null,
-        property: { id: propertyId },
+        property: { id: validPropertyId },
         upload_status: isExternal ? MediaUploadStatus.PENDING : MediaUploadStatus.COMPLETED,
         retry_count: 0,
       });
-      await this.dataSource.getRepository('PropertyImage').save(entity);
+      await imageRepo.save(entity);
     }
-    console.log("%%%%%%%%%%%%%% [syncImages] after adding new images, now checking for removals and order updates...");
+
     // Marcar como DELETING las que ya no están
-    const toRemove = existing.filter((img: any) => !incomingMap.has(img.original_image ?? img.url)); // Usar original_image para comparación, fallback a url
-    console.log("[syncImages] images to remove:", JSON.stringify(toRemove, null, 2));
+    const toRemove = existing.filter((img: any) => !incomingMap.has(img.original_image ?? img.url));
     if (toRemove.length > 0) {
-      console.log("############### [syncImages] marking images as DELETING...");
       const ids = toRemove.map((img: any) => img.id);
       // Bulk update: set upload_status = 'deleting' for all toRemove
-      await this.dataSource.getRepository('PropertyImage')
+      await imageRepo
         .createQueryBuilder()
         .update()
         .set({ upload_status: MediaUploadStatus.DELETING })
@@ -167,44 +162,56 @@ export class PropertyWriteService {
 
     // Actualizar orden si cambia
     for (const img of existing) {
-      const incoming = incomingMap.get(img.original_image ?? img.url); // Usar original_image para comparación, fallback a url
+      const incoming = incomingMap.get(img.original_image ?? img.url);
       if (incoming && img.order_position !== incoming.order_position) {
         img.order_position = incoming.order_position;
-        await this.dataSource.getRepository('PropertyImage').save(img);
+        await imageRepo.save(img);
       }
     }
+
+    this.logger.debug(
+      `[syncImages] property_id=${validPropertyId} added=${toAdd.length} removed=${toRemove.length} existing=${existing.length}`,
+    );
   }
 
   /**
    * Sincroniza archivos adjuntos de una propiedad: crea nuevos y elimina los que ya no están.
    * Para creación, simplemente inserta todos. Para update, compara y elimina/crea según corresponda.
    */
-  async syncAttached(propertyId: number, attached: any[]): Promise<void> {
+  async syncAttached(propertyId: number, attached: any[], manager?: EntityManager): Promise<void> {
+    const validPropertyId = this.ensureValidPropertyId(
+      propertyId,
+      'syncAttached',
+      'Property id invalido; no se sincronizaran adjuntos',
+    );
+
+    const attachedRepo = (manager ?? this.dataSource.manager).getRepository('PropertyAttached');
+
     // Obtener adjuntos existentes
-    const existing = await this.dataSource.getRepository('PropertyAttached').find({ where: { property: { id: propertyId } } });
-    // Mapear por original_file
-    const existingMap = new Map(existing.map((a: any) => [a.original_file, a]));
+    const existing = await attachedRepo.find({ where: { property: { id: validPropertyId } } });
+    // Mapear por la clave con la que se identifica un adjunto ya persistido
+    const existingMap = new Map(existing.map((a: any) => [a.original_file ?? a.file_url, a]));
     const incomingMap = new Map(attached.map((a: any) => [a.file_url, a]));
 
     // Crear nuevos
     const toAdd = attached.filter((a: any) => !existingMap.has(a.file_url));
     for (const a of toAdd) {
-      const entity = this.dataSource.getRepository('PropertyAttached').create({
+      const entity = attachedRepo.create({
         ...a,
-        property: { id: propertyId },
+        property: { id: validPropertyId },
         upload_status: a.file_url?.startsWith('http') ? MediaUploadStatus.PENDING : MediaUploadStatus.COMPLETED,
         upload_completed_at: null,
         retry_count: 0,
         original_file: a.file_url ?? null,
       });
-      await this.dataSource.getRepository('PropertyAttached').save(entity);
+      await attachedRepo.save(entity);
     }
 
     // Eliminar los que ya no están
-    const toRemove = existing.filter((a: any) => !incomingMap.has(a.original_file ?? a.file_url)); // Usar original_file para comparación, fallback a file_url
+    const toRemove = existing.filter((a: any) => !incomingMap.has(a.original_file ?? a.file_url));
     if (toRemove.length > 0) {
       const ids = toRemove.map((a: any) => a.id);
-      await this.dataSource.getRepository('PropertyAttached')
+      await attachedRepo
         .createQueryBuilder()
         .update()
         .set({ upload_status: MediaUploadStatus.DELETING })
@@ -214,10 +221,10 @@ export class PropertyWriteService {
 
     // Actualizar orden si cambia
     for (const a of existing) {
-      const incoming = incomingMap.get(a.original_file ?? a.file_url); // Usar original_file para comparación, fallback a file_url
+      const incoming = incomingMap.get(a.original_file ?? a.file_url);
       if (incoming && a.order_position !== incoming.order_position) {
         a.order_position = incoming.order_position;
-        await this.dataSource.getRepository('PropertyAttached').save(a);
+        await attachedRepo.save(a);
       }
     }
   }
@@ -242,6 +249,11 @@ export class PropertyWriteService {
     },
   ): Promise<{ warnings: string[] }> {
     const warnings: string[] = [];
+    const propertyId = this.ensureValidPropertyId(
+      property?.id,
+      'updatePropertyCore',
+      'Property id inexistente al actualizar; se omite sincronizacion de relaciones',
+    );
 
     // Campos que nunca se pueden sobreescribir en un update
     const { reference_code, organization_id, development_id, deleted, ...restScalars } = scalars;
@@ -251,45 +263,42 @@ export class PropertyWriteService {
     if (context?.branchId) updateData.branch_id = context.branchId;
     if (context?.userId) updateData.user_id = context.userId;
 
-    const nextDeleted = updateData.deleted ?? property.deleted;
+    // `deleted` no se puede cambiar desde un update, por eso se toma siempre el valor actual
     const nextPublicationId = updateData.publication_id ?? property.publication_id;
-    if (nextDeleted !== true) {
+    if (property.deleted !== true) {
       await this.assertUniquePublicationId(nextPublicationId, property.id);
     }
 
-    Object.assign(property, updateData);
+    const nextState = { ...property, ...updateData };
+    updateData.price_square_meter = await calculateSquareMetterPrice(nextState, this.propertyRepo);
 
-    // Si viene un nuevo userId, pisar la relación cargada en memoria para que TypeORM
-    // no use el objeto user anterior como referencia del FK al hacer save()
-    if (updateData?.user_id) {
-      (property as any).user = { id: updateData.user_id };
+    // Use direct update to avoid cascading loaded relations (images/tags/videos/attached)
+    // which can accidentally trigger invalid FK updates on relation tables.
+    try {
+      await this.propertyRepo.update({ id: propertyId }, updateData);
+    } catch (err) {
+      throw this.translatePublicationIdConflict(err);
     }
-    // Calcular y setear price_square_meter usando la función unificada
-    property.price_square_meter = await calculateSquareMetterPrice({ ...property, ...updateData }, this.propertyRepo);
-
-    await this.propertyRepo.save(property);
 
     if (context?.tags !== undefined) {
-      await this.propertyTagRepo.delete({ property: { id: property.id } });
+      await this.propertyTagRepo.delete({ property: { id: propertyId } });
       if (context.tags.length > 0) {
-        const tagWarnings = await this.syncTags(property.id!, context.tags);
+        const tagWarnings = await this.syncTags(propertyId, context.tags);
         warnings.push(...tagWarnings);
       }
     }
 
     if (context?.videos) {
-      await this.syncVideos(property.id!, context.videos, true);
+      await this.syncVideos(propertyId, context.videos, true);
     }
     if (context?.multimedia360) {
-      await this.syncMultimedia360(property.id!, context.multimedia360, true);
+      await this.syncMultimedia360(propertyId, context.multimedia360, true);
     }
     if (context?.images) {
-      console.log("$$$$$$$$$ context.images:", JSON.stringify(context.images, null, 2));
-      //this.logger.log("$$$$$$$$$ context.images:", JSON.stringify(context.images, null, 2);
-      await this.syncImages(property.id!, context.images);
+      await this.syncImages(propertyId, context.images);
     }
     if (context?.attached) {
-      await this.syncAttached(property.id!, context.attached);
+      await this.syncAttached(propertyId, context.attached);
     }
 
     return { warnings };
@@ -299,10 +308,18 @@ export class PropertyWriteService {
    * Validates tag IDs against the tags table, inserts valid ones and returns
    * warnings for any that did not exist.
    */
-  async syncTags(propertyId: number, tagIds: number[]): Promise<string[]> {
-    const warnings: string[] = [];
+  async syncTags(propertyId: number, tagIds: number[], manager?: EntityManager): Promise<string[]> {
+    const validPropertyId = this.ensureValidPropertyId(
+      propertyId,
+      'syncTags',
+      'Property id invalido; no se sincronizaran tags',
+    );
 
-    const existingTags = await this.dataSource.query(
+    const warnings: string[] = [];
+    const entityManager = manager ?? this.dataSource.manager;
+    const tagRepo = entityManager.getRepository(PropertyTag);
+
+    const existingTags = await entityManager.query(
       `SELECT id FROM tags WHERE id = ANY($1)`,
       [tagIds],
     );
@@ -312,12 +329,12 @@ export class PropertyWriteService {
 
     if (validIds.length > 0) {
       const newTags = validIds.map((tagId) =>
-        this.propertyTagRepo.create({
+        tagRepo.create({
           tag_id: tagId,
-          property: { id: propertyId } as Property,
+          property: { id: validPropertyId } as Property,
         }),
       );
-      await this.propertyTagRepo.save(newTags);
+      await tagRepo.save(newTags);
     }
 
     if (invalidIds.length > 0) {
@@ -336,20 +353,29 @@ export class PropertyWriteService {
     propertyId: number,
     videos: VideoInput[],
     isUpdate: boolean,
+    manager?: EntityManager,
   ): Promise<void> {
+    const validPropertyId = this.ensureValidPropertyId(
+      propertyId,
+      'syncVideos',
+      'Property id invalido; no se sincronizaran videos',
+    );
+
+    const videoRepo = (manager ?? this.dataSource.manager).getRepository(PropertyVideo);
+
     if (isUpdate) {
-      await this.propertyVideoRepo.delete({ property: { id: propertyId }, is_360: false });
+      await videoRepo.delete({ property: { id: validPropertyId }, is_360: false });
     }
 
     for (let i = 0; i < videos.length; i++) {
       const v = videos[i];
-      const entity = this.propertyVideoRepo.create({
+      const entity = videoRepo.create({
         url: v.url,
-        property: { id: propertyId } as Property,
+        property: { id: validPropertyId } as Property,
         is_360: false,
         order: v.order ?? i + 1,
       });
-      await this.propertyVideoRepo.save(entity);
+      await videoRepo.save(entity);
     }
   }
 
@@ -360,31 +386,42 @@ export class PropertyWriteService {
     propertyId: number,
     items: Multimedia360Input[],
     isUpdate: boolean,
+    manager?: EntityManager,
   ): Promise<void> {
+    const validPropertyId = this.ensureValidPropertyId(
+      propertyId,
+      'syncMultimedia360',
+      'Property id invalido; no se sincronizara multimedia 360',
+    );
+
+    const videoRepo = (manager ?? this.dataSource.manager).getRepository(PropertyVideo);
+
     if (isUpdate) {
-      await this.propertyVideoRepo.delete({ property: { id: propertyId }, is_360: true });
+      await videoRepo.delete({ property: { id: validPropertyId }, is_360: true });
     }
 
     for (let i = 0; i < items.length; i++) {
       const m = items[i];
-      const entity = this.propertyVideoRepo.create({
+      const entity = videoRepo.create({
         url: m.url,
-        property: { id: propertyId } as Property,
+        property: { id: validPropertyId } as Property,
         is_360: true,
         order: m.order ?? i + 1,
       });
-      await this.propertyVideoRepo.save(entity);
+      await videoRepo.save(entity);
     }
   }
 
   private async assertUniquePublicationId(
     publicationId: string | undefined | null,
     excludePropertyId?: number,
+    manager?: EntityManager,
   ): Promise<void> {
     const normalized = publicationId?.trim();
     if (!normalized) return;
 
-    const qb = this.propertyRepo
+    const repo = manager ? manager.getRepository(Property) : this.propertyRepo;
+    const qb = repo
       .createQueryBuilder('p')
       .where('p.publication_id = :publicationId', { publicationId: normalized })
       .andWhere('p.deleted = :deleted', { deleted: false });
@@ -399,6 +436,39 @@ export class PropertyWriteService {
         'Una propiedad activa con este publication_id ya existe',
       );
     }
+  }
+
+  /**
+   * The pre-check in assertUniquePublicationId can lose a race against a
+   * concurrent writer, so the DB constraint is the real guard. Translate its
+   * violation into the same error the pre-check raises.
+   */
+  private translatePublicationIdConflict(err: unknown): unknown {
+    const driverError = (err as any)?.driverError;
+    const isPublicationIdConflict =
+      driverError?.code === '23505' &&
+      String(driverError?.constraint ?? '') === 'uk_properties_publication_id';
+
+    if (isPublicationIdConflict) {
+      return new BadRequestException(
+        'Una propiedad activa con este publication_id ya existe',
+      );
+    }
+
+    return err;
+  }
+
+  private ensureValidPropertyId(
+    propertyId: number | undefined,
+    context: string,
+    reason: string,
+  ): number {
+    if (typeof propertyId === 'number' && Number.isInteger(propertyId) && propertyId > 0) {
+      return propertyId;
+    }
+
+    // Solo se lanza: el caller es el responsable de loguearlo una unica vez.
+    throw new Error(`[${context}] ${reason}. propertyId=${propertyId ?? 'undefined'}`);
   }
 
 }
