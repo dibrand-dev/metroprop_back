@@ -1302,7 +1302,8 @@ export class TokkoSyncService implements OnModuleInit {
 						branchIds: [branch.id],
 						is_verified: true,
 						phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-						alternative_phone: this.buildTokkoPhone(seller.alternative_phone_country_code, seller.alternative_phone_area_code, seller.alternative_phone),
+						phone_whatsapp: this.buildTokkoPhone(seller.alternative_phone_country_code, seller.alternative_phone_area_code, seller.alternative_phone),
+						phone_alternative: this.buildTokkoPhone(seller.alternative_phone_country_code, seller.alternative_phone_area_code, seller.alternative_phone),
 					} as any);
 					adminUserId = newUser.id;
 					this.fileLogger.info(`USUARIO CREADO PARA EL VENDEDOR. user_id=${newUser.id} email=${newUser.email}`);
@@ -1645,17 +1646,25 @@ export class TokkoSyncService implements OnModuleInit {
 				organizationId: savedOrg.id,
 				is_verified: true,
 				phone: this.buildTokkoPhone(seller.phone_country_code, seller.phone_area_code, seller.phone),
-				alternative_phone: this.buildTokkoPhone(seller.alternative_phone_country_code, seller.alternative_phone_area_code, seller.alternative_phone),
+				phone_whatsapp: this.buildTokkoPhone(seller.alternative_phone_country_code, seller.alternative_phone_area_code, seller.alternative_phone),
 			} as any);
 
 			await this.organizationRepo.update(savedOrg.id!, {
 				admin_user: { id: adminUser.id } as any,
 			});
 
-			this.emailService.sendProfessionalWelcomeEmailValidated(
-				adminUser.email,
-				adminUser.name
-			);
+			void this.emailService
+				.sendProfessionalWelcomeEmailValidated(adminUser.email, adminUser.name)
+				.catch((mailErr) => {
+					const msg = this.extractErrorMessage(mailErr);
+					this.logger.error(
+						`[TokkoSync] Welcome email failed for admin user id=${adminUser.id}: ${msg}`,
+					);
+					this.fileLogger.error(
+						`ADMIN_WELCOME_EMAIL_FAILED org_id=${savedOrg.id} user_id=${adminUser.id} email=${adminUser.email} reason="${msg}"`,
+						mailErr,
+					);
+				});
 
 			savedOrg.admin_user = adminUser as any;
 		} catch (err) {
