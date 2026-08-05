@@ -1,7 +1,7 @@
 import { BRANCH_IMAGE_FOLDER } from '../../common/constants';
 import { Injectable, NotFoundException, Logger, BadRequestException, ConflictException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import { MediaService } from '../../common/media/media.service';
 import { Branch } from './entities/branch.entity';
 import { Property } from '../properties/entities/property.entity';
@@ -40,6 +40,21 @@ export class BranchesService {
   }
 
   /**
+   * Returns the oldest active branch of an organization, used as the default
+   * branch when the source system does not identify one.
+   */
+  async findFirstByOrganizationId(organizationId: number): Promise<Branch | null> {
+    return this.repo.findOne({
+      where: {
+        organization: { id: organizationId },
+        deleted: false,
+      } as any,
+      relations: ['organization'],
+      order: { id: 'ASC' },
+    });
+  }
+
+  /**
    * Finds an active branch by (organizationId, externalRef) or creates it.
    * Race-safe: on unique / conflict, re-fetches the winner row.
    */
@@ -74,14 +89,13 @@ export class BranchesService {
     }
   }
 
+  /**
+   * Relies on the SQLSTATE code rather than the driver message, which is
+   * translated when the server runs with a non-English lc_messages.
+   */
   private isUniqueViolation(err: unknown): boolean {
-    if (err instanceof QueryFailedError) {
-      const driverError = (err as any).driverError;
-      // Postgres unique_violation
-      if (driverError?.code === '23505') return true;
-    }
-    const msg = err instanceof Error ? err.message : String(err);
-    return /duplicate key|unique constraint|uk_branches_org_external_ref_active/i.test(msg);
+    const driverError = (err as any)?.driverError ?? err;
+    return driverError?.code === '23505';
   }
 
   async create(

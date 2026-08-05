@@ -533,20 +533,43 @@ export class UsersService {
     }
   }
 
-  async addBranchToUser(userId: number, branchId: number): Promise<void> {
-    try {
-      await this.usersRepository
-        .createQueryBuilder()
-        .relation(User, 'branches')
-        .of(userId)
-        .add(branchId);
-    } catch (err) {
-      // Already linked on re-sync; treat as success
-      const msg = err instanceof Error ? err.message : String(err);
-      if (!/duplicate|unique|already exists/i.test(msg)) {
-        throw err;
-      }
+  /**
+   * Assigns organization membership and role for an existing user.
+   */
+  async assignOrganizationAndRole(
+    userId: number,
+    organizationId: number,
+    roleId: UserRole,
+  ): Promise<User> {
+    const user = await this.usersRepository.findOne({
+      where: { id: userId, deleted: false },
+      relations: ['organization'],
+    });
+
+    if (!user) {
+      throw new NotFoundException('User not found with id: ' + userId);
     }
+
+    user.organization = { id: organizationId } as Organization;
+    user.organization_id = organizationId;
+    user.role_id = roleId;
+
+    return this.usersRepository.save(user);
+  }
+
+  /**
+   * Links a user to a branch. Idempotent: re-syncing the same seller must not
+   * fail on the users_branches primary key, so the insert ignores conflicts
+   * instead of relying on catching (locale-dependent) driver messages.
+   */
+  async addBranchToUser(userId: number, branchId: number): Promise<void> {
+    await this.usersRepository.manager
+      .createQueryBuilder()
+      .insert()
+      .into('users_branches')
+      .values({ user_id: userId, branch_id: branchId })
+      .orIgnore()
+      .execute();
   }
 
   
