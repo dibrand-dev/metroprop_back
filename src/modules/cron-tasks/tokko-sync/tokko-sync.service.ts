@@ -105,6 +105,19 @@ interface TokkoFeedbackContext {
 	dedupe: Set<string>;
 }
 
+interface TokkoBatchFailureResult {
+	ok: false;
+	reason: 'API_FETCH_FAILED' | 'UNEXPECTED_BATCH_EXCEPTION';
+	details?: string;
+	dateFromUsed: string;
+	offset: number;
+	totalCount: number;
+}
+
+type TokkoBatchResult =
+	| { ok: true }
+	| TokkoBatchFailureResult;
+
 @Injectable()
 export class TokkoSyncService implements OnModuleInit {
 	private readonly logger = new Logger(TokkoSyncService.name);
@@ -802,6 +815,7 @@ export class TokkoSyncService implements OnModuleInit {
 				sync_from_date: new Date('2000-01-01'),
 				current_offset: 0,
 				total_count: 0,
+				error_try: 0,
 				is_complete: true,
 			});
 			state = await this.syncStateRepo.save(state);
@@ -812,6 +826,7 @@ export class TokkoSyncService implements OnModuleInit {
 			state.sync_from_date = state.completed_at ?? new Date('2000-01-01');
 			state.current_offset = 0;
 			state.total_count = 0;
+			state.error_try = 0;
 			state.is_complete = false;
 			state.started_at = new Date();
 			state.completed_at = null;
@@ -824,7 +839,26 @@ export class TokkoSyncService implements OnModuleInit {
 			);
 		}
 
-		await this.fetchAndProcessBatch(state, filter, processItem, feedbackContext);
+		let batchResult: TokkoBatchResult;
+		try {
+			batchResult = await this.fetchAndProcessBatch(state, filter, processItem, feedbackContext);
+		} catch (err) {
+			const msg = this.extractErrorMessage(err);
+			this.logger.error(`${label} Unexpected batch exception: ${msg}`);
+			this.fileLogger.error(`${label} Unexpected batch exception: ${msg}`, err);
+			batchResult = {
+				ok: false,
+				reason: 'UNEXPECTED_BATCH_EXCEPTION',
+				details: msg,
+				dateFromUsed: this.buildDateFrom(state.sync_from_date),
+				offset: state.current_offset,
+				totalCount: state.total_count,
+			};
+		}
+
+		if (!batchResult.ok) {
+			await this.handleFailedBatch(state, label, batchResult);
+		}
 	}
 
 	// ─── Batch Processing ────────────────────────────────────────────────────────
@@ -834,10 +868,10 @@ export class TokkoSyncService implements OnModuleInit {
 		filter: string,
 		processItem: (item: any) => Promise<string>,
 		feedbackContext?: TokkoFeedbackContext,
-	): Promise<void> {
+	): Promise<TokkoBatchResult> {
 		const label = `[TokkoSync:${state.sync_type}]`;
 		// Format date as ISO without milliseconds for the API
-		const dateFrom = state.sync_from_date.toISOString().split('.')[0];
+		const dateFrom = this.buildDateFrom(state.sync_from_date);
 
 		const result = await this.tokkoHelperService.fetchFreePortalProperties(
 			state.api_key,
@@ -851,7 +885,14 @@ export class TokkoSyncService implements OnModuleInit {
 		if ('error' in result) {
 			this.logger.error(`${label} API fetch failed: ${result.error} — ${result.details ?? ''}`);
 			this.fileLogger.error(`${label} API fetch failed: ${result.error} — ${result.details ?? ''}`);
-			return;
+			return {
+				ok: false,
+				reason: 'API_FETCH_FAILED',
+				details: result.details ? `${result.error}: ${result.details}` : result.error,
+				dateFromUsed: dateFrom,
+				offset: state.current_offset,
+				totalCount: state.total_count,
+			};
 		}
 
 		const { objects, meta } = result;
@@ -909,7 +950,10 @@ export class TokkoSyncService implements OnModuleInit {
 			this.fileLogger.info(`RUN_COMPLETE [${state.sync_type}] processed=${newOffset} total=${totalCount}`);
 		}
 
+		state.error_try = 0;
+
 		await this.syncStateRepo.save(state);
+		return { ok: true };
 	}
 
 	// ─── Deleted Property Processing ─────────────────────────────────────────────
@@ -1657,6 +1701,60 @@ export class TokkoSyncService implements OnModuleInit {
 
 	private extractPublicationId(item: any): string | null {
 		return item?.publication_id != null ? String(item.publication_id) : null;
+	}
+
+	private buildDateFrom(date: Date): string {
+		return date.toISOString().split('.')[0];
+	}
+
+	private async handleFailedBatch(
+		state: TokkoSyncState,
+		label: string,
+		failure: TokkoBatchFailureResult,
+	): Promise<void> {
+		const nextTry = (state.error_try ?? 0) + 1;
+		state.error_try = nextTry;
+
+		const baseMessage =
+			`${label} Batch failed reason=${failure.reason} try=${nextTry} ` +
+			`sync_type=${state.sync_type} from=${failure.dateFromUsed} ` +
+			`offset=${failure.offset} total=${failure.totalCount} details="${failure.details ?? 'N/A'}"`;
+
+		this.logger.warn(baseMessage);
+		this.fileLogger.warn(`TOKKO_BATCH_RETRY ${baseMessage}`);
+
+		if (nextTry >= 2) {
+			await this.notifyRetryFailure(state, failure);
+		}
+
+		await this.syncStateRepo.save(state);
+	}
+
+	private async notifyRetryFailure(
+		state: TokkoSyncState,
+		failure: TokkoBatchFailureResult,
+	): Promise<void> {
+		try {
+			await this.emailService.sendTokkoSyncFailureNotification({
+				occurredAt: new Date(),
+				syncType: state.sync_type,
+				syncFromDate: state.sync_from_date,
+				offset: failure.offset,
+				totalCount: failure.totalCount,
+				errorTry: state.error_try,
+				dateFromUsed: failure.dateFromUsed,
+				reason: failure.reason,
+				details: failure.details,
+				apiKey: state.api_key,
+			});
+			this.fileLogger.info(
+				`TOKKO_BATCH_RETRY_EMAIL_SENT sync_type=${state.sync_type} try=${state.error_try} from=${failure.dateFromUsed} offset=${failure.offset} total=${failure.totalCount}`,
+			);
+		} catch (err) {
+			const msg = this.extractErrorMessage(err);
+			this.logger.error(`[TokkoSync] Failed to send retry email notification: ${msg}`);
+			this.fileLogger.error(`[TokkoSync] Failed to send retry email notification: ${msg}`, err);
+		}
 	}
 
 	private async reportCriticalFeedbackFromError(

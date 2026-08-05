@@ -471,10 +471,10 @@ export const IMAGE_SIZES = {
 export type ImageSizeKey = keyof typeof IMAGE_SIZES;
 
 export const EMAIL_NOTIFICATION_ERRORS = {
-  PATRICIO: 'pato@pato.com',
-  NORBERTO: 'norberto@norberto.com',
-  EMILIO: 'emilio@emilio.com',
-  ESTEBAN: 'esteban@esteban.com',
+  PATRICIO: '',
+  NORBERTO: 'nriccitelli@gmail.com',
+  EMILIO: 'huerta.em@gmail.com',
+  ESTEBAN: 'eshuerta@gmail.com',
 } as const;
 
 export const PAYMENT_ERROR_NOTIFICATION_RECIPIENTS = [
@@ -483,5 +483,11 @@ export const PAYMENT_ERROR_NOTIFICATION_RECIPIENTS = [
   EMAIL_NOTIFICATION_ERRORS.EMILIO,
 ] as const;
 
+
+export const TOKKO_ERROR_NOTIFICATION_RECIPIENTS = [
+  EMAIL_NOTIFICATION_ERRORS.ESTEBAN,
+  EMAIL_NOTIFICATION_ERRORS.NORBERTO,
+  EMAIL_NOTIFICATION_ERRORS.EMILIO,
+] as const;
 
 export const TOKKO_PARTNER_NAME = 'Tokko';
