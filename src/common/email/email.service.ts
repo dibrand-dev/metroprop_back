@@ -6,6 +6,7 @@ import {
   OPERATION_TYPE_LABELS,
   PASSWORD_DEFAULT,
   PAYMENT_ERROR_NOTIFICATION_RECIPIENTS,
+  TOKKO_ERROR_NOTIFICATION_RECIPIENTS,
   PROPERTY_TYPE_LABELS,
 } from '../constants';
 import { OperationType, PropertyType } from '../enums';
@@ -136,6 +137,83 @@ export class EmailService {
       if (result.status === 'rejected') {
         this.logger.error(
           `[EmailService] Error enviando alerta de pago a ${PAYMENT_ERROR_NOTIFICATION_RECIPIENTS[index]}: ${String(result.reason)}`,
+        );
+      }
+    });
+  }
+
+  async sendTokkoSyncFailureNotification(
+    payload: {
+      occurredAt: Date;
+      syncType: string;
+      syncFromDate: Date;
+      offset: number;
+      totalCount: number;
+      errorTry: number;
+      dateFromUsed: string;
+      reason: string;
+      details?: string;
+      apiKey?: string;
+    },
+  ): Promise<void> {
+    const recipients = [...new Set(
+      TOKKO_ERROR_NOTIFICATION_RECIPIENTS
+        .map((value) => String(value ?? '').trim())
+        .filter((value) => value.length > 0),
+    )];
+
+    if (recipients.length === 0) {
+      this.logger.warn('[EmailService] TOKKO_ERROR_NOTIFICATION_RECIPIENTS is empty. Tokko sync alert was skipped.');
+      return;
+    }
+
+    const apiKeyShort = payload.apiKey
+      ? `${payload.apiKey.slice(0, 6)}...`
+      : 'N/A';
+
+    const html = `
+      <h2>Metroprop - Alerta de sincronizacion Tokko</h2>
+      <p><strong>Fecha:</strong> ${payload.occurredAt.toISOString()}</p>
+      <p><strong>Tipo de sync:</strong> ${payload.syncType}</p>
+      <p><strong>sync_from_date:</strong> ${payload.syncFromDate.toISOString()}</p>
+      <p><strong>date_from enviado al feed:</strong> ${payload.dateFromUsed}</p>
+      <p><strong>Offset:</strong> ${payload.offset}</p>
+      <p><strong>Total reportado:</strong> ${payload.totalCount}</p>
+      <p><strong>Intento fallido consecutivo:</strong> ${payload.errorTry}</p>
+      <p><strong>Razon:</strong> ${payload.reason}</p>
+      <p><strong>Detalle:</strong> ${payload.details ?? 'N/A'}</p>
+      <p><strong>API key:</strong> ${apiKeyShort}</p>
+      <h3>Contexto</h3>
+      <pre>${this.safeJson({
+        syncType: payload.syncType,
+        syncFromDate: payload.syncFromDate.toISOString(),
+        dateFromUsed: payload.dateFromUsed,
+        offset: payload.offset,
+        totalCount: payload.totalCount,
+        errorTry: payload.errorTry,
+        reason: payload.reason,
+        details: payload.details,
+        apiKeyShort,
+      })}</pre>
+    `;
+
+    const subject =
+      `Metroprop: proceso de synchronize de Tokko fallando (intento ${payload.errorTry}) - requiere atencion`;
+
+    const sendResults = await Promise.allSettled(
+      recipients.map((to) =>
+        this.sendEmail({
+          to,
+          subject,
+          html,
+        }),
+      ),
+    );
+
+    sendResults.forEach((result, index) => {
+      if (result.status === 'rejected') {
+        this.logger.error(
+          `[EmailService] Error enviando alerta de Tokko a ${recipients[index]}: ${String(result.reason)}`,
         );
       }
     });

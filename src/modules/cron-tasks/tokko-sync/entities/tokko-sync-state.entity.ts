@@ -36,6 +36,10 @@ export class TokkoSyncState {
 	@Column({ type: 'integer', default: 0, nullable: false })
 	total_count!: number;
 
+	/** Consecutive failed tries for the current set (same date_from + offset) */
+	@Column({ type: 'integer', default: 0, nullable: false })
+	error_try!: number;
+
 	/** True when the last run finished all pages successfully */
 	@Column({ type: 'boolean', default: true, nullable: false })
 	is_complete!: boolean;
