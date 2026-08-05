@@ -41,6 +41,7 @@ export class PaymentsCronService {
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
   async handlePaymentsExpirationDaily(): Promise<void> {
     const now = new Date();
+    const logFile = this.paymentsLogFile(now);
 
     const expirationSummary = await this.plansService.finalizeExpiredPurchasedPlans(now);
     if (
@@ -48,7 +49,7 @@ export class PaymentsCronService {
       expirationSummary.userPlansDeactivated > 0
     ) {
       this.mylogger.log(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] Planes vencidos desactivados: branch=${expirationSummary.branchPlansDeactivated}, user=${expirationSummary.userPlansDeactivated}. Properties reseteadas: branch=${expirationSummary.branchPropertiesReset}, user=${expirationSummary.userPropertiesReset}.`,
       );
     }
@@ -81,7 +82,7 @@ export class PaymentsCronService {
       }
     } else {
       this.mylogger.log(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         '[PaymentsCron] No active/paused branch plans found.',
       );
     }
@@ -114,7 +115,7 @@ export class PaymentsCronService {
       }
     } else {
       this.mylogger.log(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         '[PaymentsCron] No active/paused user plans found.',
       );
     }
@@ -126,6 +127,7 @@ export class PaymentsCronService {
     return;
 
     const now = new Date();
+    const logFile = this.paymentsLogFile(now);
 
     const expiredBranchPlans = await this.branchPlanRepo.find({
       where: {
@@ -156,7 +158,7 @@ export class PaymentsCronService {
       );
 
       this.mylogger.log(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] Branch plans expirados desactivados: ${branchPlanUpdateResult.affected ?? 0}. Properties reseteadas: ${propertyUpdateResult.affected ?? 0}.`,
       );
     }
@@ -190,7 +192,7 @@ export class PaymentsCronService {
       );
 
       this.mylogger.log(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] User plans expirados desactivados: ${userPlanUpdateResult.affected ?? 0}. Properties reseteadas: ${propertyUpdateResult.affected ?? 0}.`,
       );
     }
@@ -200,6 +202,7 @@ export class PaymentsCronService {
     branchPlan: BranchPlan,
     now: Date,
   ): Promise<void> {
+    const logFile = this.paymentsLogFile(now);
     try {
       const snapshot = await this.mercadopagoService.fetchStatusForPlan(
         branchPlan.mercadopago_preapproval_id,
@@ -229,7 +232,7 @@ export class PaymentsCronService {
           now,
         );
         this.mylogger.log(
-          `payments_cron_${now.toISOString()} `,
+          logFile,
           `[PaymentsCron] BranchPlan ${branchPlan.id} baja programada para ${nextState.end_date?.toISOString() ?? 'n/a'} por estado MP=${snapshot.status ?? 'n/a'} (${snapshot.source}).`,
         );
       }
@@ -247,7 +250,7 @@ export class PaymentsCronService {
         );
 
         this.mylogger.log(
-          `payments_cron_${now.toISOString()} `,
+          logFile,
           `[PaymentsCron] BranchPlan ${branchPlan.id} desactivado por end_date=${nextState.end_date.toISOString()}. Properties reseteadas: ${propertiesReset}.`,
         );
       }
@@ -266,16 +269,17 @@ export class PaymentsCronService {
       });
 
       this.mylogger.error(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] Error sincronizando BranchPlan ${branchPlan.id}: ${message}`,
       );
     }
   }
 
   private async syncUserPlanStatus(userPlan: UserPlan, now: Date): Promise<void> {
+    const logFile = this.paymentsLogFile(now);
     try {
       this.mylogger.log(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] Analizando UserPlan ${userPlan.id} para user ${userPlan.user_id}...`,
       );
 
@@ -307,7 +311,7 @@ export class PaymentsCronService {
           now,
         );
         this.mylogger.log(
-          `payments_cron_${now.toISOString()} `,
+          logFile,
           `[PaymentsCron] UserPlan ${userPlan.id} baja programada para ${nextState.end_date?.toISOString() ?? 'n/a'} por estado MP=${snapshot.status ?? 'n/a'} (${snapshot.source}).`,
         );
       }
@@ -325,7 +329,7 @@ export class PaymentsCronService {
         );
 
         this.mylogger.log(
-          `payments_cron_${now.toISOString()} `,
+          logFile,
           `[PaymentsCron] UserPlan ${userPlan.id} desactivado por end_date=${nextState.end_date.toISOString()}. Properties reseteadas: ${propertiesReset}.`,
         );
       }
@@ -344,7 +348,7 @@ export class PaymentsCronService {
       });
 
       this.mylogger.error(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] Error sincronizando UserPlan ${userPlan.id}: ${message}`,
       );
     }
@@ -400,6 +404,7 @@ export class PaymentsCronService {
     userPlan?: UserPlan;
   }): Promise<void> {
     const { now, planType, message, branchPlan, userPlan } = params;
+    const logFile = this.paymentsLogFile(now);
 
     let principalInfo: Record<string, unknown> = {};
 
@@ -463,10 +468,17 @@ export class PaymentsCronService {
       });
     } catch (notificationError) {
       this.mylogger.error(
-        `payments_cron_${now.toISOString()} `,
+        logFile,
         `[PaymentsCron] Error enviando alerta de pago: ${String(notificationError)}`,
       );
     }
+  }
+
+  private paymentsLogFile(now: Date): string {
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    return `payments-cron-${year}-${month}-${day}.log`;
   }
 
   private applyMercadoPagoSnapshot<T extends BranchPlan | UserPlan>(

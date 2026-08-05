@@ -95,6 +95,32 @@ export class TokkoSyncLoggerService {
 		this.write(this.orgLogPath(orgId), `ERROR ${line}`);
 	}
 
+	feedbackSent(source: string, publicationId: string, reasonCode: string): void {
+		this.info(
+			`TOKKO_FEEDBACK_SENT source=${source} pub_id=${publicationId} reason=${reasonCode}`,
+		);
+	}
+
+	feedbackSkippedNonCritical(source: string, publicationId: string | undefined, reason: string): void {
+		this.info(
+			`TOKKO_FEEDBACK_SKIPPED_NON_CRITICAL source=${source} pub_id=${publicationId ?? 'N/A'} reason="${reason}"`,
+		);
+	}
+
+	feedbackSkippedNoPublicationId(source: string, reasonCode: string): void {
+		this.warn(
+			`TOKKO_FEEDBACK_SKIPPED_NO_PUBLICATION_ID source=${source} reason=${reasonCode}`,
+		);
+	}
+
+	feedbackFailed(source: string, publicationId: string, reasonCode: string, err?: unknown): void {
+		const detail = err instanceof Error ? err.message : err != null ? String(err) : 'unknown';
+		this.error(
+			`TOKKO_FEEDBACK_FAILED source=${source} pub_id=${publicationId} reason=${reasonCode} error="${detail}"`,
+			err,
+		);
+	}
+
 	// ─── Batch-level helpers ─────────────────────────────────────────────────────
 
 	logBatchStart(offset: number, total: number, dateFrom: string): void {

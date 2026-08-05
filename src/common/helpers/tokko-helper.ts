@@ -1791,6 +1791,87 @@ export class TokkoHelperService {
 
 // ─── Tokko Contact Notification ─────────────────────────────────────────────
 
+const TOKKO_FEEDBACK_URL = 'http://www.tokkobroker.com/portals/simple_portal/api/v1/feedback/';
+
+export type TokkoFeedbackStatus = '3' | '4' | '5';
+
+export interface TokkoFeedbackMessage {
+  message: string;
+}
+
+export interface TokkoFeedbackObject {
+  id?: string;
+  publication_id: string;
+  status: TokkoFeedbackStatus;
+  warnings?: TokkoFeedbackMessage[];
+  errors?: TokkoFeedbackMessage[];
+}
+
+export interface TokkoPublicationFeedbackParams {
+  apiKey: string;
+  objects: TokkoFeedbackObject[];
+}
+
+/**
+ * Reports publication status/errors to Tokko /feedback endpoint.
+ * Token must go in X-API-KEY header (not in body).
+ */
+export async function notifyTokkoPublicationFeedback(
+  params: TokkoPublicationFeedbackParams,
+): Promise<void> {
+  const apiKey = (params.apiKey ?? '').trim();
+  if (!apiKey) {
+    throw new Error('Tokko feedback requires a non-empty apiKey');
+  }
+
+  const objects = (params.objects ?? [])
+    .filter((obj) => !!obj?.publication_id)
+    .map((obj) => ({
+      ...obj,
+      publication_id: String(obj.publication_id),
+      id: obj.id != null ? String(obj.id) : undefined,
+    }));
+
+  if (objects.length === 0) {
+    return;
+  }
+
+  const response = await axios.post(
+    TOKKO_FEEDBACK_URL,
+    { objects },
+    {
+      headers: {
+        'X-API-KEY': apiKey,
+        'Content-Type': 'application/json',
+      },
+      timeout: 15000,
+      validateStatus: () => true,
+    },
+  );
+
+  if (response.status >= 200 && response.status < 300) {
+    return;
+  }
+
+  let responsePreview = '';
+  try {
+    responsePreview =
+      typeof response.data === 'string'
+        ? response.data
+        : JSON.stringify(response.data ?? {});
+  } catch {
+    responsePreview = String(response.data ?? '');
+  }
+
+  if (responsePreview.length > 400) {
+    responsePreview = `${responsePreview.slice(0, 400)}...[truncated]`;
+  }
+
+  throw new Error(
+    `Tokko /feedback failed with HTTP ${response.status}. response=${responsePreview}`,
+  );
+}
+
 const TOKKO_CONTACT_URL = 'http://tokkobroker.com/portals/simple_portal/api/v1/contact/';
 
 const TOKKO_CONTACT_ERROR_MESSAGES: Record<number, string> = {

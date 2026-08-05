@@ -10,7 +10,11 @@ import { Organization } from '../../organizations/entities/organization.entity';
 import { OrganizationsService } from '../../organizations/organizations.service';
 import { PartnersService } from '../../partners/partners.service';
 
-import { TokkoHelperService } from '../../../common/helpers/tokko-helper';
+import {
+	TokkoFeedbackObject,
+	TokkoHelperService,
+	notifyTokkoPublicationFeedback,
+} from '../../../common/helpers/tokko-helper';
 import { BranchesService } from '../../branches/branches.service';
 import { UsersService } from '../../users/users.service';
 import { PropertyStatus, UserRole } from '../../../common/enums';
@@ -90,6 +94,15 @@ export interface TokkoFullCompareResult {
 		organizations_with_errors: number;
 	};
 	results: TokkoFullCompareOrgResult[];
+}
+
+type TokkoFeedbackSource = 'cron' | 'sync-one' | 'sync-organization';
+
+interface TokkoFeedbackContext {
+	source: TokkoFeedbackSource;
+	apiKey: string;
+	enabled: boolean;
+	dedupe: Set<string>;
 }
 
 @Injectable()
@@ -185,6 +198,7 @@ export class TokkoSyncService implements OnModuleInit {
 
 		this.logger.log(`[TokkoSync-ONE] syncSingleProperty publication_id=${publicationId}`);
 		this.fileLogger.info(`TokkoSync-ONE publication_id=${publicationId}`);
+		const feedbackContext = this.createFeedbackContext('sync-one', apiKey);
 
 		const result = await this.tokkoHelperService.fetchFreePortalPropertyById(apiKey, publicationId);
 
@@ -194,6 +208,11 @@ export class TokkoSyncService implements OnModuleInit {
 					`TokkoSync-ONE_NOT_FOUND publication_id=${publicationId}` +
 					(result.details ? ` details=${result.details}` : ''),
 				);
+				await this.sendCriticalTokkoFeedback(feedbackContext, {
+					publicationId,
+					reasonCode: 'PUBLICATION_NOT_FOUND',
+					message: `No se encontro el aviso con publication_id ${publicationId} en Tokko.`,
+				});
 				return { outcome: 'not_found', message: result.error };
 			}
 			const msg = result.details ? `${result.error}: ${result.details}` : result.error;
@@ -205,13 +224,19 @@ export class TokkoSyncService implements OnModuleInit {
 		const { item } = result;
 		this.fileLogger.logItemReceived(item);
 		try {
-			const outcome = await this.processProperty(item);
+			const outcome = await this.processProperty(item, feedbackContext);
 			const msg = `publication_id=${publicationId} outcome=${outcome}`;
 			this.logger.log(`[TokkoSync-ONE] syncSingleProperty done — ${msg}`);
 			this.fileLogger.info(`TokkoSync-ONE_DONE ${msg}`);
 			return { outcome, message: `Property ${outcome} successfully` };
 		} catch (err) {
 			const msg = err instanceof Error ? err.message : String(err);
+			await this.reportCriticalFeedbackFromError(
+				feedbackContext,
+				publicationId,
+				err,
+				item?.id != null ? String(item.id) : undefined,
+			);
 			this.logger.error(`[TokkoSync-ONE] syncSingleProperty failed — ${msg}`);
 			this.fileLogger.logItemFailed(item, err);
 			return { outcome: 'skipped', message: msg };
@@ -264,6 +289,7 @@ export class TokkoSyncService implements OnModuleInit {
 		const { objects, meta } = result;
 		const totalCount: number = meta.total_count ?? objects.length;
 		const stats = { created: 0, updated: 0, skipped: 0, failed: 0, depublished: 0 };
+		const feedbackContext = this.createFeedbackContext('sync-organization', apiKey);
 
 		// Track all publication_ids present in this feed response
 		const feedPublicationIds = new Set<string>(
@@ -275,7 +301,7 @@ export class TokkoSyncService implements OnModuleInit {
 		for (const item of objects) {
 			const pubId = item?.publication_id != null ? String(item.publication_id) : 'N/A';
 			try {
-				const outcome = await this.processProperty(item);
+				const outcome = await this.processProperty(item, feedbackContext);
 				if (outcome === 'created') stats.created++;
 				else if (outcome === 'updated') stats.updated++;
 				else stats.skipped++;
@@ -283,6 +309,12 @@ export class TokkoSyncService implements OnModuleInit {
 			} catch (err) {
 				stats.failed++;
 				const msg = err instanceof Error ? err.message : String(err);
+				await this.reportCriticalFeedbackFromError(
+					feedbackContext,
+					item?.publication_id != null ? String(item.publication_id) : null,
+					err,
+					item?.id != null ? String(item.id) : undefined,
+				);
 				this.logger.error(
 					`[TokkoSync] syncOrganization error processing item id=${item.id}: ${msg}`,
 				);
@@ -728,7 +760,14 @@ export class TokkoSyncService implements OnModuleInit {
 	// ─── Sync Orchestration ──────────────────────────────────────────────────────
 
 	private async syncFreePortalFeed(apiKey: string): Promise<void> {
-		await this.runPaginatedSync(apiKey, 'feed', 'updated', (item) => this.processProperty(item));
+		const feedbackContext = this.createFeedbackContext('cron', apiKey);
+		await this.runPaginatedSync(
+			apiKey,
+			'feed',
+			'updated',
+			(item) => this.processProperty(item, feedbackContext),
+			feedbackContext,
+		);
 	}
 
 	private async syncDeletedFeed(apiKey: string): Promise<void> {
@@ -745,6 +784,7 @@ export class TokkoSyncService implements OnModuleInit {
 		syncType: string,
 		filter: string,
 		processItem: (item: any) => Promise<string>,
+		feedbackContext?: TokkoFeedbackContext,
 	): Promise<void> {
 		const label = `[TokkoSync:${syncType}]`;
 		this.logger.log(`${label} Starting sync cycle`);
@@ -784,7 +824,7 @@ export class TokkoSyncService implements OnModuleInit {
 			);
 		}
 
-		await this.fetchAndProcessBatch(state, filter, processItem);
+		await this.fetchAndProcessBatch(state, filter, processItem, feedbackContext);
 	}
 
 	// ─── Batch Processing ────────────────────────────────────────────────────────
@@ -793,6 +833,7 @@ export class TokkoSyncService implements OnModuleInit {
 		state: TokkoSyncState,
 		filter: string,
 		processItem: (item: any) => Promise<string>,
+		feedbackContext?: TokkoFeedbackContext,
 	): Promise<void> {
 		const label = `[TokkoSync:${state.sync_type}]`;
 		// Format date as ISO without milliseconds for the API
@@ -838,6 +879,12 @@ export class TokkoSyncService implements OnModuleInit {
 			} catch (err) {
 				stats.failed++;
 				const msg = err instanceof Error ? err.message : String(err);
+				await this.reportCriticalFeedbackFromError(
+					feedbackContext,
+					this.extractPublicationId(item),
+					err,
+					item?.id != null ? String(item.id) : undefined,
+				);
 				this.logger.error(
 					`${label} Error processing item id=${item.id} pub=${item.publication_id}: ${msg}`,
 				);
@@ -909,7 +956,10 @@ export class TokkoSyncService implements OnModuleInit {
 
 	// ─── Single Property Upsert ──────────────────────────────────────────────────
 
-	private async processProperty(item: any): Promise<'created' | 'updated' | 'skipped'> {
+	private async processProperty(
+		item: any,
+		_feedbackContext?: TokkoFeedbackContext,
+	): Promise<'created' | 'updated' | 'skipped'> {
 		if (!item || typeof item !== 'object') {
 			this.logger.warn('[TokkoSync] Skipping item: payload is null or invalid');
 			this.fileLogger.warn('SKIPPED reason="invalid payload: item is null or not an object"');
@@ -1008,6 +1058,13 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		if (existing) {
+			this.assertPropertyBelongsToImportedOrganization(
+				existing,
+				publicationId,
+				orgId,
+				branchId,
+				userId,
+			);
 			this.fileLogger.info(`STEP db_update pub_id=${publicationId} property_id=${existing.id}`);
 			this.logPayload('existing_property', publicationId, existing);
 
@@ -1587,6 +1644,279 @@ export class TokkoSyncService implements OnModuleInit {
 		}
 
 		return savedOrg;
+	}
+
+	private createFeedbackContext(source: TokkoFeedbackSource, apiKey: string): TokkoFeedbackContext {
+		return {
+			source,
+			apiKey,
+			enabled: apiKey.trim().length > 0,
+			dedupe: new Set<string>(),
+		};
+	}
+
+	private extractPublicationId(item: any): string | null {
+		return item?.publication_id != null ? String(item.publication_id) : null;
+	}
+
+	private async reportCriticalFeedbackFromError(
+		feedbackContext: TokkoFeedbackContext | undefined,
+		publicationId: string | null,
+		err: unknown,
+		tokkoId?: string,
+	): Promise<void> {
+		if (!feedbackContext?.enabled) {
+			return;
+		}
+
+		const critical = this.buildCriticalFeedbackFromError(err);
+		if (!critical) {
+			this.fileLogger.feedbackSkippedNonCritical(
+				feedbackContext.source,
+				publicationId ?? undefined,
+				this.toSingleLine(this.extractErrorMessage(err), 180),
+			);
+			return;
+		}
+
+		await this.sendCriticalTokkoFeedback(feedbackContext, {
+			publicationId,
+			tokkoId,
+			reasonCode: critical.reasonCode,
+			message: critical.message,
+		});
+	}
+
+	private buildCriticalFeedbackFromError(
+		err: unknown,
+	): { reasonCode: string; message: string } | null {
+		const rawMessage = this.extractErrorMessage(err);
+		const normalized = rawMessage.toUpperCase();
+
+		if (normalized.includes('PUBLICATION_OWNERSHIP_MISMATCH')) {
+			return {
+				reasonCode: 'PUBLICATION_OWNERSHIP_MISMATCH',
+				message:
+					'No se pudo publicar el aviso porque el publication_id ya existe en Metroprop y pertenece a otra inmobiliaria o a otro usuario.',
+			};
+		}
+
+		if (normalized.includes('EXISTING_USER_ORG_EXTERNAL_REF_MISMATCH')) {
+			return {
+				reasonCode: 'ORG_USER_EXTERNAL_REF_MISMATCH',
+				message:
+					'No se pudo publicar el aviso porque el usuario ya pertenece a una organizacion con otro external_reference.',
+			};
+		}
+
+		if (normalized.includes('EXISTING_USER_ORG_PARTNER_MISMATCH')) {
+			return {
+				reasonCode: 'ORG_USER_PARTNER_MISMATCH',
+				message:
+					'No se pudo publicar el aviso porque el usuario ya pertenece a otra inmobiliaria o partner.',
+			};
+		}
+
+		if (normalized.includes('EXISTING_USER_ORG_EXTERNAL_REF_TAKEN')) {
+			return {
+				reasonCode: 'ORG_EXTERNAL_REF_TAKEN',
+				message:
+					'No se pudo publicar el aviso porque el external_reference de la organizacion ya esta en uso.',
+			};
+		}
+
+		if (this.isPublicationValidationError(err, rawMessage)) {
+			return {
+				reasonCode: 'PUBLICATION_VALIDATION_FAILED',
+				message: this.buildValidationFeedbackMessage(err, rawMessage),
+			};
+		}
+
+		return null;
+	}
+
+	private isPublicationValidationError(err: unknown, rawMessage?: string): boolean {
+		const anyErr = err as any;
+		const status = Number(anyErr?.status ?? anyErr?.response?.status ?? 0);
+		if (status === 400 || status === 422) {
+			return true;
+		}
+
+		const name = String(anyErr?.name ?? '').toUpperCase();
+		if (name.includes('BADREQUESTEXCEPTION') || name.includes('UNPROCESSABLEENTITYEXCEPTION')) {
+			return true;
+		}
+
+		const driverCandidate = anyErr?.driverError ?? anyErr;
+		const driverCode = String(driverCandidate?.code ?? '');
+		if (['23502', '23505', '23514', '22P02', '22001'].includes(driverCode)) {
+			return true;
+		}
+
+		const normalizedMessage = (rawMessage ?? this.extractErrorMessage(err)).toUpperCase();
+		const markers = [
+			'VALIDACION',
+			'VALIDACION DE DATOS',
+			'REQUISITO',
+			'REQUIRED',
+			'OBLIGATORIO',
+			'INVALID',
+			'INVÁLIDO',
+			'INVALI',
+			'YA EXISTE',
+			'UK_PROPERTIES_PUBLICATION_ID',
+			'NO SE PUDO GUARDAR LA PROPIEDAD',
+			'NULL VALUE',
+			'NOT-NULL',
+			'CONSTRAINT',
+		];
+
+		return markers.some((marker) => normalizedMessage.includes(marker));
+	}
+
+	private buildValidationFeedbackMessage(err: unknown, rawMessage?: string): string {
+		const anyErr = err as any;
+		const driverCandidate = anyErr?.driverError ?? anyErr;
+		const driverCode = String(driverCandidate?.code ?? '').toUpperCase();
+		const normalizedMessage = (rawMessage ?? this.extractErrorMessage(err)).toUpperCase();
+
+		if (
+			driverCode === '23505' ||
+			normalizedMessage.includes('UK_PROPERTIES_PUBLICATION_ID') ||
+			normalizedMessage.includes('YA EXISTE')
+		) {
+			return 'No se pudo publicar el aviso porque el publication_id ya existe en Metroprop.';
+		}
+
+		if (
+			driverCode === '23502' ||
+			normalizedMessage.includes('REQUIRED') ||
+			normalizedMessage.includes('OBLIGATORIO') ||
+			normalizedMessage.includes('NULL VALUE') ||
+			normalizedMessage.includes('NOT-NULL')
+		) {
+			return 'No se pudo publicar el aviso porque faltan datos obligatorios.';
+		}
+
+		if (
+			driverCode === '22P02' ||
+			driverCode === '22001' ||
+			normalizedMessage.includes('INVALID') ||
+			normalizedMessage.includes('FORMATO')
+		) {
+			return 'No se pudo publicar el aviso porque algunos datos tienen un formato invalido.';
+		}
+
+		if (driverCode === '23514' || normalizedMessage.includes('CONSTRAINT')) {
+			return 'No se pudo publicar el aviso porque no cumple una regla de validacion.';
+		}
+
+		return 'No se pudo publicar el aviso por una validacion de datos.';
+	}
+
+	private assertPropertyBelongsToImportedOrganization(
+		existing: any,
+		publicationId: string,
+		expectedOrganizationId: number,
+		expectedBranchId: number,
+		expectedUserId?: number,
+	): void {
+		const existingOrganizationId = existing?.organization_id ?? null;
+		if (existingOrganizationId === expectedOrganizationId) {
+			return;
+		}
+
+		const message =
+			`PUBLICATION_OWNERSHIP_MISMATCH pub_id=${publicationId} property_id=${existing?.id ?? 'N/A'} ` +
+			`existing_org_id=${existingOrganizationId ?? 'NULL'} incoming_org_id=${expectedOrganizationId} ` +
+			`existing_branch_id=${existing?.branch_id ?? 'NULL'} incoming_branch_id=${expectedBranchId} ` +
+			`existing_user_id=${existing?.user_id ?? 'NULL'} incoming_user_id=${expectedUserId ?? 'NULL'}`;
+
+		this.fileLogger.error(`STEP ownership_guard_failed ${message}`);
+		throw new Error(message);
+	}
+
+	private async sendCriticalTokkoFeedback(
+		feedbackContext: TokkoFeedbackContext | undefined,
+		params: {
+			publicationId: string | null;
+			tokkoId?: string;
+			reasonCode: string;
+			message: string;
+		},
+	): Promise<void> {
+		if (!feedbackContext?.enabled) {
+			return;
+		}
+
+		if (!params.publicationId) {
+			this.fileLogger.feedbackSkippedNoPublicationId(feedbackContext.source, params.reasonCode);
+			return;
+		}
+
+		const dedupeKey = `${params.publicationId}|${params.reasonCode}`;
+		if (feedbackContext.dedupe.has(dedupeKey)) {
+			this.fileLogger.info(
+				`TOKKO_FEEDBACK_SKIPPED_DUPLICATE source=${feedbackContext.source} pub_id=${params.publicationId} reason=${params.reasonCode}`,
+			);
+			return;
+		}
+
+		feedbackContext.dedupe.add(dedupeKey);
+
+		const feedbackObject: TokkoFeedbackObject = {
+			publication_id: params.publicationId,
+			status: '4',
+			errors: [{ message: this.toSingleLine(params.message, 220) }],
+		};
+
+		if (params.tokkoId) {
+			feedbackObject.id = params.tokkoId;
+		}
+
+		try {
+			await notifyTokkoPublicationFeedback({
+				apiKey: feedbackContext.apiKey,
+				objects: [feedbackObject],
+			});
+			this.fileLogger.feedbackSent(
+				feedbackContext.source,
+				params.publicationId,
+				params.reasonCode,
+			);
+		} catch (notifyErr) {
+			this.fileLogger.feedbackFailed(
+				feedbackContext.source,
+				params.publicationId,
+				params.reasonCode,
+				notifyErr,
+			);
+		}
+	}
+
+	private extractErrorMessage(err: unknown): string {
+		if (err instanceof Error) {
+			return err.message;
+		}
+
+		const anyErr = err as any;
+		if (Array.isArray(anyErr?.message)) {
+			return anyErr.message.join('; ');
+		}
+
+		if (typeof anyErr?.message === 'string') {
+			return anyErr.message;
+		}
+
+		return String(err);
+	}
+
+	private toSingleLine(value: string, maxLength: number): string {
+		const oneLine = (value ?? '').replace(/\s+/g, ' ').trim();
+		if (oneLine.length <= maxLength) {
+			return oneLine;
+		}
+		return `${oneLine.slice(0, maxLength)}...`;
 	}
 
 	private async resolveTokkoPartnerId(): Promise<number | null> {
