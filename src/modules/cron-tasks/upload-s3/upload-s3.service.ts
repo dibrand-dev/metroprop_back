@@ -13,7 +13,7 @@ import { User } from '../../users/entities/user.entity';
 import { MediaService } from '../../../common/media/media.service';
 import { MediaUploadStatus } from '../../../common/enums';
 
-const BATCH_SIZE = 100;
+const BATCH_SIZE = 30;
 const MAX_RETRIES = 5;
 
 @Injectable()
