@@ -320,12 +320,11 @@ export class PropertiesService {
    * Obtiene una unidad (child property) específica dentro de un emprendimiento.
    */
   async getDevelopmentUnit(developmentId: number, unitId: number): Promise<Property> {
-    const unit = await this.propertyRepository.findOne({
+    const unitExists = await this.propertyRepository.exist({
       where: { id: unitId, development_id: developmentId, is_development: false, deleted: false },
-      select: ['id'],
     });
 
-    if (!unit) {
+    if (!unitExists) {
       throw new NotFoundException(
         `Unidad con ID ${unitId} no encontrada en el emprendimiento ${developmentId}`,
       );
@@ -896,6 +895,17 @@ export class PropertiesService {
             unit.images = prependImagePrefixToUrls('', unit.images);
           }
         }
+      }
+
+      if (property?.user) {
+        const {
+          password,
+          email_verification_token,
+          password_reset_token,
+          password_reset_token_expires,
+          ...safeUser
+        } = property.user as any;
+        property.user = safeUser;
       }
 
       // Si es una unidad de emprendimiento, cargar el emprendimiento padre con sus imágenes y unidades
@@ -1470,7 +1480,7 @@ export class PropertiesService {
         )`,
       )
       .leftJoinAndSelect('p.organization', 'p_org', 'p_org.deleted = false AND p_org.status = true')
-      .leftJoinAndSelect('p.units', 'units', 'units.deleted = false')
+        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false AND p.is_development = true')
   //  .leftJoinAndSelect('units.images', 'unitImages')
       .leftJoinAndSelect('p.user', 'usr')
       .where('p.id IN (:...ids)', { ids })
@@ -1585,7 +1595,7 @@ export class PropertiesService {
       const qb = baseQb.clone();
       qb.leftJoinAndSelect('p.images', 'img')
         .leftJoinAndSelect('p.organization', 'p_org')
-        .leftJoinAndSelect('p.units', 'units')
+        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false AND p.is_development = true')
       //  .leftJoinAndSelect('units.images', 'unitImages')
      //   .leftJoinAndSelect('p.user', 'usr')
           .skip(offset)
@@ -1658,7 +1668,7 @@ export class PropertiesService {
           )`,
         )
         .leftJoinAndSelect('p.organization', 'p_org', 'p_org.deleted = false AND p_org.status = true')
-        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false');
+        .leftJoinAndSelect('p.units', 'units', 'units.deleted = false AND p.is_development = true');
       this.appendPropertyOrder(cardQb, orderBy, orderDirection);
       cardQb.skip(offset).take(limit);
 
