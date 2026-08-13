@@ -1,7 +1,9 @@
-import { Controller, DefaultValuePipe, Get, ParseIntPipe, Query, UseInterceptors } from '@nestjs/common';
+import { Controller, DefaultValuePipe, Get, ParseIntPipe, Query, UseGuards, UseInterceptors } from '@nestjs/common';
 import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { LocationsService } from './locations.service';
 import { TokkoMigratorService } from '../cron-tasks/tokko-migrator/tokko-migrator.service';
+import { Public } from '../../common/decorators/public.decorator';
 
 @Controller('location')
 export class LocationsController {
@@ -131,6 +133,9 @@ export class LocationsController {
   }
 
   @Get('getAllLocations')
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
   @UseInterceptors(CacheInterceptor)
   @CacheTTL(86400) // 1 día en segundos
   getAllLocations(@Query('country_id') countryId?: string | number) {
