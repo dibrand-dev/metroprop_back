@@ -53,7 +53,7 @@ export class UploadS3Service {
     this.logger.log('[ImageUploadCron] Batch complete');
   }
 
-  @Cron(CronExpression.EVERY_HOUR)
+  @Cron(CronExpression.EVERY_5_MINUTES)
   async handleImageDeleteCron() {
     this.logger.log('[ImageDeleteCron] Running S3 image delete cron...');
     const images = await this.propertyImageRepo.find({
