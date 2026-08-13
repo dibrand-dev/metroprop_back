@@ -1,8 +1,11 @@
-import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards, UseInterceptors } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import { TagsService } from './tags.service';
 import { CreateTagDto } from './dto/create-tag.dto';
 import { UpdateTagDto } from './dto/update-tag.dto';
 import { TagType, UserRole } from '../../common/enums';
+import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -13,16 +16,31 @@ export class TagsController {
   constructor(private readonly tagsService: TagsService) {}
 
   @Get()
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(86400)
   findAll() {
     return this.tagsService.findAll();
   }
 
   @Get('type/:type')
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(86400)
   findByType(@Param('type', ParseIntPipe) type: TagType) {
     return this.tagsService.findByType(type);
   }
 
   @Get('types')
+  @Public()
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { ttl: 60000, limit: 30 } })
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(86400)
   getTagTypes() {
     return this.tagsService.getTagTypes();
   }

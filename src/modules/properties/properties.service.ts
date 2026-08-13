@@ -2024,7 +2024,7 @@ export class PropertiesService {
     }
 
     /* ############# HARDCODED ARGENTINA POR AHORA ################# */
-    filters.country_id = COUNTRY_ARGENTINA_ID;
+    // filters.country_id = COUNTRY_ARGENTINA_ID;
 
     if (filters.branch_id != null) {
       qb.andWhere('p.branch_id = :branch_id', {
