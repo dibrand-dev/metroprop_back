@@ -9,6 +9,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, DataSource, In, Repository } from 'typeorm';
 import { Property } from './entities/property.entity';
 import { PropertyImage } from './entities/property-image.entity';
+import { PropertyAttribute } from './entities/property-attribute.entity';
+import { PropertyTag } from './entities/property-tag.entity';
 import { CreatePropertyDto } from './dto/create-property.dto';
 import { PropertyWriteService } from './property-write.service';
 import { UpdatePropertyDto } from './dto/update-property.dto';
@@ -744,10 +746,16 @@ export class PropertiesService {
    * Obtener una propiedad por ID
    */
   async findOne(id: number, format: string | null = null): Promise<Property> {
-    
+    const startedAt = Date.now();
+
     let property: Property | null = null;
+    let baseQueryMs = 0;
+    let relationsMs = 0;
+    let developmentMs = 0;
+
     if (format === 'card') {
       // Usar QueryBuilder para traer campos seleccionados y la relación organization
+      const queryStartedAt = Date.now();
       property = await this.propertyRepository.createQueryBuilder('property')
         .leftJoinAndSelect('property.organization', 'organization')
         .leftJoinAndSelect('property.units', 'units')
@@ -780,19 +788,23 @@ export class PropertiesService {
         //  'unitImages',
         ])
         .getOne();
+      baseQueryMs = Date.now() - queryStartedAt;
 
       // Traer solo la primera imagen (si existe)
       if (property) {
-        let firstImage = await this.propertyImageRepository.findOne({
+        const imageQueryStartedAt = Date.now();
+        const firstImage = await this.propertyImageRepository.findOne({
           where: { property: { id } },
           order: { order_position: 'ASC' },
         });
+        relationsMs = Date.now() - imageQueryStartedAt;
         if(firstImage) {
           property.images = prependImagePrefixToUrls(THUMB_PREFIX, [firstImage]);
         }
       }
     } else if (format === 'multimedia') {
       // Traer id, todas las imágenes, todos los videos y multimedia360
+      const queryStartedAt = Date.now();
       property = await this.propertyRepository.findOne({
         where: {
           id,
@@ -801,6 +813,7 @@ export class PropertiesService {
         select: ['id'],
         relations: ['images', 'videos'],
       });
+      baseQueryMs = Date.now() - queryStartedAt;
       if (property) {
         // Separar videos y multimedia360
         const allVideos = property.videos ?? [];
@@ -809,39 +822,69 @@ export class PropertiesService {
       }
 
     } else {
-      // DETALLE MAS COMPLETO DE LA PROPIEDAD
+      // Cargar entidad base y relaciones 1:1 primero para evitar multiplicación de filas.
+      const baseQueryStartedAt = Date.now();
       const qb  = this.propertyRepository.createQueryBuilder('property')
-      .leftJoinAndSelect('property.images', 'images')
-      .leftJoinAndSelect('property.attributes', 'attributes')
-      .leftJoinAndSelect('property.tags', 'tags')
-      .leftJoinAndSelect('property.videos', 'videos')
-      .leftJoinAndSelect('property.attached', 'attached')
-      .leftJoinAndSelect('property.organization', 'organization')
-      .leftJoinAndSelect('property.units', 'units')
-      .leftJoinAndSelect('units.images', 'unitImages')
-      .leftJoinAndSelect('property.user', 'user')
-      .where('property.id = :id', { id })
-      .andWhere('property.deleted = false')
-      .andWhere('(units.deleted = false OR units.id IS NULL)')
-      .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = true))')
-      .select([
-        'property',
-        'images',
-        'attributes',
-        'tags',
-        'videos',
-        'attached',
-        'organization',
-        'units',
-        'unitImages',
-        'user',
-      ]);
+        .leftJoinAndSelect('property.organization', 'organization')
+        .leftJoinAndSelect('property.user', 'user')
+        .where('property.id = :id', { id })
+        .andWhere('property.deleted = false')
+        .andWhere('(property.organization_id IS NULL OR (organization.deleted = false AND organization.status = true))');
 
       if (format !== 'edit') {
         qb.andWhere('property.status = :status', { status: PropertyStatus.DISPONIBLE });
       } 
 
       property = await qb.getOne();
+      baseQueryMs = Date.now() - baseQueryStartedAt;
+
+      if (property) {
+        // Cargar relaciones 1:N en paralelo para evitar cartesian explosion por múltiples LEFT JOIN.
+        const relationQueryStartedAt = Date.now();
+        const [images, attributes, tags, videos, attached, units] = await Promise.all([
+          this.propertyImageRepository.find({
+            where: { property: { id } },
+            order: { order_position: 'ASC', id: 'ASC' },
+          }),
+          this.dataSource.getRepository(PropertyAttribute).find({
+            where: { property: { id } },
+            order: { id: 'ASC' },
+          }),
+          this.dataSource.getRepository(PropertyTag).find({
+            where: { property: { id } },
+            order: { id: 'ASC' },
+          }),
+          this.dataSource.getRepository(PropertyVideo).find({
+            where: { property: { id } },
+            order: { id: 'ASC' },
+          }),
+          this.propertyAttachedRepository.find({
+            where: { property: { id } },
+            order: { id: 'ASC' },
+          }),
+          property.is_development
+            ? this.propertyRepository
+                .createQueryBuilder('unit')
+                .leftJoinAndSelect('unit.images', 'unitImages')
+                .where('unit.development_id = :developmentId', {
+                  developmentId: property.id,
+                })
+                .andWhere('unit.deleted = false')
+                .orderBy('unit.id', 'ASC')
+                .addOrderBy('unitImages.order_position', 'ASC')
+                .addOrderBy('unitImages.id', 'ASC')
+                .getMany()
+            : Promise.resolve([] as Property[]),
+        ]);
+        relationsMs = Date.now() - relationQueryStartedAt;
+
+        property.images = images;
+        property.attributes = attributes;
+        property.tags = tags;
+        property.videos = videos;
+        property.attached = attached;
+        property.units = units;
+      }
 
       if (property?.images) {
         property.images = prependImagePrefixToUrls('', property.images);
@@ -857,6 +900,7 @@ export class PropertiesService {
 
       // Si es una unidad de emprendimiento, cargar el emprendimiento padre con sus imágenes y unidades
       if (property?.development_id) {
+        const developmentQueryStartedAt = Date.now();
         const development = await this.propertyRepository.createQueryBuilder('dev')
           .leftJoinAndSelect('dev.images', 'devImages')
           .leftJoinAndSelect('dev.units', 'devUnits', 'devUnits.deleted = false')
@@ -864,6 +908,7 @@ export class PropertiesService {
           .andWhere('dev.deleted = false')
           .select(['dev', 'devImages', 'devUnits'])
           .getOne();
+        developmentMs = Date.now() - developmentQueryStartedAt;
 
         if (development) {
           if (development.images?.length) {
@@ -876,6 +921,13 @@ export class PropertiesService {
 
     if (!property) {
       throw new NotFoundException(`Propiedad con ID ${id} no encontrada`);
+    }
+
+    const totalMs = Date.now() - startedAt;
+    if (totalMs >= 1000) {
+      this.logger.warn(
+        `[PERF][properties.findOne] id=${id} format=${format ?? 'default'} totalMs=${totalMs} baseMs=${baseQueryMs} relationsMs=${relationsMs} developmentMs=${developmentMs} images=${property.images?.length ?? 0} tags=${property.tags?.length ?? 0} units=${property.units?.length ?? 0}`,
+      );
     }
 
     return property;
