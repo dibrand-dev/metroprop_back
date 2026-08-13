@@ -13,6 +13,7 @@ import {
   ParseIntPipe,
   BadRequestException,
 } from '@nestjs/common';
+import { CacheInterceptor, CacheTTL } from '@nestjs/cache-manager';
 import { PropertiesService } from './properties.service';
 import { UploadS3Service } from '../cron-tasks/upload-s3/upload-s3.service';
 import { CreatePropertyDto } from './dto/create-property.dto';
@@ -430,6 +431,8 @@ export class PropertiesController {
    * Obtener propiedad por ID
    */
   @Get(':id')
+  @UseInterceptors(CacheInterceptor)
+  @CacheTTL(120)
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Query('format') format?: string

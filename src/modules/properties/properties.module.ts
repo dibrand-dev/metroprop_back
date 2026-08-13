@@ -1,6 +1,7 @@
 import { ImageUploadModule } from '../../common/image-upload/image-upload.module';
 import { UploadS3CronModule } from '../cron-tasks/upload-s3/upload-s3.module';
 import { Module } from '@nestjs/common';
+import { CacheModule } from '@nestjs/cache-manager';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PropertiesService } from './properties.service';
 import { PropertyWriteService } from './property-write.service';
@@ -26,6 +27,9 @@ import { PropertyAttached } from './entities/property-attached.entity';
       PropertyVideo,
       PropertyAttached,
     ]),
+    CacheModule.register({
+      ttl: 120,
+    }),
     ImageUploadModule,
     UploadS3CronModule,
   ],
