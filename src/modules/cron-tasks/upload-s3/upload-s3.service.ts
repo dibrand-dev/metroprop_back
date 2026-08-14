@@ -58,7 +58,7 @@ export class UploadS3Service {
     this.logger.log('[ImageDeleteCron] Running S3 image delete cron...');
     const images = await this.propertyImageRepo.find({
       where: { upload_status: MediaUploadStatus.DELETING },
-      take: 100,
+      take: 250,
     });
     if (!images.length) return;
     for (const img of images) {
